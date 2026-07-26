@@ -7,6 +7,7 @@ use App\Models\MeetingActionItem;
 use App\Models\Task;
 use App\Models\User;
 use App\Services\Meeting\ActivityLogger;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
@@ -56,6 +57,30 @@ class TaskController extends Controller
         return Inertia::render('Tasks/Kanban', [
             'tasksByStatus' => $tasksByStatus,
             'statuses' => Task::STATUSES,
+        ]);
+    }
+
+    public function calendar(Request $request)
+    {
+        $user = Auth::user();
+        $month = max(1, min(12, (int) $request->input('month', now()->month)));
+        $year = (int) $request->input('year', now()->year);
+
+        $start = Carbon::create($year, $month, 1)->startOfMonth();
+        $end = $start->copy()->endOfMonth();
+
+        $tasks = Task::query()
+            ->when(!$user->hasRole('superadmin'), fn ($q) => $q->where('unit_id', $user->unit_id))
+            ->whereBetween('deadline', [$start->toDateString(), $end->toDateString()])
+            ->with(['assignee:id,name'])
+            ->orderBy('deadline')
+            ->get()
+            ->groupBy(fn (Task $task) => $task->deadline->toDateString());
+
+        return Inertia::render('Tasks/Calendar', [
+            'tasksByDate' => $tasks,
+            'month' => $month,
+            'year' => $year,
         ]);
     }
 

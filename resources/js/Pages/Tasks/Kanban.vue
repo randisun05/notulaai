@@ -47,9 +47,14 @@ const priorityColor = (priority) => ({
         <template #header>
             <div class="flex justify-between items-center">
                 <h2 class="font-semibold text-xl text-gray-800 leading-tight">Kanban Task</h2>
-                <Link :href="route('tasks.index')" class="inline-flex items-center px-4 py-2 bg-white border border-gray-300 rounded-md font-semibold text-xs text-gray-700 uppercase tracking-widest shadow-sm hover:bg-gray-50">
-                    Lihat Daftar
-                </Link>
+                <div class="flex gap-2">
+                    <Link :href="route('tasks.index')" class="inline-flex items-center px-4 py-2 bg-white border border-gray-300 rounded-md font-semibold text-xs text-gray-700 uppercase tracking-widest shadow-sm hover:bg-gray-50">
+                        Lihat Daftar
+                    </Link>
+                    <Link :href="route('tasks.calendar')" class="inline-flex items-center px-4 py-2 bg-white border border-gray-300 rounded-md font-semibold text-xs text-gray-700 uppercase tracking-widest shadow-sm hover:bg-gray-50">
+                        Lihat Kalender
+                    </Link>
+                </div>
             </div>
         </template>
 

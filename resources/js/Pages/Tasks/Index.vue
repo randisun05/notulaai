@@ -45,9 +45,14 @@ const formattedDate = (dateString) => {
         <template #header>
             <div class="flex justify-between items-center">
                 <h2 class="font-semibold text-xl text-gray-800 leading-tight">Daftar Task</h2>
-                <Link :href="route('tasks.kanban')" class="inline-flex items-center px-4 py-2 bg-white border border-gray-300 rounded-md font-semibold text-xs text-gray-700 uppercase tracking-widest shadow-sm hover:bg-gray-50">
-                    Lihat Kanban
-                </Link>
+                <div class="flex gap-2">
+                    <Link :href="route('tasks.kanban')" class="inline-flex items-center px-4 py-2 bg-white border border-gray-300 rounded-md font-semibold text-xs text-gray-700 uppercase tracking-widest shadow-sm hover:bg-gray-50">
+                        Lihat Kanban
+                    </Link>
+                    <Link :href="route('tasks.calendar')" class="inline-flex items-center px-4 py-2 bg-white border border-gray-300 rounded-md font-semibold text-xs text-gray-700 uppercase tracking-widest shadow-sm hover:bg-gray-50">
+                        Lihat Kalender
+                    </Link>
+                </div>
             </div>
         </template>
 
