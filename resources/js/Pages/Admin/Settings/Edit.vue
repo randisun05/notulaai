@@ -50,21 +50,21 @@ const submit = () => {
 
     <AuthenticatedLayout>
         <template #header>
-            <h2 class="font-semibold text-xl text-gray-800 leading-tight">Pengaturan Aplikasi</h2>
+            <h2 class="page-heading">Pengaturan Aplikasi</h2>
         </template>
 
-        <div class="py-12">
-            <div class="max-w-3xl mx-auto sm:px-6 lg:px-8 space-y-6">
+        <div class="page-shell">
+            <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
 
-                <div v-if="$page.props.flash?.success" class="bg-green-50 border border-green-200 text-green-800 text-sm rounded-md px-4 py-3">
+                <div v-if="$page.props.flash?.success" class="alert-success">
                     {{ $page.props.flash.success }}
                 </div>
 
                 <form @submit.prevent="submit" class="space-y-6">
 
-                    <div class="bg-white overflow-hidden shadow-sm rounded-lg">
-                        <div class="p-6 space-y-4">
-                            <h3 class="text-lg font-medium text-gray-900">Perusahaan / Instansi</h3>
+                    <div class="card">
+                        <div class="card-padded space-y-4">
+                            <h3 class="card-title">Perusahaan / Instansi</h3>
 
                             <div>
                                 <InputLabel for="company_name" value="Nama Perusahaan" />
@@ -93,14 +93,14 @@ const submit = () => {
                         </div>
                     </div>
 
-                    <div class="bg-white overflow-hidden shadow-sm rounded-lg">
-                        <div class="p-6 space-y-4">
-                            <h3 class="text-lg font-medium text-gray-900">AI Provider</h3>
+                    <div class="card">
+                        <div class="card-padded space-y-4">
+                            <h3 class="card-title">AI Provider</h3>
                             <p class="text-sm text-gray-500">Menentukan provider AI yang dipakai untuk transkripsi dan ringkasan notula.</p>
 
                             <div>
                                 <InputLabel for="ai_text_provider" value="Provider Ringkasan (Teks)" />
-                                <select id="ai_text_provider" v-model="form.ai_text_provider" class="mt-1 block w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm">
+                                <select id="ai_text_provider" v-model="form.ai_text_provider" class="form-select mt-1">
                                     <option v-for="p in textProviders" :key="p" :value="p">{{ p }}</option>
                                 </select>
                                 <InputError class="mt-2" :message="form.errors.ai_text_provider" />
@@ -108,7 +108,7 @@ const submit = () => {
 
                             <div>
                                 <InputLabel for="ai_transcription_provider" value="Provider Transkripsi (Audio)" />
-                                <select id="ai_transcription_provider" v-model="form.ai_transcription_provider" class="mt-1 block w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm">
+                                <select id="ai_transcription_provider" v-model="form.ai_transcription_provider" class="form-select mt-1">
                                     <option v-for="p in transcriptionProviders" :key="p" :value="p">{{ p }}</option>
                                 </select>
                                 <InputError class="mt-2" :message="form.errors.ai_transcription_provider" />
@@ -116,7 +116,7 @@ const submit = () => {
 
                             <div>
                                 <InputLabel for="ai_ocr_provider" value="Provider OCR (Gambar)" />
-                                <select id="ai_ocr_provider" v-model="form.ai_ocr_provider" class="mt-1 block w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm">
+                                <select id="ai_ocr_provider" v-model="form.ai_ocr_provider" class="form-select mt-1">
                                     <option v-for="p in ocrProviders" :key="p" :value="p">{{ p }}</option>
                                 </select>
                                 <InputError class="mt-2" :message="form.errors.ai_ocr_provider" />
@@ -124,13 +124,13 @@ const submit = () => {
                         </div>
                     </div>
 
-                    <div class="bg-white overflow-hidden shadow-sm rounded-lg">
-                        <div class="p-6 space-y-4">
-                            <h3 class="text-lg font-medium text-gray-900">Zona Waktu</h3>
+                    <div class="card">
+                        <div class="card-padded space-y-4">
+                            <h3 class="card-title">Zona Waktu</h3>
 
                             <div>
                                 <InputLabel for="timezone" value="Timezone" />
-                                <select id="timezone" v-model="form.timezone" class="mt-1 block w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm">
+                                <select id="timezone" v-model="form.timezone" class="form-select mt-1">
                                     <option v-for="tz in timezones" :key="tz" :value="tz">{{ tz }}</option>
                                 </select>
                                 <InputError class="mt-2" :message="form.errors.timezone" />

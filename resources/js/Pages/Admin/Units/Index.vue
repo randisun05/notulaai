@@ -84,52 +84,45 @@ const submitDelete = () => {
 
     <AuthenticatedLayout>
         <template #header>
-            <h2 class="font-semibold text-xl text-gray-800 leading-tight">Manajemen Unit</h2>
+            <h2 class="page-heading">Manajemen Unit</h2>
         </template>
 
-        <div class="py-12">
-            <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
-                <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
-                    <div class="p-6 text-gray-900">
+        <div class="page-shell">
+            <div class="page-container">
+                <div class="card-padded">
 
-                        <div class="flex justify-between items-center mb-6">
-                            <h3 class="text-lg font-medium">Daftar Unit</h3>
-                            <PrimaryButton @click="showCreateModal = true">Tambah Unit Baru</PrimaryButton>
-                        </div>
-
-                        <!-- Daftar Unit -->
-                        <div class="overflow-x-auto">
-                            <table class="min-w-full divide-y divide-gray-200">
-                                <thead class="bg-gray-50">
-                                    <tr>
-                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nama Unit</th>
-                                        <th scope="col" class="relative px-6 py-3">
-                                            <span class="sr-only">Aksi</span>
-                                        </th>
-                                    </tr>
-                                </thead>
-                                <tbody class="bg-white divide-y divide-gray-200">
-                                    <tr v-for="unit in units.data" :key="unit.id">
-                                        <td class="px-6 py-4 whitespace-nowrap">
-                                            <div class="text-sm font-medium text-gray-900">{{ unit.name }}</div>
-                                        </td>
-                                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                            <button @click="openEditModal(unit)" class="text-indigo-600 hover:text-indigo-900 mr-4">Edit</button>
-                                            <button @click="openDeleteModal(unit)" class="text-red-600 hover:text-red-900">Hapus</button>
-                                        </td>
-                                    </tr>
-                                    <tr v-if="units.data.length === 0">
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500" colspan="2">
-                                            Belum ada data unit.
-                                        </td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
-
-                        <!-- TODO: Tambahkan Paginasi jika diperlukan nanti -->
-
+                    <div class="flex justify-between items-center mb-6">
+                        <h3 class="card-title">Daftar Unit</h3>
+                        <PrimaryButton @click="showCreateModal = true">+ Tambah Unit</PrimaryButton>
                     </div>
+
+                    <div class="table-wrap">
+                        <table class="table-base">
+                            <thead class="table-head">
+                                <tr>
+                                    <th scope="col" class="table-head-cell">Nama Unit</th>
+                                    <th scope="col" class="relative px-6 py-3">
+                                        <span class="sr-only">Aksi</span>
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody class="table-body">
+                                <tr v-for="unit in units.data" :key="unit.id" class="table-row-hover">
+                                    <td class="table-cell whitespace-nowrap font-medium text-gray-900">{{ unit.name }}</td>
+                                    <td class="table-cell whitespace-nowrap text-right font-medium">
+                                        <button @click="openEditModal(unit)" class="text-brand-600 hover:text-brand-800 mr-4">Edit</button>
+                                        <button @click="openDeleteModal(unit)" class="text-red-600 hover:text-red-800">Hapus</button>
+                                    </td>
+                                </tr>
+                                <tr v-if="units.data.length === 0">
+                                    <td class="empty-state" colspan="2">
+                                        Belum ada data unit.
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
                 </div>
             </div>
         </div>

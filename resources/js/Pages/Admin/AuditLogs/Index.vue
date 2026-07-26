@@ -40,54 +40,52 @@ const formattedDate = (dateString) => {
 
     <AuthenticatedLayout>
         <template #header>
-            <h2 class="font-semibold text-xl text-gray-800 leading-tight">Audit Log</h2>
+            <h2 class="page-heading">Audit Log</h2>
         </template>
 
-        <div class="py-12">
-            <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
-                <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
-                    <div class="p-6 text-gray-900">
-                        <p class="text-sm text-gray-500 mb-4">Jejak aksi admin yang sensitif: CRUD user/unit, ubah pengaturan, terbitkan/cabut API token, dan login/logout.</p>
+        <div class="page-shell">
+            <div class="page-container">
+                <div class="card-padded">
+                    <p class="text-sm text-gray-500 mb-4">Jejak aksi admin yang sensitif: CRUD user/unit, ubah pengaturan, terbitkan/cabut API token, dan login/logout.</p>
 
-                        <div class="flex flex-wrap gap-3 mb-6">
-                            <TextInput v-model="search" type="text" placeholder="Cari deskripsi..." class="w-64" />
-                            <select :value="filters.action || ''" @change="filterByAction($event.target.value)" class="text-sm border-gray-300 rounded-md focus:border-indigo-500 focus:ring-indigo-500">
-                                <option value="">Semua Aksi</option>
-                                <option v-for="action in actions" :key="action" :value="action">{{ action }}</option>
-                            </select>
-                        </div>
+                    <div class="flex flex-wrap gap-3 mb-6">
+                        <TextInput v-model="search" type="text" placeholder="Cari deskripsi..." class="w-64" />
+                        <select :value="filters.action || ''" @change="filterByAction($event.target.value)" class="form-select w-auto">
+                            <option value="">Semua Aksi</option>
+                            <option v-for="action in actions" :key="action" :value="action">{{ action }}</option>
+                        </select>
+                    </div>
 
-                        <div class="overflow-x-auto">
-                            <table class="min-w-full divide-y divide-gray-200">
-                                <thead class="bg-gray-50">
-                                    <tr>
-                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Waktu</th>
-                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Aktor</th>
-                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Aksi</th>
-                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Deskripsi</th>
-                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">IP</th>
-                                    </tr>
-                                </thead>
-                                <tbody class="bg-white divide-y divide-gray-200">
-                                    <tr v-if="logs.data.length === 0">
-                                        <td colspan="5" class="px-6 py-4 text-center text-sm text-gray-500">Belum ada audit log.</td>
-                                    </tr>
-                                    <tr v-for="log in logs.data" :key="log.id">
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ formattedDate(log.created_at) }}</td>
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ log.user?.name || 'Sistem' }}</td>
-                                        <td class="px-6 py-4 whitespace-nowrap">
-                                            <span class="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-700 font-mono">{{ log.action }}</span>
-                                        </td>
-                                        <td class="px-6 py-4 text-sm text-gray-700">{{ log.description }}</td>
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-400">{{ log.ip_address || '-' }}</td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
+                    <div class="table-wrap">
+                        <table class="table-base">
+                            <thead class="table-head">
+                                <tr>
+                                    <th class="table-head-cell">Waktu</th>
+                                    <th class="table-head-cell">Aktor</th>
+                                    <th class="table-head-cell">Aksi</th>
+                                    <th class="table-head-cell">Deskripsi</th>
+                                    <th class="table-head-cell">IP</th>
+                                </tr>
+                            </thead>
+                            <tbody class="table-body">
+                                <tr v-if="logs.data.length === 0">
+                                    <td colspan="5" class="empty-state">Belum ada audit log.</td>
+                                </tr>
+                                <tr v-for="log in logs.data" :key="log.id" class="table-row-hover">
+                                    <td class="table-cell whitespace-nowrap">{{ formattedDate(log.created_at) }}</td>
+                                    <td class="table-cell whitespace-nowrap">{{ log.user?.name || 'Sistem' }}</td>
+                                    <td class="table-cell whitespace-nowrap">
+                                        <span class="badge-gray font-mono">{{ log.action }}</span>
+                                    </td>
+                                    <td class="table-cell">{{ log.description }}</td>
+                                    <td class="table-cell whitespace-nowrap text-gray-400">{{ log.ip_address || '-' }}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
 
-                        <div class="mt-6" v-if="logs.links.length > 0">
-                            <Pagination :links="logs.links" />
-                        </div>
+                    <div class="mt-6" v-if="logs.links.length > 0">
+                        <Pagination :links="logs.links" />
                     </div>
                 </div>
             </div>

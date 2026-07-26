@@ -1,6 +1,8 @@
 <script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
+import SecondaryButton from '@/Components/SecondaryButton.vue';
+import DangerButton from '@/Components/DangerButton.vue';
 import Modal from '@/Components/Modal.vue';
 import InputLabel from '@/Components/InputLabel.vue';
 import TextInput from '@/Components/TextInput.vue';
@@ -83,69 +85,67 @@ watch(search, debounce((value) => {
 
     <AuthenticatedLayout>
         <template #header>
-            <h2 class="font-semibold text-xl text-gray-800 leading-tight">Manajemen User</h2>
+            <h2 class="page-heading">Manajemen User</h2>
         </template>
 
-        <div class="py-12">
-            <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
-                <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
-                    <div class="p-6 text-gray-900">
+        <div class="page-shell">
+            <div class="page-container">
+                <div class="card-padded">
 
-                        <div class="flex justify-between mb-4">
-                            <TextInput
-                                type="text"
-                                class="block w-full md:w-1/2"
-                                v-model="search"
-                                placeholder="Cari user berdasarkan nama atau email..."
-                            />
-                            <PrimaryButton @click="openModal">Tambah User Baru</PrimaryButton>
-                        </div>
-
-                        <!-- Tabel User -->
-                        <div class="overflow-x-auto">
-                            <table class="min-w-full divide-y divide-gray-200">
-                                <thead class="bg-gray-50">
-                                    <tr>
-                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nama</th>
-                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Unit</th>
-                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
-                                        <th scope="col" class="relative px-6 py-3"><span class="sr-only">Edit</span></th>
-                                    </tr>
-                                </thead>
-                                <tbody class="bg-white divide-y divide-gray-200">
-                                    <tr v-for="user in users.data" :key="user.id">
-                                        <td class="px-6 py-4 whitespace-nowrap">
-                                            <div class="text-sm font-medium text-gray-900">{{ user.name }}</div>
-                                            <div class="text-sm text-gray-500">{{ user.email }}</div>
-                                        </td>
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ user.unit ? user.unit.name : 'N/A' }}</td>
-                                        <td class="px-6 py-4 whitespace-nowrap">
-                                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full"
-                                                  :class="{
-                                                      'bg-green-100 text-green-800': user.role === 'user',
-                                                      'bg-blue-100 text-blue-800': user.role === 'admin',
-                                                      'bg-red-100 text-red-800': user.role === 'superadmin'
-                                                  }">
-                                                {{ user.role }}
-                                            </span>
-                                        </td>
-                                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                            <Link :href="route('admin.users.edit', user.id)" class="text-indigo-600 hover:text-indigo-900">Edit</Link>
-                                           <Link @click="openDeleteModal(user)" class="text-red-600 hover:text-red-900">Hapus</Link>
-                                        </td>
-                                    </tr>
-                                    <tr v-if="users.data.length === 0">
-                                        <td colspan="4" class="px-6 py-4 text-center text-sm text-gray-500">
-                                            Tidak ada user yang ditemukan.
-                                        </td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
-
-                        <Pagination class="mt-6" :links="users.links" />
-
+                    <div class="flex flex-col sm:flex-row justify-between gap-3 mb-6">
+                        <TextInput
+                            type="text"
+                            class="block w-full md:w-1/2"
+                            v-model="search"
+                            placeholder="Cari user berdasarkan nama atau email..."
+                        />
+                        <PrimaryButton @click="openModal">+ Tambah User</PrimaryButton>
                     </div>
+
+                    <div class="table-wrap">
+                        <table class="table-base">
+                            <thead class="table-head">
+                                <tr>
+                                    <th scope="col" class="table-head-cell">Nama</th>
+                                    <th scope="col" class="table-head-cell">Unit</th>
+                                    <th scope="col" class="table-head-cell">Role</th>
+                                    <th scope="col" class="relative px-6 py-3"><span class="sr-only">Edit</span></th>
+                                </tr>
+                            </thead>
+                            <tbody class="table-body">
+                                <tr v-for="user in users.data" :key="user.id" class="table-row-hover">
+                                    <td class="table-cell whitespace-nowrap">
+                                        <div class="font-medium text-gray-900">{{ user.name }}</div>
+                                        <div class="text-gray-500">{{ user.email }}</div>
+                                    </td>
+                                    <td class="table-cell whitespace-nowrap">{{ user.unit ? user.unit.name : 'N/A' }}</td>
+                                    <td class="table-cell whitespace-nowrap">
+                                        <span
+                                            :class="{
+                                                'badge-green': user.role === 'user',
+                                                'badge-blue': user.role === 'admin',
+                                                'badge-red': user.role === 'superadmin',
+                                            }"
+                                        >
+                                            {{ user.role }}
+                                        </span>
+                                    </td>
+                                    <td class="table-cell whitespace-nowrap text-right font-medium">
+                                        <Link :href="route('admin.users.edit', user.id)" class="text-brand-600 hover:text-brand-800">Edit</Link>
+                                       <Link @click="openDeleteModal(user)" class="ml-4 text-red-600 hover:text-red-800">Hapus</Link>
+                                    </td>
+                                </tr>
+                                <tr v-if="users.data.length === 0">
+                                    <td colspan="4" class="empty-state">
+                                        Tidak ada user yang ditemukan.
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <Pagination class="mt-6" :links="users.links" />
+
                 </div>
             </div>
         </div>
@@ -175,7 +175,7 @@ watch(search, debounce((value) => {
 
                     <div>
                         <InputLabel for="role" value="Role" />
-                        <select id="role" v-model="form.role" class="mt-1 block w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm">
+                        <select id="role" v-model="form.role" class="form-select mt-1">
                             <option value="user">User</option>
                             <option value="admin">Admin</option>
                             <option value="superadmin">Super Admin</option>
@@ -185,7 +185,7 @@ watch(search, debounce((value) => {
 
                     <div>
                         <InputLabel for="unit" value="Unit (Opsional)" />
-                        <select id="unit" v-model="form.unit_id" class="mt-1 block w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm">
+                        <select id="unit" v-model="form.unit_id" class="form-select mt-1">
                             <option :value="null">-- Tidak Ada Unit --</option>
                             <option v-for="unit in units" :key="unit.id" :value="unit.id">{{ unit.name }}</option>
                         </select>
@@ -207,12 +207,12 @@ watch(search, debounce((value) => {
             </div>
         </Modal>
 
-        <!-- Modal Hapus Unit -->
+        <!-- Modal Hapus User -->
         <Modal :show="showDeleteModal" @close="showDeleteModal = false" max-width="lg">
              <div class="p-6">
-                <h2 class="text-lg font-medium text-gray-900">Hapus Unit</h2>
+                <h2 class="text-lg font-medium text-gray-900">Hapus User</h2>
                 <p class="mt-1 text-sm text-gray-600">
-                    Apakah Anda yakin ingin menghapus unit **{{ unitToDelete?.name }}**?
+                    Apakah Anda yakin ingin menghapus user <strong>{{ userToDelete?.name }}</strong>?
                     <span class="font-bold text-red-600">Aksi ini tidak dapat dibatalkan.</span>
                 </p>
                  <div class="mt-6 flex justify-end">

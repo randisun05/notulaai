@@ -32,14 +32,13 @@ const submit = () => {
 
     <AuthenticatedLayout>
         <template #header>
-            <h2 class="font-semibold text-xl text-gray-800 leading-tight">Edit User: {{ user.name }}</h2>
+            <h2 class="page-heading">Edit User: {{ user.name }}</h2>
         </template>
 
-        <div class="py-12">
-            <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
-                <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
-                    <div class="p-6 text-gray-900 max-w-2xl mx-auto">
-                        <form @submit.prevent="submit" class="mt-6 space-y-4">
+        <div class="page-shell">
+            <div class="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="card-padded">
+                        <form @submit.prevent="submit" class="space-y-4">
                             <div>
                                 <InputLabel for="name" value="Nama" />
                                 <TextInput id="name" type="text" class="mt-1 block w-full" v-model="form.name" required autofocus />
@@ -54,7 +53,7 @@ const submit = () => {
 
                             <div>
                                 <InputLabel for="role" value="Role" />
-                                <select id="role" v-model="form.role" class="mt-1 block w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm">
+                                <select id="role" v-model="form.role" class="form-select mt-1">
                                     <option value="user">User</option>
                                     <option value="admin">Admin</option>
                                     <option value="superadmin">Super Admin</option>
@@ -64,7 +63,7 @@ const submit = () => {
 
                             <div>
                                 <InputLabel for="unit" value="Unit (Opsional)" />
-                                <select id="unit" v-model="form.unit_id" class="mt-1 block w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm">
+                                <select id="unit" v-model="form.unit_id" class="form-select mt-1">
                                     <option :value="null">-- Tidak Ada Unit --</option>
                                     <option v-for="unit in units" :key="unit.id" :value="unit.id">{{ unit.name }}</option>
                                 </select>
@@ -96,7 +95,6 @@ const submit = () => {
                                 </PrimaryButton>
                             </div>
                         </form>
-                    </div>
                 </div>
             </div>
         </div>

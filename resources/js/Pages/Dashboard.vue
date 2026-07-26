@@ -81,17 +81,17 @@ const maxStatusCount = computed(() => Math.max(1, ...props.taskStatusBreakdown.m
 
     <AuthenticatedLayout>
         <template #header>
-            <h2 class="font-semibold text-xl text-gray-800 leading-tight">Dashboard</h2>
+            <h2 class="page-heading">Dashboard</h2>
         </template>
 
-        <div class="py-12">
-            <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-8">
+        <div class="page-shell">
+            <div class="page-container">
 
                 <!-- Stat Tiles -->
                 <div>
                     <h3 class="text-base font-semibold leading-6 text-gray-900">Ringkasan</h3>
                     <dl class="mt-5 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-5">
-                        <div v-for="item in statCards" :key="item.name" class="overflow-hidden rounded-lg bg-white px-4 py-5 shadow sm:p-6">
+                        <div v-for="item in statCards" :key="item.name" class="card-padded">
                             <dt class="truncate text-sm font-medium text-gray-500">
                                 <component :is="item.icon" class="h-5 w-5 text-gray-400 inline-block mr-1.5 align-text-bottom" aria-hidden="true" />
                                 {{ item.name }}
@@ -102,16 +102,12 @@ const maxStatusCount = computed(() => Math.max(1, ...props.taskStatusBreakdown.m
                 </div>
 
                 <!-- AI Insight -->
-                <div class="bg-white overflow-hidden shadow-sm rounded-lg p-6">
+                <div class="card-padded">
                     <div class="flex items-center justify-between gap-3 flex-wrap">
                         <h3 class="text-sm font-semibold text-gray-700 flex items-center gap-1.5">
-                            <SparklesIcon class="h-4 w-4 text-gray-400" /> AI Insight
+                            <SparklesIcon class="h-4 w-4 text-brand-500" /> AI Insight
                         </h3>
-                        <button
-                            @click="generateInsight"
-                            :disabled="insightLoading"
-                            class="inline-flex items-center px-3 py-1.5 bg-indigo-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-indigo-500 disabled:opacity-50"
-                        >
+                        <button @click="generateInsight" :disabled="insightLoading" class="btn-primary btn-sm">
                             {{ insightLoading ? 'Membuat...' : (insight ? 'Buat Ulang' : 'Buat Insight') }}
                         </button>
                     </div>
@@ -124,11 +120,11 @@ const maxStatusCount = computed(() => Math.max(1, ...props.taskStatusBreakdown.m
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
                     <!-- Volume Rapat -->
-                    <div class="bg-white overflow-hidden shadow-sm rounded-lg p-6">
+                    <div class="card-padded">
                         <h3 class="text-sm font-semibold text-gray-700 mb-4 flex items-center gap-1.5">
                             <ChartBarIcon class="h-4 w-4 text-gray-400" /> Volume Rapat (8 Minggu Terakhir)
                         </h3>
-                        <div v-if="weeklyMeetings.every(w => w.count === 0)" class="text-sm text-gray-400 py-10 text-center">Belum ada data rapat.</div>
+                        <div v-if="weeklyMeetings.every(w => w.count === 0)" class="empty-state">Belum ada data rapat.</div>
                         <div v-else class="flex items-end gap-2 h-40">
                             <div v-for="week in weeklyMeetings" :key="week.label" class="flex-1 flex flex-col items-center justify-end h-full group relative">
                                 <span class="text-xs text-gray-500 mb-1 opacity-0 group-hover:opacity-100 transition-opacity">{{ week.count }}</span>
@@ -143,11 +139,11 @@ const maxStatusCount = computed(() => Math.max(1, ...props.taskStatusBreakdown.m
                     </div>
 
                     <!-- Distribusi Status Task -->
-                    <div class="bg-white overflow-hidden shadow-sm rounded-lg p-6">
+                    <div class="card-padded">
                         <h3 class="text-sm font-semibold text-gray-700 mb-4 flex items-center gap-1.5">
                             <ChartBarIcon class="h-4 w-4 text-gray-400" /> Distribusi Status Task
                         </h3>
-                        <div v-if="taskStatusBreakdown.every(s => s.count === 0)" class="text-sm text-gray-400 py-10 text-center">Belum ada data task.</div>
+                        <div v-if="taskStatusBreakdown.every(s => s.count === 0)" class="empty-state">Belum ada data task.</div>
                         <div v-else class="space-y-2.5">
                             <div v-for="s in taskStatusBreakdown" :key="s.status" class="flex items-center gap-2">
                                 <span class="w-24 text-xs text-gray-500 shrink-0">{{ s.status }}</span>
@@ -167,46 +163,45 @@ const maxStatusCount = computed(() => Math.max(1, ...props.taskStatusBreakdown.m
                 <!-- Daftar Rapat Terbaru -->
                 <div>
                      <h3 class="text-base font-semibold leading-6 text-gray-900 mb-5">Rapat Terbaru</h3>
-                     <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
-                        <div class="overflow-x-auto">
-                            <table class="min-w-full divide-y divide-gray-200">
-                                <thead class="bg-gray-50">
-                                    <tr>
-                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Judul Rapat</th>
-                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tanggal</th>
-                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                                        <th scope="col" class="relative px-6 py-3">
-                                            <span class="sr-only">Aksi</span>
-                                        </th>
-                                    </tr>
-                                </thead>
-                                <tbody class="bg-white divide-y divide-gray-200">
-                                    <tr v-for="meeting in recentMeetings" :key="meeting.id">
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{ meeting.title }}</td>
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ formatDate(meeting.date) }}</td>
-                                        <td class="px-6 py-4 whitespace-nowrap">
-                                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full"
-                                                  :class="{
-                                                    'bg-blue-100 text-blue-800': meeting.status === 'Dijadwalkan',
-                                                    'bg-yellow-100 text-yellow-800': meeting.status === 'Memproses',
-                                                    'bg-green-100 text-green-800': meeting.status === 'Selesai Diproses',
-                                                    'bg-red-100 text-red-800': meeting.status === 'Gagal'
-                                                  }">
-                                                {{ meeting.status }}
-                                            </span>
-                                        </td>
-                                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                            <Link :href="route('meetings.show', meeting.id)" class="text-indigo-600 hover:text-indigo-900">Lihat Detail</Link>
-                                        </td>
-                                    </tr>
-                                    <tr v-if="recentMeetings.length === 0">
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500" colspan="4">
-                                            Belum ada rapat yang dijadwalkan.
-                                        </td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
+                     <div class="table-wrap">
+                        <table class="table-base">
+                            <thead class="table-head">
+                                <tr>
+                                    <th scope="col" class="table-head-cell">Judul Rapat</th>
+                                    <th scope="col" class="table-head-cell">Tanggal</th>
+                                    <th scope="col" class="table-head-cell">Status</th>
+                                    <th scope="col" class="relative px-6 py-3">
+                                        <span class="sr-only">Aksi</span>
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody class="table-body">
+                                <tr v-for="meeting in recentMeetings" :key="meeting.id" class="table-row-hover">
+                                    <td class="table-cell whitespace-nowrap font-medium text-gray-900">{{ meeting.title }}</td>
+                                    <td class="table-cell whitespace-nowrap">{{ formatDate(meeting.date) }}</td>
+                                    <td class="table-cell whitespace-nowrap">
+                                        <span
+                                            :class="{
+                                                'badge-blue': meeting.status === 'Dijadwalkan',
+                                                'badge-yellow': meeting.status === 'Memproses',
+                                                'badge-green': meeting.status === 'Selesai Diproses',
+                                                'badge-red': meeting.status === 'Gagal',
+                                            }"
+                                        >
+                                            {{ meeting.status }}
+                                        </span>
+                                    </td>
+                                    <td class="table-cell whitespace-nowrap text-right font-medium">
+                                        <Link :href="route('meetings.show', meeting.id)" class="btn-link">Lihat Detail</Link>
+                                    </td>
+                                </tr>
+                                <tr v-if="recentMeetings.length === 0">
+                                    <td class="empty-state" colspan="4">
+                                        Belum ada rapat yang dijadwalkan.
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
                      </div>
                 </div>
 

@@ -31,14 +31,14 @@ const formatDate = (dateString) => {
 
     <AuthenticatedLayout>
         <template #header>
-            <h2 class="font-semibold text-xl text-gray-800 leading-tight">Heatmap Task</h2>
+            <h2 class="page-heading">Heatmap Task</h2>
         </template>
 
-        <div class="py-12">
-            <div class="max-w-5xl mx-auto sm:px-6 lg:px-8">
+        <div class="page-shell">
+            <div class="page-container max-w-5xl">
                 <AnalyticsNav />
 
-                <div class="bg-white overflow-hidden shadow-sm rounded-lg p-6">
+                <div class="card-padded">
                     <p class="text-sm text-gray-500 mb-4">Jumlah Task yang dibuat per hari, 12 minggu terakhir.</p>
 
                     <div class="overflow-x-auto">

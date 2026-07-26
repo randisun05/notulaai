@@ -48,87 +48,85 @@ const confirmDelete = (meetingId) => {
     <AuthenticatedLayout>
         <template #header>
             <div class="flex justify-between items-center">
-                <h2 class="font-semibold text-xl text-gray-800 leading-tight">Indeks Rapat</h2>
-                <Link :href="route('meetings.create')" as="button" class="inline-flex items-center px-4 py-2 bg-gray-800 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-gray-700 focus:bg-gray-700 active:bg-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition ease-in-out duration-150">
-                    Jadwalkan Rapat Baru
+                <div>
+                    <h2 class="page-heading">Indeks Rapat</h2>
+                    <p class="page-subheading">Kelola dan cari seluruh riwayat rapat unit Anda.</p>
+                </div>
+                <Link :href="route('meetings.create')" as="button" class="btn-primary">
+                    + Jadwalkan Rapat
                 </Link>
             </div>
         </template>
 
-        <div class="py-12">
-            <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
-                <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
-                    <div class="p-6 text-gray-900">
+        <div class="page-shell">
+            <div class="page-container">
+                <div class="card-padded">
 
-                        <!-- Search Bar -->
-                        <div class="mb-6">
-                            <input
-                                type="text"
-                                v-model="search"
-                                placeholder="Cari berdasarkan judul, agenda, atau isi notula..."
-                                class="block w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm"
-                            />
-                        </div>
-
-                        <!-- Meja Rapat -->
-                        <div class="overflow-x-auto">
-                            <table class="min-w-full divide-y divide-gray-200">
-                                <thead class="bg-gray-50">
-                                    <tr>
-                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Judul</th>
-                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tanggal</th>
-                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Unit</th>
-                                        <th scope="col" class="relative px-6 py-3">
-                                            <span class="sr-only">Aksi</span>
-                                        </th>
-                                    </tr>
-                                </thead>
-                                <tbody class="bg-white divide-y divide-gray-200">
-                                    <tr v-if="meetings.data.length === 0">
-                                        <td colspan="5" class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">
-                                            Tidak ada rapat ditemukan.
-                                        </td>
-                                    </tr>
-                                    <tr v-for="meeting in meetings.data" :key="meeting.id">
-                                        <td class="px-6 py-4 whitespace-nowrap">
-                                            <Link :href="route('meetings.show', meeting.id)" class="text-sm font-medium text-indigo-600 hover:text-indigo-900">
-                                                {{ meeting.title }}
-                                            </Link>
-                                        </td>
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                            {{ formattedDate(meeting.date) }}
-                                        </td>
-                                        <td class="px-6 py-4 whitespace-nowrap">
-                                            <span :class="{
-                                                'bg-blue-100 text-blue-800': meeting.status === 'Dijadwalkan',
-                                                'bg-yellow-100 text-yellow-800': meeting.status === 'Memproses',
-                                                'bg-green-100 text-green-800': meeting.status === 'Selesai Diproses',
-                                                'bg-red-100 text-red-800': meeting.status === 'Gagal'
-                                            }" class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium">
-                                                {{ meeting.status }}
-                                            </span>
-                                        </td>
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                            {{ meeting.unit ? meeting.unit.name : 'N/A' }}
-                                        </td>
-                                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                            <Link :href="route('meetings.show', meeting.id)" class="text-indigo-600 hover:text-indigo-900">Lihat</Link>
-                                            <button @click.prevent="confirmDelete(meeting.id)" class="ml-4 text-red-600 hover:text-red-900">
-                                                Hapus
-                                            </button>
-                                        </td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
-
-                        <!-- Pagination -->
-                        <div class="mt-6" v-if="meetings.links.length > 0">
-                            <Pagination :links="meetings.links" />
-                        </div>
-
+                    <div class="mb-6">
+                        <input
+                            type="text"
+                            v-model="search"
+                            placeholder="Cari berdasarkan judul, agenda, atau isi notula..."
+                            class="form-input"
+                        />
                     </div>
+
+                    <div class="table-wrap">
+                        <table class="table-base">
+                            <thead class="table-head">
+                                <tr>
+                                    <th scope="col" class="table-head-cell">Judul</th>
+                                    <th scope="col" class="table-head-cell">Tanggal</th>
+                                    <th scope="col" class="table-head-cell">Status</th>
+                                    <th scope="col" class="table-head-cell">Unit</th>
+                                    <th scope="col" class="relative px-6 py-3">
+                                        <span class="sr-only">Aksi</span>
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody class="table-body">
+                                <tr v-if="meetings.data.length === 0">
+                                    <td colspan="5" class="empty-state">
+                                        Tidak ada rapat ditemukan.
+                                    </td>
+                                </tr>
+                                <tr v-for="meeting in meetings.data" :key="meeting.id" class="table-row-hover">
+                                    <td class="table-cell whitespace-nowrap">
+                                        <Link :href="route('meetings.show', meeting.id)" class="font-medium text-brand-600 hover:text-brand-800">
+                                            {{ meeting.title }}
+                                        </Link>
+                                    </td>
+                                    <td class="table-cell whitespace-nowrap">
+                                        {{ formattedDate(meeting.date) }}
+                                    </td>
+                                    <td class="table-cell whitespace-nowrap">
+                                        <span :class="{
+                                            'badge-blue': meeting.status === 'Dijadwalkan',
+                                            'badge-yellow': meeting.status === 'Memproses',
+                                            'badge-green': meeting.status === 'Selesai Diproses',
+                                            'badge-red': meeting.status === 'Gagal',
+                                        }">
+                                            {{ meeting.status }}
+                                        </span>
+                                    </td>
+                                    <td class="table-cell whitespace-nowrap">
+                                        {{ meeting.unit ? meeting.unit.name : 'N/A' }}
+                                    </td>
+                                    <td class="table-cell whitespace-nowrap text-right font-medium">
+                                        <Link :href="route('meetings.show', meeting.id)" class="btn-link">Lihat</Link>
+                                        <button @click.prevent="confirmDelete(meeting.id)" class="ml-4 text-red-600 hover:text-red-800 text-sm font-medium">
+                                            Hapus
+                                        </button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="mt-6" v-if="meetings.links.length > 0">
+                        <Pagination :links="meetings.links" />
+                    </div>
+
                 </div>
             </div>
         </div>

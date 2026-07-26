@@ -32,7 +32,7 @@ const formatDateTime = (value) => {
 </script>
 
 <template>
-    <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg p-6">
+    <div class="card-padded">
         <h3 class="text-lg font-semibold mb-4 text-gray-900">Aktivitas</h3>
 
         <p v-if="!meeting.activities?.length" class="text-sm text-gray-500">Belum ada aktivitas tercatat.</p>

@@ -62,7 +62,7 @@ const nextMonth = () => {
 const priorityColor = (priority) => ({
     Urgent: 'bg-red-100 text-red-700',
     High: 'bg-orange-100 text-orange-700',
-    Medium: 'bg-blue-100 text-blue-700',
+    Medium: 'bg-brand-100 text-brand-700',
     Low: 'bg-gray-100 text-gray-600',
 }[priority] || 'bg-gray-100 text-gray-600');
 </script>
@@ -73,21 +73,19 @@ const priorityColor = (priority) => ({
     <AuthenticatedLayout>
         <template #header>
             <div class="flex justify-between items-center">
-                <h2 class="font-semibold text-xl text-gray-800 leading-tight">Kalender Task</h2>
-                <Link :href="route('tasks.index')" class="inline-flex items-center px-4 py-2 bg-white border border-gray-300 rounded-md font-semibold text-xs text-gray-700 uppercase tracking-widest shadow-sm hover:bg-gray-50">
-                    Lihat Daftar
-                </Link>
+                <h2 class="page-heading">Kalender Task</h2>
+                <Link :href="route('tasks.index')" class="btn-secondary">Daftar</Link>
             </div>
         </template>
 
-        <div class="py-12">
-            <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
-                <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg p-6">
+        <div class="page-shell">
+            <div class="page-container">
+                <div class="card-padded">
 
                     <div class="flex items-center justify-between mb-4">
-                        <button @click="previousMonth" class="px-3 py-1.5 text-sm border border-gray-300 rounded-md hover:bg-gray-50">&larr; Sebelumnya</button>
+                        <button @click="previousMonth" class="btn-ghost">&larr; Sebelumnya</button>
                         <h3 class="text-base font-semibold text-gray-800">{{ MONTH_NAMES[month - 1] }} {{ year }}</h3>
-                        <button @click="nextMonth" class="px-3 py-1.5 text-sm border border-gray-300 rounded-md hover:bg-gray-50">Berikutnya &rarr;</button>
+                        <button @click="nextMonth" class="btn-ghost">Berikutnya &rarr;</button>
                     </div>
 
                     <div class="grid grid-cols-7 gap-px bg-gray-200 border border-gray-200 rounded-md overflow-hidden text-xs font-semibold text-gray-500 uppercase">
@@ -102,7 +100,7 @@ const priorityColor = (priority) => ({
                                 :class="['bg-white min-h-[6rem] p-1.5 align-top', !cell ? 'bg-gray-50' : '']"
                             >
                                 <template v-if="cell">
-                                    <div :class="['text-xs mb-1', isToday(cell.key) ? 'inline-flex items-center justify-center w-5 h-5 rounded-full bg-indigo-600 text-white font-semibold' : 'text-gray-500']">{{ cell.day }}</div>
+                                    <div :class="['text-xs mb-1', isToday(cell.key) ? 'inline-flex items-center justify-center w-5 h-5 rounded-full bg-brand-600 text-white font-semibold' : 'text-gray-500']">{{ cell.day }}</div>
                                     <div class="space-y-1">
                                         <Link
                                             v-for="task in (tasksByDate[cell.key] || [])"

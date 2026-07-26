@@ -43,7 +43,7 @@ const renderBody = (comment) => {
     (comment.mentioned_users || []).forEach((u) => {
         const escapedName = escapeHtml(u.name).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
         const re = new RegExp('@' + escapedName, 'gi');
-        html = html.replace(re, (match) => `<span class="text-indigo-600 font-medium">${match}</span>`);
+        html = html.replace(re, (match) => `<span class="text-brand-600 font-medium">${match}</span>`);
     });
 
     return html;
@@ -119,7 +119,7 @@ const formatDateTime = (value) => {
 </script>
 
 <template>
-    <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg p-6">
+    <div class="card-padded">
         <h3 class="text-lg font-semibold mb-4 text-gray-900">Forum Diskusi</h3>
 
         <form @submit.prevent="submitNewComment" class="mb-6">
@@ -127,7 +127,7 @@ const formatDateTime = (value) => {
                 v-model="newCommentForm.body"
                 rows="3"
                 placeholder="Tulis komentar tentang rapat ini... (ketik @Nama Lengkap untuk menyebut anggota unit)"
-                class="block w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm"
+                class="block w-full border-gray-300 focus:border-brand-500 focus:ring-brand-500 rounded-md shadow-sm"
             ></textarea>
             <InputError class="mt-2" :message="newCommentForm.errors.body" />
             <div class="mt-2 flex items-center justify-between gap-2">
@@ -156,7 +156,7 @@ const formatDateTime = (value) => {
                 </div>
 
                 <div v-if="editingId === comment.id" class="mt-2">
-                    <textarea v-model="editForm.body" rows="2" class="block w-full text-sm border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm"></textarea>
+                    <textarea v-model="editForm.body" rows="2" class="block w-full text-sm border-gray-300 focus:border-brand-500 focus:ring-brand-500 rounded-md shadow-sm"></textarea>
                     <InputError class="mt-1" :message="editForm.errors.body" />
                     <div class="mt-2 flex gap-2">
                         <PrimaryButton :disabled="editForm.processing" @click="submitEdit(comment)">Simpan</PrimaryButton>
@@ -167,7 +167,7 @@ const formatDateTime = (value) => {
 
                 <ul v-if="comment.attachments?.length" class="mt-2 space-y-1">
                     <li v-for="file in comment.attachments" :key="file.id">
-                        <a :href="`/storage/${file.file_path}`" target="_blank" class="text-xs text-indigo-600 hover:text-indigo-800 underline">
+                        <a :href="`/storage/${file.file_path}`" target="_blank" class="text-xs text-brand-600 hover:text-brand-800 underline">
                             📎 {{ file.file_name }} <span class="text-gray-400">({{ formatFileSize(file.file_size) }})</span>
                         </a>
                     </li>
@@ -178,7 +178,7 @@ const formatDateTime = (value) => {
                         v-for="r in reactionSummary(comment)"
                         :key="r.emoji"
                         @click="toggleReaction(comment, r.emoji)"
-                        :class="['inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs border', r.reactedByMe ? 'bg-indigo-50 border-indigo-300 text-indigo-700' : 'border-gray-200 text-gray-500 hover:bg-gray-50']"
+                        :class="['inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs border', r.reactedByMe ? 'bg-brand-50 border-brand-300 text-brand-700' : 'border-gray-200 text-gray-500 hover:bg-gray-50']"
                     >
                         <span>{{ r.emoji }}</span>
                         <span v-if="r.count > 0">{{ r.count }}</span>
@@ -186,7 +186,7 @@ const formatDateTime = (value) => {
                 </div>
 
                 <div class="mt-2 flex gap-3 text-xs">
-                    <button @click="startReply(comment.id)" class="text-indigo-600 hover:text-indigo-800 font-medium">Balas</button>
+                    <button @click="startReply(comment.id)" class="text-brand-600 hover:text-brand-800 font-medium">Balas</button>
                     <template v-if="canManage(comment) && editingId !== comment.id">
                         <button @click="startEdit(comment)" class="text-gray-500 hover:text-gray-700">Edit</button>
                         <button @click="deleteComment(comment)" class="text-red-500 hover:text-red-700">Hapus</button>
@@ -194,7 +194,7 @@ const formatDateTime = (value) => {
                 </div>
 
                 <form v-if="replyingTo === comment.id" @submit.prevent="submitReply" class="mt-3 ml-6">
-                    <textarea v-model="replyForm.body" rows="2" placeholder="Tulis balasan..." class="block w-full text-sm border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm"></textarea>
+                    <textarea v-model="replyForm.body" rows="2" placeholder="Tulis balasan..." class="block w-full text-sm border-gray-300 focus:border-brand-500 focus:ring-brand-500 rounded-md shadow-sm"></textarea>
                     <InputError class="mt-1" :message="replyForm.errors.body" />
                     <input
                         ref="replyFileInput"
@@ -217,7 +217,7 @@ const formatDateTime = (value) => {
                         </div>
 
                         <div v-if="editingId === reply.id" class="mt-1">
-                            <textarea v-model="editForm.body" rows="2" class="block w-full text-sm border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm"></textarea>
+                            <textarea v-model="editForm.body" rows="2" class="block w-full text-sm border-gray-300 focus:border-brand-500 focus:ring-brand-500 rounded-md shadow-sm"></textarea>
                             <div class="mt-2 flex gap-2">
                                 <PrimaryButton :disabled="editForm.processing" @click="submitEdit(reply)">Simpan</PrimaryButton>
                                 <SecondaryButton @click="cancelEdit">Batal</SecondaryButton>
@@ -227,7 +227,7 @@ const formatDateTime = (value) => {
 
                         <ul v-if="reply.attachments?.length" class="mt-2 space-y-1">
                             <li v-for="file in reply.attachments" :key="file.id">
-                                <a :href="`/storage/${file.file_path}`" target="_blank" class="text-xs text-indigo-600 hover:text-indigo-800 underline">
+                                <a :href="`/storage/${file.file_path}`" target="_blank" class="text-xs text-brand-600 hover:text-brand-800 underline">
                                     📎 {{ file.file_name }} <span class="text-gray-400">({{ formatFileSize(file.file_size) }})</span>
                                 </a>
                             </li>
@@ -238,7 +238,7 @@ const formatDateTime = (value) => {
                                 v-for="r in reactionSummary(reply)"
                                 :key="r.emoji"
                                 @click="toggleReaction(reply, r.emoji)"
-                                :class="['inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs border', r.reactedByMe ? 'bg-indigo-50 border-indigo-300 text-indigo-700' : 'border-gray-200 text-gray-500 hover:bg-gray-50']"
+                                :class="['inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs border', r.reactedByMe ? 'bg-brand-50 border-brand-300 text-brand-700' : 'border-gray-200 text-gray-500 hover:bg-gray-50']"
                             >
                                 <span>{{ r.emoji }}</span>
                                 <span v-if="r.count > 0">{{ r.count }}</span>

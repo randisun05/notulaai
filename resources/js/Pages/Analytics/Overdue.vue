@@ -33,22 +33,22 @@ const priorityColor = (priority) => ({
     <AuthenticatedLayout>
         <template #header>
             <div class="flex justify-between items-center">
-                <h2 class="font-semibold text-xl text-gray-800 leading-tight">Overdue Analysis</h2>
-                <a :href="route('tasks.export.pdf') + '?overdue=1'" class="inline-flex items-center px-4 py-2 bg-white border border-gray-300 rounded-md font-semibold text-xs text-gray-700 uppercase tracking-widest shadow-sm hover:bg-gray-50">
+                <h2 class="page-heading">Overdue Analysis</h2>
+                <a :href="route('tasks.export.pdf') + '?overdue=1'" class="btn-secondary">
                     Export PDF
                 </a>
             </div>
         </template>
 
-        <div class="py-12">
-            <div class="max-w-5xl mx-auto sm:px-6 lg:px-8">
+        <div class="page-shell">
+            <div class="page-container max-w-5xl">
                 <AnalyticsNav />
 
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
                     <!-- Distribusi umur overdue -->
-                    <div class="bg-white overflow-hidden shadow-sm rounded-lg p-6">
+                    <div class="card-padded">
                         <h3 class="text-sm font-semibold text-gray-700 mb-4">Distribusi Usia Overdue</h3>
-                        <div v-if="overdueTasks.length === 0" class="text-sm text-gray-400 py-6 text-center">Tidak ada task overdue. 🎉</div>
+                        <div v-if="overdueTasks.length === 0" class="empty-state py-6">Tidak ada task overdue. 🎉</div>
                         <div v-else class="space-y-2.5">
                             <div v-for="b in ageBuckets" :key="b.label" class="flex items-center gap-2">
                                 <span class="w-20 text-xs text-gray-500 shrink-0">{{ b.label }}</span>
@@ -61,9 +61,9 @@ const priorityColor = (priority) => ({
                     </div>
 
                     <!-- Breakdown per unit (superadmin) -->
-                    <div v-if="isSuperadmin" class="bg-white overflow-hidden shadow-sm rounded-lg p-6">
+                    <div v-if="isSuperadmin" class="card-padded">
                         <h3 class="text-sm font-semibold text-gray-700 mb-4">Overdue per Unit</h3>
-                        <div v-if="byUnit.length === 0" class="text-sm text-gray-400 py-6 text-center">Tidak ada data.</div>
+                        <div v-if="byUnit.length === 0" class="empty-state py-6">Tidak ada data.</div>
                         <ul v-else class="space-y-2">
                             <li v-for="u in byUnit" :key="u.unit" class="flex items-center justify-between text-sm">
                                 <span class="text-gray-600">{{ u.unit }}</span>
@@ -73,38 +73,36 @@ const priorityColor = (priority) => ({
                     </div>
                 </div>
 
-                <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
-                    <div class="overflow-x-auto">
-                        <table class="min-w-full divide-y divide-gray-200">
-                            <thead class="bg-gray-50">
-                                <tr>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Task</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">PIC</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Unit</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Prioritas</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Deadline</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Terlambat</th>
-                                </tr>
-                            </thead>
-                            <tbody class="bg-white divide-y divide-gray-200">
-                                <tr v-if="overdueTasks.length === 0">
-                                    <td colspan="6" class="px-6 py-4 text-center text-sm text-gray-500">Tidak ada task overdue. 🎉</td>
-                                </tr>
-                                <tr v-for="task in overdueTasks" :key="task.id">
-                                    <td class="px-6 py-4">
-                                        <Link :href="route('tasks.show', task.id)" class="text-sm font-medium text-indigo-600 hover:text-indigo-900">{{ task.title }}</Link>
-                                    </td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ task.assignee || 'Belum ditentukan' }}</td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ task.unit || '-' }}</td>
-                                    <td class="px-6 py-4 whitespace-nowrap">
-                                        <span :class="['text-xs px-2 py-0.5 rounded-full', priorityColor(task.priority)]">{{ task.priority }}</span>
-                                    </td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ task.deadline }}</td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm" :class="severityColor(task.days_overdue)">{{ task.days_overdue }} hari</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
+                <div class="table-wrap">
+                    <table class="table-base">
+                        <thead class="table-head">
+                            <tr>
+                                <th class="table-head-cell">Task</th>
+                                <th class="table-head-cell">PIC</th>
+                                <th class="table-head-cell">Unit</th>
+                                <th class="table-head-cell">Prioritas</th>
+                                <th class="table-head-cell">Deadline</th>
+                                <th class="table-head-cell">Terlambat</th>
+                            </tr>
+                        </thead>
+                        <tbody class="table-body">
+                            <tr v-if="overdueTasks.length === 0">
+                                <td colspan="6" class="empty-state">Tidak ada task overdue. 🎉</td>
+                            </tr>
+                            <tr v-for="task in overdueTasks" :key="task.id" class="table-row-hover">
+                                <td class="table-cell">
+                                    <Link :href="route('tasks.show', task.id)" class="font-medium text-brand-600 hover:text-brand-800">{{ task.title }}</Link>
+                                </td>
+                                <td class="table-cell whitespace-nowrap">{{ task.assignee || 'Belum ditentukan' }}</td>
+                                <td class="table-cell whitespace-nowrap">{{ task.unit || '-' }}</td>
+                                <td class="table-cell whitespace-nowrap">
+                                    <span :class="['text-xs px-2 py-0.5 rounded-full', priorityColor(task.priority)]">{{ task.priority }}</span>
+                                </td>
+                                <td class="table-cell whitespace-nowrap">{{ task.deadline }}</td>
+                                <td class="table-cell whitespace-nowrap" :class="severityColor(task.days_overdue)">{{ task.days_overdue }} hari</td>
+                            </tr>
+                        </tbody>
+                    </table>
                 </div>
 
             </div>

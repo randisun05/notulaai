@@ -62,60 +62,58 @@ const submitDelete = () => {
 
     <AuthenticatedLayout>
         <template #header>
-            <h2 class="font-semibold text-xl text-gray-800 leading-tight">Webhooks</h2>
+            <h2 class="page-heading">Webhooks</h2>
         </template>
 
-        <div class="py-12">
-            <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
-                <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
-                    <div class="p-6 text-gray-900">
-                        <p class="text-sm text-gray-500 mb-4">
-                            Kirim notifikasi HTTP POST otomatis ke sistem eksternal saat event tertentu terjadi (task dibuat,
-                            status berubah, disetujui, atau notula selesai diproses). Setiap payload ditandatangani HMAC-SHA256
-                            memakai secret webhook (header <code>X-Notula-Signature</code>).
-                        </p>
+        <div class="page-shell">
+            <div class="page-container">
+                <div class="card-padded">
+                    <p class="text-sm text-gray-500 mb-4">
+                        Kirim notifikasi HTTP POST otomatis ke sistem eksternal saat event tertentu terjadi (task dibuat,
+                        status berubah, disetujui, atau notula selesai diproses). Setiap payload ditandatangani HMAC-SHA256
+                        memakai secret webhook (header <code>X-Notula-Signature</code>).
+                    </p>
 
-                        <div class="flex justify-end mb-6">
-                            <PrimaryButton @click="showCreateModal = true">Tambah Webhook</PrimaryButton>
-                        </div>
+                    <div class="flex justify-end mb-6">
+                        <PrimaryButton @click="showCreateModal = true">+ Tambah Webhook</PrimaryButton>
+                    </div>
 
-                        <div class="overflow-x-auto">
-                            <table class="min-w-full divide-y divide-gray-200">
-                                <thead class="bg-gray-50">
-                                    <tr>
-                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nama</th>
-                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Unit</th>
-                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">URL</th>
-                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Events</th>
-                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Secret</th>
-                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                                        <th class="relative px-6 py-3"><span class="sr-only">Aksi</span></th>
-                                    </tr>
-                                </thead>
-                                <tbody class="bg-white divide-y divide-gray-200">
-                                    <tr v-if="webhooks.length === 0">
-                                        <td colspan="7" class="px-6 py-4 text-center text-sm text-gray-500">Belum ada webhook.</td>
-                                    </tr>
-                                    <tr v-for="webhook in webhooks" :key="webhook.id">
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{ webhook.name }}</td>
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ webhook.unit?.name }}</td>
-                                        <td class="px-6 py-4 text-sm text-gray-500 max-w-xs truncate">{{ webhook.url }}</td>
-                                        <td class="px-6 py-4 text-sm text-gray-500">
-                                            <span v-for="event in webhook.events" :key="event" class="inline-block text-xs px-1.5 py-0.5 mr-1 mb-1 rounded bg-gray-100 font-mono">{{ event }}</span>
-                                        </td>
-                                        <td class="px-6 py-4 text-xs text-gray-400 font-mono select-all">{{ webhook.secret }}</td>
-                                        <td class="px-6 py-4 whitespace-nowrap">
-                                            <button @click="toggleActive(webhook)" :class="['text-xs px-2 py-0.5 rounded-full', webhook.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500']">
-                                                {{ webhook.is_active ? 'Aktif' : 'Nonaktif' }}
-                                            </button>
-                                        </td>
-                                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm">
-                                            <button @click="openDeleteModal(webhook)" class="text-red-600 hover:text-red-900">Hapus</button>
-                                        </td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
+                    <div class="table-wrap">
+                        <table class="table-base">
+                            <thead class="table-head">
+                                <tr>
+                                    <th class="table-head-cell">Nama</th>
+                                    <th class="table-head-cell">Unit</th>
+                                    <th class="table-head-cell">URL</th>
+                                    <th class="table-head-cell">Events</th>
+                                    <th class="table-head-cell">Secret</th>
+                                    <th class="table-head-cell">Status</th>
+                                    <th class="relative px-6 py-3"><span class="sr-only">Aksi</span></th>
+                                </tr>
+                            </thead>
+                            <tbody class="table-body">
+                                <tr v-if="webhooks.length === 0">
+                                    <td colspan="7" class="empty-state">Belum ada webhook.</td>
+                                </tr>
+                                <tr v-for="webhook in webhooks" :key="webhook.id" class="table-row-hover">
+                                    <td class="table-cell whitespace-nowrap font-medium text-gray-900">{{ webhook.name }}</td>
+                                    <td class="table-cell whitespace-nowrap">{{ webhook.unit?.name }}</td>
+                                    <td class="table-cell max-w-xs truncate">{{ webhook.url }}</td>
+                                    <td class="table-cell">
+                                        <span v-for="event in webhook.events" :key="event" class="badge-gray font-mono mr-1 mb-1">{{ event }}</span>
+                                    </td>
+                                    <td class="table-cell text-xs text-gray-400 font-mono select-all">{{ webhook.secret }}</td>
+                                    <td class="table-cell whitespace-nowrap">
+                                        <button @click="toggleActive(webhook)" :class="webhook.is_active ? 'badge-green' : 'badge-gray'">
+                                            {{ webhook.is_active ? 'Aktif' : 'Nonaktif' }}
+                                        </button>
+                                    </td>
+                                    <td class="table-cell whitespace-nowrap text-right">
+                                        <button @click="openDeleteModal(webhook)" class="text-red-600 hover:text-red-800 font-medium">Hapus</button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             </div>
@@ -133,7 +131,7 @@ const submitDelete = () => {
 
                 <div class="mt-4">
                     <InputLabel for="unit_id" value="Unit" />
-                    <select id="unit_id" v-model="form.unit_id" class="mt-1 block w-full border-gray-300 rounded-md focus:border-indigo-500 focus:ring-indigo-500" required>
+                    <select id="unit_id" v-model="form.unit_id" class="form-select mt-1" required>
                         <option value="" disabled>Pilih unit</option>
                         <option v-for="unit in units" :key="unit.id" :value="unit.id">{{ unit.name }}</option>
                     </select>
@@ -150,7 +148,7 @@ const submitDelete = () => {
                     <InputLabel value="Events" />
                     <div class="mt-1 space-y-1">
                         <label v-for="event in availableEvents" :key="event" class="flex items-center gap-2 text-sm">
-                            <input type="checkbox" :value="event" v-model="form.events" class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500" />
+                            <input type="checkbox" :value="event" v-model="form.events" class="rounded border-gray-300 text-brand-600 focus:ring-brand-500" />
                             <span class="font-mono">{{ event }}</span>
                         </label>
                     </div>

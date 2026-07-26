@@ -204,11 +204,11 @@ const deleteMeeting = () => {
     <AuthenticatedLayout>
         <template #header>
             <div class="flex flex-wrap gap-4 justify-between items-center">
-                <h2 class="font-semibold text-xl text-gray-800 leading-tight">{{ meeting.title }}</h2>
+                <h2 class="page-heading">{{ meeting.title }}</h2>
 
-                <div class="flex items-center space-x-2">
+                <div class="flex items-center gap-2">
                      <!-- Tombol Edit -->
-                    <Link v-if="meeting.status === 'Dijadwalkan'" :href="route('meetings.edit', meeting.id)" as="button" class="inline-flex items-center px-4 py-2 bg-white border border-gray-300 rounded-md font-semibold text-xs text-gray-700 uppercase tracking-widest shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-25 transition ease-in-out duration-150">
+                    <Link v-if="meeting.status === 'Dijadwalkan'" :href="route('meetings.edit', meeting.id)" as="button" class="btn-secondary">
                         Edit Rapat
                     </Link>
                     <!-- Tombol Hapus (Hanya untuk Admin / Super Admin) -->
@@ -223,16 +223,14 @@ const deleteMeeting = () => {
             </div>
         </template>
 
-        <div class="py-12">
-            <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
+        <div class="page-shell">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 
-                <!-- ... (Sisa template tidak berubah: flash message, info rapat, tab notula, form input, dll.) ... -->
-
-                <div v-if="flashSuccess" class="mb-4 bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative" role="alert">
+                <div v-if="flashSuccess" class="alert-success mb-4">
                     <span class="block sm:inline">{{ flashSuccess }}</span>
                 </div>
 
-                <div v-if="flashError" class="mb-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
+                <div v-if="flashError" class="alert-error mb-4" role="alert">
                     <span class="block sm:inline">{{ flashError }}</span>
                 </div>
 
@@ -252,7 +250,7 @@ const deleteMeeting = () => {
                  </div>
 
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                    <div class="lg:col-span-2 bg-white overflow-hidden shadow-sm sm:rounded-lg">
+                    <div class="lg:col-span-2 card">
                         <div v-if="meeting.status === 'Selesai Diproses'" class="p-6">
 
                             <!-- Audio Player Section -->
@@ -309,8 +307,8 @@ const deleteMeeting = () => {
                                                 <span v-if="item.deadline"> &middot; Deadline: {{ item.deadline }}</span>
                                             </p>
                                         </div>
-                                        <span v-if="item.converted_to_task" class="shrink-0 text-xs font-medium text-green-700 bg-green-100 px-2 py-1 rounded-full">Sudah jadi Task</span>
-                                        <button v-else @click="convertToTask(item)" class="shrink-0 text-xs font-medium text-indigo-700 bg-indigo-50 hover:bg-indigo-100 px-3 py-1.5 rounded-md">Jadikan Task</button>
+                                        <span v-if="item.converted_to_task" class="badge-green shrink-0">Sudah jadi Task</span>
+                                        <button v-else @click="convertToTask(item)" class="shrink-0 text-xs font-medium text-brand-700 bg-brand-50 hover:bg-brand-100 px-3 py-1.5 rounded-md">Jadikan Task</button>
                                     </li>
                                 </ul>
                             </div>
@@ -320,7 +318,7 @@ const deleteMeeting = () => {
                                 <div class="flex flex-wrap items-end gap-3 mb-4">
                                     <div>
                                         <InputLabel for="email_purpose" value="Jenis Email" />
-                                        <select id="email_purpose" v-model="emailPurpose" class="mt-1 block w-56 border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm">
+                                        <select id="email_purpose" v-model="emailPurpose" class="mt-1 block w-56 border-gray-300 focus:border-brand-500 focus:ring-brand-500 rounded-md shadow-sm">
                                             <option v-for="(label, key) in emailPurposes" :key="key" :value="key">{{ label }}</option>
                                         </select>
                                     </div>
@@ -339,7 +337,7 @@ const deleteMeeting = () => {
                                     </div>
                                     <div>
                                         <InputLabel for="email_body" value="Isi Email (HTML)" />
-                                        <textarea id="email_body" v-model="emailDraft.body" rows="10" class="mt-1 block w-full font-mono text-xs border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm"></textarea>
+                                        <textarea id="email_body" v-model="emailDraft.body" rows="10" class="mt-1 block w-full font-mono text-xs border-gray-300 focus:border-brand-500 focus:ring-brand-500 rounded-md shadow-sm"></textarea>
                                         <InputError class="mt-2" :message="emailSendForm.errors.body" />
                                     </div>
                                     <div>
@@ -350,7 +348,7 @@ const deleteMeeting = () => {
                                         <InputLabel value="Kirim Ke" />
                                         <div class="mt-2 space-y-1 max-h-40 overflow-y-auto">
                                             <label v-for="u in unitUsers" :key="u.id" class="flex items-center gap-2 text-sm text-gray-700">
-                                                <input type="checkbox" :value="u.id" v-model="selectedRecipients" class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500" />
+                                                <input type="checkbox" :value="u.id" v-model="selectedRecipients" class="rounded border-gray-300 text-brand-600 focus:ring-brand-500" />
                                                 {{ u.name }} ({{ u.email }})
                                             </label>
                                         </div>
@@ -368,7 +366,7 @@ const deleteMeeting = () => {
                                 <div class="border border-gray-200 rounded-md p-4 h-80 overflow-y-auto space-y-3 mb-4 bg-gray-50">
                                     <p v-if="chatMessages.length === 0" class="text-sm text-gray-400 text-center mt-10">Belum ada percakapan. Silakan mulai bertanya di bawah.</p>
                                     <div v-for="msg in chatMessages" :key="msg.id" :class="msg.role === 'user' ? 'text-right' : 'text-left'">
-                                        <div :class="['inline-block max-w-[80%] px-3 py-2 rounded-lg text-sm', msg.role === 'user' ? 'bg-indigo-600 text-white' : 'bg-white border border-gray-200 text-gray-800']">
+                                        <div :class="['inline-block max-w-[80%] px-3 py-2 rounded-lg text-sm', msg.role === 'user' ? 'bg-brand-600 text-white' : 'bg-white border border-gray-200 text-gray-800']">
                                             {{ msg.content }}
                                         </div>
                                     </div>
@@ -401,7 +399,7 @@ const deleteMeeting = () => {
 
                             <form @submit.prevent="submitProcess">
                                 <div v-show="inputType === 'text'">
-                                    <textarea v-model="form.text_input" rows="10" placeholder="Ketik atau paste transkrip rapat di sini..." class="mt-1 block w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm"></textarea>
+                                    <textarea v-model="form.text_input" rows="10" placeholder="Ketik atau paste transkrip rapat di sini..." class="mt-1 block w-full border-gray-300 focus:border-brand-500 focus:ring-brand-500 rounded-md shadow-sm"></textarea>
                                     <InputError class="mt-2" :message="form.errors.text_input" />
                                 </div>
 
@@ -443,7 +441,7 @@ const deleteMeeting = () => {
 
                     <!-- Agenda & Peserta -->
                     <div class="lg:col-span-1">
-                        <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg p-6">
+                        <div class="card-padded">
                             <h3 class="text-lg font-semibold mb-4 text-gray-900">Detail Rapat</h3>
 
                             <div class="mb-6">
