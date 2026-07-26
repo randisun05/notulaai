@@ -2,10 +2,12 @@
 
 namespace App\Providers;
 
+use App\Models\ForumComment;
 use App\Models\Meeting;
 use App\Models\Task;
 use App\Models\Unit;
 use App\Models\User;
+use App\Policies\ForumCommentPolicy;
 use App\Policies\MeetingPolicy;
 use App\Policies\TaskPolicy;
 use App\Policies\UnitPolicy;
@@ -25,6 +27,7 @@ class AuthServiceProvider extends ServiceProvider
         Unit::class => UnitPolicy::class,
         Meeting::class => MeetingPolicy::class,
         Task::class => TaskPolicy::class,
+        ForumComment::class => ForumCommentPolicy::class,
     ];
 
     /**

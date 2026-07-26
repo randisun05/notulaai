@@ -5,6 +5,7 @@ import InputLabel from '@/Components/InputLabel.vue';
 import TextInput from '@/Components/TextInput.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import DangerButton from '@/Components/DangerButton.vue'; // <-- Import Tombol Merah
+import ForumSection from '@/Pages/Meetings/Partials/ForumSection.vue';
 import { Head, useForm, usePage, Link, router } from '@inertiajs/vue3';
 import { ref, computed } from 'vue';
 import axios from 'axios';
@@ -422,6 +423,10 @@ const deleteMeeting = () => {
                             </div>
                         </div>
                     </div>
+                </div>
+
+                <div class="mt-8">
+                    <ForumSection :meeting="meeting" />
                 </div>
 
             </div>

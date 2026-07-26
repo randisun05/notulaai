@@ -54,4 +54,12 @@ class Meeting extends Model
     {
         return $this->hasMany(MeetingChatMessage::class)->orderBy('created_at');
     }
+
+    /**
+     * Komentar forum tingkat atas (balasan diakses lewat relasi `replies` masing-masing komentar).
+     */
+    public function comments(): HasMany
+    {
+        return $this->hasMany(ForumComment::class)->whereNull('parent_id')->orderBy('created_at');
+    }
 }

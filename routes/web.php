@@ -13,6 +13,7 @@ use App\Http\Controllers\SettingController;
 use App\Http\Controllers\TaskController;
 use App\Http\Controllers\MeetingEmailController;
 use App\Http\Controllers\MeetingChatController;
+use App\Http\Controllers\ForumCommentController;
 
 Route::get('/', function () {
     return Inertia::render('Welcome', [
@@ -56,6 +57,11 @@ Route::middleware('auth')->group(function () {
     // Task Routes
     Route::get('/tasks', [TaskController::class, 'index'])->name('tasks.index');
     Route::patch('/tasks/{task}/status', [TaskController::class, 'updateStatus'])->name('tasks.update-status');
+
+    // Forum Routes
+    Route::post('/meetings/{meeting}/comments', [ForumCommentController::class, 'store'])->name('meetings.comments.store');
+    Route::put('/comments/{comment}', [ForumCommentController::class, 'update'])->name('comments.update');
+    Route::delete('/comments/{comment}', [ForumCommentController::class, 'destroy'])->name('comments.destroy');
 
 
       // ===============================================
