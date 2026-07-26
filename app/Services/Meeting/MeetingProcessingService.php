@@ -6,17 +6,22 @@ use App\Mail\MeetingSummary;
 use App\Models\Meeting;
 use App\Models\User;
 use App\Services\AI\AiManager;
+use App\Services\AI\AiRequestLogger;
+use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
+use Throwable;
 
 class MeetingProcessingService
 {
     private const AUDIO_EXTENSIONS = ['mp3', 'wav', 'm4a'];
     private const TEXT_EXTENSIONS = ['txt', 'md'];
 
-    public function __construct(private readonly AiManager $ai)
-    {
+    public function __construct(
+        private readonly AiManager $ai,
+        private readonly AiRequestLogger $logger,
+    ) {
     }
 
     public function process(Meeting $meeting): void
@@ -27,7 +32,7 @@ class MeetingProcessingService
 
         Log::info("Transkrip berhasil dibuat untuk Rapat ID: {$meeting->id}");
 
-        $summary = $this->summarize($transcript);
+        $summary = $this->summarize($meeting, $transcript);
 
         Log::info("Rangkuman berhasil dibuat untuk Rapat ID: {$meeting->id}");
 
@@ -51,11 +56,21 @@ class MeetingProcessingService
         $extension = strtolower(pathinfo($filePath, PATHINFO_EXTENSION));
 
         if (in_array($extension, self::AUDIO_EXTENSIONS)) {
-            $result = $this->ai->transcription()->transcribe(
-                absoluteFilePath: Storage::disk('public')->path($filePath),
-                fileName: basename($filePath),
-                language: 'Indonesian',
-            );
+            $provider = Config::get('ai.default_transcription_provider');
+            $fileName = basename($filePath);
+
+            try {
+                $result = $this->ai->transcription()->transcribe(
+                    absoluteFilePath: Storage::disk('public')->path($filePath),
+                    fileName: $fileName,
+                    language: 'Indonesian',
+                );
+            } catch (Throwable $e) {
+                $this->logger->logFailure('transcription', $provider, null, $fileName, $e->getMessage(), $meeting, $meeting->creator);
+                throw $e;
+            }
+
+            $this->logger->logSuccess('transcription', $provider, null, $fileName, $result->text, null, null, $result->durationMs, $meeting, $meeting->creator);
 
             return $result->text;
         }
@@ -73,13 +88,25 @@ class MeetingProcessingService
         throw new \RuntimeException("Tipe file tidak didukung: {$extension}");
     }
 
-    private function summarize(string $transcript): string
+    private function summarize(Meeting $meeting, string $transcript): string
     {
         $prompt = 'You are a helpful assistant that summarizes meeting transcripts. Create a summary in well-structured HTML format. '
             . 'Use headings (<h3>), unordered lists (<ul><li>) for key points, and bold tags (<b>) to highlight action items or names. '
             . 'Here is the transcript: ' . $transcript;
 
-        return $this->ai->text()->generate($prompt)->content;
+        $provider = Config::get('ai.default_text_provider');
+        $model = Config::get("ai.providers.{$provider}.model");
+
+        try {
+            $result = $this->ai->text()->generate($prompt);
+        } catch (Throwable $e) {
+            $this->logger->logFailure('text', $provider, $model, $prompt, $e->getMessage(), $meeting, $meeting->creator);
+            throw $e;
+        }
+
+        $this->logger->logSuccess('text', $provider, $model, $prompt, $result->content, $result->promptTokens, $result->completionTokens, $result->durationMs, $meeting, $meeting->creator);
+
+        return $result->content;
     }
 
     private function notifyUnit(Meeting $meeting): void
