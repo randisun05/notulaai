@@ -101,6 +101,7 @@ class TaskController extends Controller
             ]),
             'statuses' => Task::STATUSES,
             'unitUsers' => User::where('unit_id', $task->unit_id)->get(['id', 'name']),
+            'canApprove' => Auth::user()->can('approve', $task),
         ]);
     }
 
@@ -145,21 +146,71 @@ class TaskController extends Controller
     {
         $this->authorize('update', $task);
 
+        // "Done" hanya boleh dicapai lewat approve(), bukan lewat dropdown status
+        // biasa — supaya penyelesaian Task selalu melalui persetujuan.
+        $selectableStatuses = array_values(array_diff(Task::STATUSES, ['Done']));
+
         $validated = $request->validate([
-            'status' => ['required', Rule::in(Task::STATUSES)],
+            'status' => ['required', Rule::in($selectableStatuses)],
+        ], [
+            'status.in' => 'Status "Done" hanya bisa dicapai lewat persetujuan (ajukan status "Review" terlebih dahulu).',
         ]);
 
         $oldStatus = $task->status;
         $task->update($validated);
 
+        $activityType = $validated['status'] === 'Review' ? 'task.approval_requested' : 'task.status_changed';
+        $description = $validated['status'] === 'Review'
+            ? Auth::user()->name . " mengajukan Task \"{$task->title}\" untuk direview."
+            : Auth::user()->name . " mengubah status Task \"{$task->title}\" dari {$oldStatus} menjadi {$validated['status']}.";
+
+        $this->activityLogger->log($task->meeting, Auth::user(), $activityType, $description, $task);
+
+        return back()->with('success', 'Status task berhasil diperbarui.');
+    }
+
+    public function approve(Task $task)
+    {
+        $this->authorize('approve', $task);
+
+        if ($task->status !== 'Review') {
+            return back()->with('error', 'Task hanya bisa disetujui saat berstatus Review.');
+        }
+
+        $task->update(['status' => 'Done']);
+
         $this->activityLogger->log(
             $task->meeting,
             Auth::user(),
-            'task.status_changed',
-            Auth::user()->name . " mengubah status Task \"{$task->title}\" dari {$oldStatus} menjadi {$validated['status']}.",
+            'task.approved',
+            Auth::user()->name . " menyetujui Task \"{$task->title}\" sebagai selesai.",
             $task,
         );
 
-        return back()->with('success', 'Status task berhasil diperbarui.');
+        return back()->with('success', 'Task disetujui sebagai selesai.');
+    }
+
+    public function reject(Request $request, Task $task)
+    {
+        $this->authorize('approve', $task);
+
+        if ($task->status !== 'Review') {
+            return back()->with('error', 'Task hanya bisa ditolak saat berstatus Review.');
+        }
+
+        $validated = $request->validate([
+            'reason' => 'nullable|string|max:1000',
+        ]);
+
+        $task->update(['status' => 'In Progress']);
+
+        $description = Auth::user()->name . " menolak penyelesaian Task \"{$task->title}\", dikembalikan ke In Progress.";
+        if (!empty($validated['reason'])) {
+            $description .= " Alasan: {$validated['reason']}";
+        }
+
+        $this->activityLogger->log($task->meeting, Auth::user(), 'task.rejected', $description, $task);
+
+        return back()->with('success', 'Task dikembalikan untuk diperbaiki.');
     }
 }

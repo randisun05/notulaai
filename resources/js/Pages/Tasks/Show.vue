@@ -9,14 +9,30 @@ const props = defineProps({
     task: { type: Object, required: true },
     statuses: { type: Array, required: true },
     unitUsers: { type: Array, default: () => [] },
+    canApprove: { type: Boolean, default: false },
 });
 
 const page = usePage();
 const flashSuccess = computed(() => page.props.flash?.success);
 
+// "Done" hanya bisa dicapai lewat approve(), jadi tidak ditawarkan di dropdown biasa.
+const selectableStatuses = computed(() => props.statuses.filter((s) => s !== 'Done'));
+
 const updateStatus = (status) => {
     router.patch(route('tasks.update-status', props.task.id), { status }, {
         preserveScroll: true,
+    });
+};
+
+const approveTask = () => {
+    router.post(route('tasks.approve', props.task.id), {}, { preserveScroll: true });
+};
+
+const rejectForm = useForm({ reason: '' });
+const rejectTask = () => {
+    rejectForm.post(route('tasks.reject', props.task.id), {
+        preserveScroll: true,
+        onSuccess: () => rejectForm.reset(),
     });
 };
 
@@ -107,8 +123,23 @@ const priorityColor = (priority) => ({
                         <div class="mt-6 pt-6 border-t border-gray-100">
                             <label class="text-sm font-medium text-gray-500">Status</label>
                             <select :value="task.status" @change="updateStatus($event.target.value)" class="mt-1 block w-full sm:w-64 border-gray-300 rounded-md focus:border-indigo-500 focus:ring-indigo-500">
-                                <option v-for="status in statuses" :key="status" :value="status">{{ status }}</option>
+                                <option v-for="status in selectableStatuses" :key="status" :value="status">{{ status }}</option>
+                                <option v-if="task.status === 'Done'" value="Done">Done</option>
                             </select>
+                            <p v-if="task.status !== 'Done'" class="mt-1 text-xs text-gray-400">Untuk menandai selesai, ubah status ke "Review" lalu tunggu persetujuan.</p>
+                        </div>
+
+                        <div v-if="task.status === 'Review' && canApprove" class="mt-6 pt-6 border-t border-gray-100 bg-yellow-50 -mx-6 px-6 py-4">
+                            <h4 class="text-sm font-medium text-gray-700 mb-2">Task Menunggu Persetujuan</h4>
+                            <div class="flex flex-wrap items-start gap-2">
+                                <PrimaryButton @click="approveTask">Setujui &amp; Tandai Selesai</PrimaryButton>
+                                <div class="flex-1 min-w-[12rem]">
+                                    <input v-model="rejectForm.reason" type="text" placeholder="Alasan penolakan (opsional)" class="block w-full border-gray-300 rounded-md text-sm focus:border-indigo-500 focus:ring-indigo-500" />
+                                </div>
+                                <button @click="rejectTask" type="button" class="inline-flex items-center px-4 py-2 bg-white border border-red-300 rounded-md font-semibold text-xs text-red-700 uppercase tracking-widest hover:bg-red-50">
+                                    Tolak
+                                </button>
+                            </div>
                         </div>
 
                         <div class="mt-6 pt-6 border-t border-gray-100">

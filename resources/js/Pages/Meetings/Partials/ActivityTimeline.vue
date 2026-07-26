@@ -15,6 +15,10 @@ const ICONS = {
     'comment.replied': '↩️',
     'task.created': '📌',
     'task.status_changed': '🔄',
+    'task.disposed': '📤',
+    'task.approval_requested': '🙋',
+    'task.approved': '✅',
+    'task.rejected': '❌',
     'email.sent': '✉️',
 };
 

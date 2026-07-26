@@ -32,6 +32,16 @@ class TaskPolicy
         return $user->id === $task->assignee_id || $this->inScope($user, $task);
     }
 
+    /**
+     * Hanya admin/superadmin unit yang bersangkutan yang boleh menyetujui atau
+     * menolak Task yang statusnya "Review" — assignee sendiri tidak boleh
+     * menyetujui pekerjaannya sendiri.
+     */
+    public function approve(User $user, Task $task): bool
+    {
+        return ($user->hasRole('admin') || $user->hasRole('superadmin')) && $this->inScope($user, $task);
+    }
+
     private function inScope(User $user, Task $task): bool
     {
         return $user->hasRole('superadmin') || $task->unit_id === $user->unit_id;
