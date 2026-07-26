@@ -35,6 +35,9 @@ const showingNavigationDropdown = ref(false);
                                 <NavLink :href="route('meetings.index')" :active="route().current('meetings.*')">
                                     Indeks Rapat
                                 </NavLink>
+                                <NavLink :href="route('tasks.index')" :active="route().current('tasks.*')">
+                                    Task
+                                </NavLink>
 
 
                                 <template v-if="$page.props.auth.user.role === 'superadmin'">
@@ -135,6 +138,9 @@ const showingNavigationDropdown = ref(false);
                         </ResponsiveNavLink>
                         <ResponsiveNavLink :href="route('meetings.index')" :active="route().current('meetings.*')">
                             Indeks Rapat
+                        </ResponsiveNavLink>
+                        <ResponsiveNavLink :href="route('tasks.index')" :active="route().current('tasks.*')">
+                            Task
                         </ResponsiveNavLink>
                     </div>
 

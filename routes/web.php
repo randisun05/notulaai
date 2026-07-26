@@ -10,6 +10,7 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\SettingController;
+use App\Http\Controllers\TaskController;
 
 Route::get('/', function () {
     return Inertia::render('Welcome', [
@@ -40,6 +41,12 @@ Route::middleware('auth')->group(function () {
     Route::put('/meetings/{meeting}', [MeetingController::class, 'update'])->name('meetings.update');
     // Tambahkan route untuk update, destroy di sini nanti\
      Route::delete('/meetings/{meeting}', [MeetingController::class, 'destroy'])->name('meetings.destroy'); // <-- TAMBAHKAN INI
+
+    Route::post('/meetings/{meeting}/action-items/{actionItem}/convert-to-task', [TaskController::class, 'storeFromActionItem'])->name('meetings.action-items.convert');
+
+    // Task Routes
+    Route::get('/tasks', [TaskController::class, 'index'])->name('tasks.index');
+    Route::patch('/tasks/{task}/status', [TaskController::class, 'updateStatus'])->name('tasks.update-status');
 
 
       // ===============================================

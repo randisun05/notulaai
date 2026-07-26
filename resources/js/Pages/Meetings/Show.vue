@@ -17,6 +17,12 @@ const page = usePage();
 const authUserRole = computed(() => page.props.auth.user.role);
 const flashSuccess = computed(() => page.props.flash?.success);
 
+const convertToTask = (item) => {
+    router.post(route('meetings.action-items.convert', { meeting: props.meeting.id, actionItem: item.id }), {}, {
+        preserveScroll: true,
+    });
+};
+
 const activeTab = ref(props.meeting.status === 'Selesai Diproses' ? 'summary' : 'input');
 const inputType = ref('text'); // 'text', 'audio', 'file', 'image'
 
@@ -189,6 +195,8 @@ const deleteMeeting = () => {
                                                 <span v-if="item.deadline"> &middot; Deadline: {{ item.deadline }}</span>
                                             </p>
                                         </div>
+                                        <span v-if="item.converted_to_task" class="shrink-0 text-xs font-medium text-green-700 bg-green-100 px-2 py-1 rounded-full">Sudah jadi Task</span>
+                                        <button v-else @click="convertToTask(item)" class="shrink-0 text-xs font-medium text-indigo-700 bg-indigo-50 hover:bg-indigo-100 px-3 py-1.5 rounded-md">Jadikan Task</button>
                                     </li>
                                 </ul>
                             </div>

@@ -3,9 +3,11 @@
 namespace App\Providers;
 
 use App\Models\Meeting;
+use App\Models\Task;
 use App\Models\Unit;
 use App\Models\User;
 use App\Policies\MeetingPolicy;
+use App\Policies\TaskPolicy;
 use App\Policies\UnitPolicy;
 use App\Policies\UserPolicy;
 use Illuminate\Support\Facades\Gate;
@@ -22,6 +24,7 @@ class AuthServiceProvider extends ServiceProvider
         User::class => UserPolicy::class,
         Unit::class => UnitPolicy::class,
         Meeting::class => MeetingPolicy::class,
+        Task::class => TaskPolicy::class,
     ];
 
     /**
