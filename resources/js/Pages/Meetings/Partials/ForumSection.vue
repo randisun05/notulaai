@@ -17,6 +17,21 @@ const currentUserId = () => page.props.auth.user.id;
 const isSuperadmin = () => page.props.auth.user.role === 'superadmin';
 const canManage = (comment) => comment.user_id === currentUserId() || isSuperadmin();
 
+const ALLOWED_EMOJIS = ['👍', '❤️', '😂', '😮', '😢', '👏'];
+
+const reactionSummary = (comment) => {
+    const reactions = comment.reactions || [];
+    return ALLOWED_EMOJIS.map((emoji) => ({
+        emoji,
+        count: reactions.filter((r) => r.emoji === emoji).length,
+        reactedByMe: reactions.some((r) => r.emoji === emoji && r.user_id === currentUserId()),
+    }));
+};
+
+const toggleReaction = (comment, emoji) => {
+    router.post(route('comments.reactions.toggle', comment.id), { emoji }, { preserveScroll: true });
+};
+
 const newCommentForm = useForm({ body: '', attachments: [] });
 const newCommentFileInput = ref(null);
 const submitNewComment = () => {
@@ -141,6 +156,18 @@ const formatDateTime = (value) => {
                     </li>
                 </ul>
 
+                <div class="mt-2 flex flex-wrap items-center gap-1">
+                    <button
+                        v-for="r in reactionSummary(comment)"
+                        :key="r.emoji"
+                        @click="toggleReaction(comment, r.emoji)"
+                        :class="['inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs border', r.reactedByMe ? 'bg-indigo-50 border-indigo-300 text-indigo-700' : 'border-gray-200 text-gray-500 hover:bg-gray-50']"
+                    >
+                        <span>{{ r.emoji }}</span>
+                        <span v-if="r.count > 0">{{ r.count }}</span>
+                    </button>
+                </div>
+
                 <div class="mt-2 flex gap-3 text-xs">
                     <button @click="startReply(comment.id)" class="text-indigo-600 hover:text-indigo-800 font-medium">Balas</button>
                     <template v-if="canManage(comment) && editingId !== comment.id">
@@ -188,6 +215,18 @@ const formatDateTime = (value) => {
                                 </a>
                             </li>
                         </ul>
+
+                        <div class="mt-2 flex flex-wrap items-center gap-1">
+                            <button
+                                v-for="r in reactionSummary(reply)"
+                                :key="r.emoji"
+                                @click="toggleReaction(reply, r.emoji)"
+                                :class="['inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs border', r.reactedByMe ? 'bg-indigo-50 border-indigo-300 text-indigo-700' : 'border-gray-200 text-gray-500 hover:bg-gray-50']"
+                            >
+                                <span>{{ r.emoji }}</span>
+                                <span v-if="r.count > 0">{{ r.count }}</span>
+                            </button>
+                        </div>
 
                         <div v-if="canManage(reply) && editingId !== reply.id" class="mt-1 flex gap-3 text-xs">
                             <button @click="startEdit(reply)" class="text-gray-500 hover:text-gray-700">Edit</button>

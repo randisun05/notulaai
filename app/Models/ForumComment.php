@@ -39,4 +39,9 @@ class ForumComment extends Model
     {
         return $this->hasMany(ForumCommentAttachment::class);
     }
+
+    public function reactions(): HasMany
+    {
+        return $this->hasMany(ForumCommentReaction::class);
+    }
 }

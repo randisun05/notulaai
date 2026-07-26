@@ -14,6 +14,7 @@ use App\Http\Controllers\TaskController;
 use App\Http\Controllers\MeetingEmailController;
 use App\Http\Controllers\MeetingChatController;
 use App\Http\Controllers\ForumCommentController;
+use App\Http\Controllers\ForumCommentReactionController;
 
 Route::get('/', function () {
     return Inertia::render('Welcome', [
@@ -62,6 +63,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/meetings/{meeting}/comments', [ForumCommentController::class, 'store'])->name('meetings.comments.store');
     Route::put('/comments/{comment}', [ForumCommentController::class, 'update'])->name('comments.update');
     Route::delete('/comments/{comment}', [ForumCommentController::class, 'destroy'])->name('comments.destroy');
+    Route::post('/comments/{comment}/reactions/toggle', [ForumCommentReactionController::class, 'toggle'])->name('comments.reactions.toggle');
 
 
       // ===============================================
