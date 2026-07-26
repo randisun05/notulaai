@@ -26,8 +26,8 @@ class MeetingSummary extends Mailable
     public function __construct(Meeting $meeting)
     {
         $this->meeting = $meeting;
-        // Kita load relasi user agar bisa digunakan di template email
-        $this->user = $meeting->user;
+        // Kita load relasi creator (pembuat rapat) agar bisa digunakan di template email
+        $this->user = $meeting->creator;
     }
 
     /**
