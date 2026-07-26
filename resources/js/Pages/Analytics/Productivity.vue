@@ -1,5 +1,6 @@
 <script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+import AnalyticsNav from '@/Pages/Analytics/Partials/AnalyticsNav.vue';
 import { Head } from '@inertiajs/vue3';
 import { computed } from 'vue';
 
@@ -21,8 +22,10 @@ const maxCompleted = computed(() => Math.max(1, ...props.productivity.map((p) =>
         </template>
 
         <div class="py-12">
-            <div class="max-w-5xl mx-auto sm:px-6 lg:px-8 space-y-6">
+            <div class="max-w-5xl mx-auto sm:px-6 lg:px-8">
+                <AnalyticsNav />
 
+                <div class="space-y-6">
                 <div v-if="topEmployee" class="bg-white overflow-hidden shadow-sm rounded-lg p-6 flex items-center gap-4">
                     <div class="h-14 w-14 rounded-full bg-[#eda100]/15 flex items-center justify-center text-2xl">🏆</div>
                     <div>
@@ -68,6 +71,7 @@ const maxCompleted = computed(() => Math.max(1, ...props.productivity.map((p) =>
                             </tbody>
                         </table>
                     </div>
+                </div>
                 </div>
 
             </div>

@@ -72,6 +72,7 @@ Route::middleware('auth')->group(function () {
 
     // Analytics Routes
     Route::get('/analytics/productivity', [AnalyticsController::class, 'productivity'])->name('analytics.productivity');
+    Route::get('/analytics/heatmap', [AnalyticsController::class, 'heatmap'])->name('analytics.heatmap');
 
     // Forum Routes
     Route::post('/meetings/{meeting}/comments', [ForumCommentController::class, 'store'])->name('meetings.comments.store');

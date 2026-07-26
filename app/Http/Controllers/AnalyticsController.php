@@ -2,7 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Task;
 use App\Models\User;
+use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 
@@ -42,6 +44,48 @@ class AnalyticsController extends Controller
 
         return Inertia::render('Analytics/Productivity', [
             'productivity' => $productivity,
+        ]);
+    }
+
+    /**
+     * Heatmap kalender jumlah Task yang dibuat per hari, 12 minggu terakhir.
+     */
+    public function heatmap()
+    {
+        $user = Auth::user();
+        $isSuperadmin = $user->hasRole('superadmin');
+
+        $taskQuery = Task::query();
+        if (!$isSuperadmin) {
+            $taskQuery->where('unit_id', $user->unit_id);
+        }
+
+        $today = Carbon::today();
+        $rangeStart = $today->copy()->subWeeks(11)->startOfWeek(Carbon::SUNDAY);
+
+        $counts = (clone $taskQuery)
+            ->where('created_at', '>=', $rangeStart)
+            ->get(['created_at'])
+            ->groupBy(fn (Task $t) => $t->created_at->toDateString())
+            ->map->count();
+
+        $weeks = [];
+        $cursor = $rangeStart->copy();
+        while ($cursor->lte($today)) {
+            $week = [];
+            for ($d = 0; $d < 7; $d++) {
+                $week[] = $cursor->gt($today) ? null : [
+                    'date' => $cursor->toDateString(),
+                    'count' => $counts->get($cursor->toDateString(), 0),
+                ];
+                $cursor->addDay();
+            }
+            $weeks[] = $week;
+        }
+
+        return Inertia::render('Analytics/Heatmap', [
+            'weeks' => $weeks,
+            'maxCount' => $counts->max() ?? 0,
         ]);
     }
 }
