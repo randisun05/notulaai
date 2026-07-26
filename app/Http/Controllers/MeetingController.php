@@ -3,11 +3,13 @@
 namespace App\Http\Controllers;
 
 use App\Models\Meeting;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Auth;
 use App\Jobs\ProcessMeetingNotula;
 use Illuminate\Support\Facades\Storage;
+use App\Services\Meeting\EmailDraftGenerator;
 
 class MeetingController extends Controller
 {
@@ -95,6 +97,8 @@ class MeetingController extends Controller
 
         return Inertia::render('Meetings/Show', [
             'meeting' => $meeting->load('actionItems'),
+            'unitUsers' => User::where('unit_id', $meeting->unit_id)->get(['id', 'name', 'email']),
+            'emailPurposes' => EmailDraftGenerator::PURPOSES,
         ]);
     }
 

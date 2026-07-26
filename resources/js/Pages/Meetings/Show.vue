@@ -5,11 +5,20 @@ import PrimaryButton from '@/Components/PrimaryButton.vue';
 import DangerButton from '@/Components/DangerButton.vue'; // <-- Import Tombol Merah
 import { Head, useForm, usePage, Link, router } from '@inertiajs/vue3';
 import { ref, computed } from 'vue';
+import axios from 'axios';
 
 const props = defineProps({
     meeting: {
         type: Object,
         required: true,
+    },
+    unitUsers: {
+        type: Array,
+        default: () => [],
+    },
+    emailPurposes: {
+        type: Object,
+        default: () => ({}),
     },
 });
 
@@ -20,6 +29,48 @@ const flashSuccess = computed(() => page.props.flash?.success);
 const convertToTask = (item) => {
     router.post(route('meetings.action-items.convert', { meeting: props.meeting.id, actionItem: item.id }), {}, {
         preserveScroll: true,
+    });
+};
+
+const emailPurpose = ref(Object.keys(props.emailPurposes)[0] || 'follow_up');
+const emailDraft = ref(null);
+const emailGenerating = ref(false);
+const emailError = ref('');
+const selectedRecipients = ref([]);
+
+const generateEmailDraft = async () => {
+    emailGenerating.value = true;
+    emailError.value = '';
+    emailDraft.value = null;
+
+    try {
+        const { data } = await axios.post(route('meetings.emails.generate', props.meeting.id), {
+            purpose: emailPurpose.value,
+        });
+        emailDraft.value = data;
+    } catch (e) {
+        emailError.value = e.response?.data?.error || 'Gagal membuat draft email.';
+    } finally {
+        emailGenerating.value = false;
+    }
+};
+
+const emailSendForm = useForm({
+    subject: '',
+    body: '',
+    recipient_ids: [],
+});
+
+const sendEmail = () => {
+    emailSendForm.subject = emailDraft.value.subject;
+    emailSendForm.body = emailDraft.value.body;
+    emailSendForm.recipient_ids = selectedRecipients.value;
+    emailSendForm.post(route('meetings.emails.send', props.meeting.id), {
+        preserveScroll: true,
+        onSuccess: () => {
+            emailDraft.value = null;
+            selectedRecipients.value = [];
+        },
     });
 };
 
@@ -173,6 +224,7 @@ const deleteMeeting = () => {
                                         Action Items
                                         <span v-if="meeting.action_items?.length" class="ml-1 inline-flex items-center justify-center h-5 min-w-[1.25rem] px-1 rounded-full bg-blue-100 text-blue-700 text-xs font-semibold">{{ meeting.action_items.length }}</span>
                                     </button>
+                                    <button @click="activeTab = 'email_ai'" :class="['whitespace-nowrap pb-4 px-1 border-b-2 font-medium text-sm', activeTab === 'email_ai' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300']">Email AI</button>
                                 </nav>
                             </div>
                             <div v-show="activeTab === 'summary'">
@@ -199,6 +251,53 @@ const deleteMeeting = () => {
                                         <button v-else @click="convertToTask(item)" class="shrink-0 text-xs font-medium text-indigo-700 bg-indigo-50 hover:bg-indigo-100 px-3 py-1.5 rounded-md">Jadikan Task</button>
                                     </li>
                                 </ul>
+                            </div>
+                            <div v-show="activeTab === 'email_ai'">
+                                <h3 class="text-lg font-semibold mb-2">Buat Email dengan AI</h3>
+
+                                <div class="flex flex-wrap items-end gap-3 mb-4">
+                                    <div>
+                                        <InputLabel for="email_purpose" value="Jenis Email" />
+                                        <select id="email_purpose" v-model="emailPurpose" class="mt-1 block w-56 border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm">
+                                            <option v-for="(label, key) in emailPurposes" :key="key" :value="key">{{ label }}</option>
+                                        </select>
+                                    </div>
+                                    <PrimaryButton :disabled="emailGenerating" @click="generateEmailDraft">
+                                        {{ emailGenerating ? 'Membuat draft...' : 'Generate Draft' }}
+                                    </PrimaryButton>
+                                </div>
+
+                                <p v-if="emailError" class="text-sm text-red-600 mb-4">{{ emailError }}</p>
+
+                                <div v-if="emailDraft" class="space-y-4 border border-gray-200 rounded-md p-4">
+                                    <div>
+                                        <InputLabel for="email_subject" value="Subjek" />
+                                        <TextInput id="email_subject" type="text" class="mt-1 block w-full" v-model="emailDraft.subject" />
+                                        <InputError class="mt-2" :message="emailSendForm.errors.subject" />
+                                    </div>
+                                    <div>
+                                        <InputLabel for="email_body" value="Isi Email (HTML)" />
+                                        <textarea id="email_body" v-model="emailDraft.body" rows="10" class="mt-1 block w-full font-mono text-xs border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm"></textarea>
+                                        <InputError class="mt-2" :message="emailSendForm.errors.body" />
+                                    </div>
+                                    <div>
+                                        <InputLabel value="Preview" />
+                                        <div class="mt-1 p-4 border border-gray-100 rounded-md bg-gray-50 prose max-w-none text-sm" v-html="emailDraft.body"></div>
+                                    </div>
+                                    <div>
+                                        <InputLabel value="Kirim Ke" />
+                                        <div class="mt-2 space-y-1 max-h-40 overflow-y-auto">
+                                            <label v-for="u in unitUsers" :key="u.id" class="flex items-center gap-2 text-sm text-gray-700">
+                                                <input type="checkbox" :value="u.id" v-model="selectedRecipients" class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500" />
+                                                {{ u.name }} ({{ u.email }})
+                                            </label>
+                                        </div>
+                                        <InputError class="mt-2" :message="emailSendForm.errors.recipient_ids" />
+                                    </div>
+                                    <PrimaryButton :disabled="emailSendForm.processing || selectedRecipients.length === 0" @click="sendEmail">
+                                        Kirim Email
+                                    </PrimaryButton>
+                                </div>
                             </div>
                         </div>
 

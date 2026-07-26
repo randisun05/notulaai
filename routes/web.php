@@ -11,6 +11,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\SettingController;
 use App\Http\Controllers\TaskController;
+use App\Http\Controllers\MeetingEmailController;
 
 Route::get('/', function () {
     return Inertia::render('Welcome', [
@@ -43,6 +44,10 @@ Route::middleware('auth')->group(function () {
      Route::delete('/meetings/{meeting}', [MeetingController::class, 'destroy'])->name('meetings.destroy'); // <-- TAMBAHKAN INI
 
     Route::post('/meetings/{meeting}/action-items/{actionItem}/convert-to-task', [TaskController::class, 'storeFromActionItem'])->name('meetings.action-items.convert');
+
+    // AI Email Generator
+    Route::post('/meetings/{meeting}/emails/generate', [MeetingEmailController::class, 'generate'])->name('meetings.emails.generate');
+    Route::post('/meetings/{meeting}/emails/send', [MeetingEmailController::class, 'send'])->name('meetings.emails.send');
 
     // Task Routes
     Route::get('/tasks', [TaskController::class, 'index'])->name('tasks.index');
