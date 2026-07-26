@@ -15,10 +15,7 @@ class AnalyticsController extends Controller
         $user = Auth::user();
         $isSuperadmin = $user->hasRole('superadmin');
 
-        $userQuery = User::query()->with('unit:id,name');
-        if (!$isSuperadmin) {
-            $userQuery->where('unit_id', $user->unit_id);
-        }
+        $userQuery = User::query()->visibleTo($user)->with('unit:id,name');
 
         $productivity = $userQuery
             ->withCount([
@@ -53,12 +50,8 @@ class AnalyticsController extends Controller
     public function heatmap()
     {
         $user = Auth::user();
-        $isSuperadmin = $user->hasRole('superadmin');
 
-        $taskQuery = Task::query();
-        if (!$isSuperadmin) {
-            $taskQuery->where('unit_id', $user->unit_id);
-        }
+        $taskQuery = Task::query()->visibleTo($user);
 
         $today = Carbon::today();
         $rangeStart = $today->copy()->subWeeks(11)->startOfWeek(Carbon::SUNDAY);
@@ -95,13 +88,10 @@ class AnalyticsController extends Controller
         $isSuperadmin = $user->hasRole('superadmin');
 
         $taskQuery = Task::query()
+            ->visibleTo($user)
             ->whereNotIn('status', ['Done', 'Cancelled'])
             ->whereNotNull('deadline')
             ->whereDate('deadline', '<', today());
-
-        if (!$isSuperadmin) {
-            $taskQuery->where('unit_id', $user->unit_id);
-        }
 
         $overdueTasks = $taskQuery
             ->with(['assignee:id,name', 'unit:id,name'])

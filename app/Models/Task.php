@@ -2,12 +2,15 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\ScopedToUnit;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Task extends Model
 {
+    use ScopedToUnit;
+
     public const STATUSES = ['Todo', 'In Progress', 'Waiting', 'Review', 'Done', 'Cancelled'];
     public const PRIORITIES = ['Low', 'Medium', 'High', 'Urgent'];
     private const CLOSED_STATUSES = ['Done', 'Cancelled'];

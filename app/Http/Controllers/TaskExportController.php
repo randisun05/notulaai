@@ -28,7 +28,7 @@ class TaskExportController extends Controller
         $user = Auth::user();
 
         return Task::query()
-            ->when(!$user->hasRole('superadmin'), fn ($q) => $q->where('unit_id', $user->unit_id))
+            ->visibleTo($user)
             ->when($request->input('status'), fn ($q, $status) => $q->where('status', $status))
             ->when($request->boolean('overdue'), fn ($q) => $q->whereNotIn('status', ['Done', 'Cancelled'])
                 ->whereNotNull('deadline')

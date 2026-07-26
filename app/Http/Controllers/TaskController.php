@@ -24,7 +24,7 @@ class TaskController extends Controller
         $user = Auth::user();
 
         $tasks = Task::query()
-            ->when(!$user->hasRole('superadmin'), fn ($q) => $q->where('unit_id', $user->unit_id))
+            ->visibleTo($user)
             ->when($request->input('status'), fn ($q, $status) => $q->where('status', $status))
             ->with(['meeting:id,title', 'assignee:id,name'])
             ->orderByRaw("CASE status WHEN 'Done' THEN 1 WHEN 'Cancelled' THEN 1 ELSE 0 END")
@@ -44,7 +44,7 @@ class TaskController extends Controller
         $user = Auth::user();
 
         $tasks = Task::query()
-            ->when(!$user->hasRole('superadmin'), fn ($q) => $q->where('unit_id', $user->unit_id))
+            ->visibleTo($user)
             ->with(['meeting:id,title', 'assignee:id,name'])
             ->orderBy('deadline')
             ->get()
@@ -70,7 +70,7 @@ class TaskController extends Controller
         $end = $start->copy()->endOfMonth();
 
         $tasks = Task::query()
-            ->when(!$user->hasRole('superadmin'), fn ($q) => $q->where('unit_id', $user->unit_id))
+            ->visibleTo($user)
             ->whereBetween('deadline', [$start->toDateString(), $end->toDateString()])
             ->with(['assignee:id,name'])
             ->orderBy('deadline')

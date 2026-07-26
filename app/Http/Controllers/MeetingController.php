@@ -24,14 +24,8 @@ class MeetingController extends Controller
     public function getFilteredMeetingsQuery()
     {
         $user = Auth::user();
-        $query = Meeting::query();
 
-        // Jika bukan superadmin, filter berdasarkan unit
-        if (!$user->hasRole('superadmin')) {
-            $query->where('unit_id', $user->unit_id);
-        }
-
-        return $query;
+        return Meeting::query()->visibleTo($user);
     }
 
     /**

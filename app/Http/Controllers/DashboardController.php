@@ -46,17 +46,10 @@ class DashboardController extends Controller
     private function buildDashboardData(): array
     {
         $user = Auth::user();
-        $isSuperadmin = $user->hasRole('superadmin');
 
-        $meetingQuery = Meeting::query();
-        $taskQuery = Task::query();
-        $userQuery = User::query();
-
-        if (!$isSuperadmin) {
-            $meetingQuery->where('unit_id', $user->unit_id);
-            $taskQuery->where('unit_id', $user->unit_id);
-            $userQuery->where('unit_id', $user->unit_id);
-        }
+        $meetingQuery = Meeting::query()->visibleTo($user);
+        $taskQuery = Task::query()->visibleTo($user);
+        $userQuery = User::query()->visibleTo($user);
 
         $totalTasks = (clone $taskQuery)->where('status', '!=', 'Cancelled')->count();
         $completedTasks = (clone $taskQuery)->where('status', 'Done')->count();
