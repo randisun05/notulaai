@@ -24,6 +24,7 @@ class MeetingProcessingService
         private readonly AiManager $ai,
         private readonly AiRequestLogger $logger,
         private readonly ActionItemsParser $actionItemsParser,
+        private readonly ActivityLogger $activityLogger,
     ) {
     }
 
@@ -49,6 +50,8 @@ class MeetingProcessingService
         // Action items bersifat pelengkap: kalau AI gagal menghasilkan/mem-parse-nya,
         // notula tetap dianggap berhasil diproses (transkrip + rangkuman sudah aman).
         $this->generateActionItems($meeting, $transcript);
+
+        $this->activityLogger->log($meeting, null, 'meeting.processed', 'AI berhasil membuat transkrip dan rangkuman notula.');
 
         $this->notifyUnit($meeting);
     }

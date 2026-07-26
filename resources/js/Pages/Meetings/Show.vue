@@ -6,6 +6,7 @@ import TextInput from '@/Components/TextInput.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import DangerButton from '@/Components/DangerButton.vue'; // <-- Import Tombol Merah
 import ForumSection from '@/Pages/Meetings/Partials/ForumSection.vue';
+import ActivityTimeline from '@/Pages/Meetings/Partials/ActivityTimeline.vue';
 import { Head, useForm, usePage, Link, router } from '@inertiajs/vue3';
 import { ref, computed } from 'vue';
 import axios from 'axios';
@@ -421,6 +422,10 @@ const deleteMeeting = () => {
                                 <h4 class="font-medium text-gray-700">Peserta</h4>
                                 <div class="mt-2 text-sm text-gray-600 prose max-w-none whitespace-pre-wrap" v-text="meeting.participants || 'Tidak ada daftar peserta.'"></div>
                             </div>
+                        </div>
+
+                        <div class="mt-8">
+                            <ActivityTimeline :meeting="meeting" />
                         </div>
                     </div>
                 </div>

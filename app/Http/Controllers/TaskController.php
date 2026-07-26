@@ -6,6 +6,7 @@ use App\Models\Meeting;
 use App\Models\MeetingActionItem;
 use App\Models\Task;
 use App\Models\User;
+use App\Services\Meeting\ActivityLogger;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
@@ -13,6 +14,10 @@ use Inertia\Inertia;
 
 class TaskController extends Controller
 {
+    public function __construct(private readonly ActivityLogger $activityLogger)
+    {
+    }
+
     public function index(Request $request)
     {
         $user = Auth::user();
@@ -52,7 +57,7 @@ class TaskController extends Controller
                 ->first();
         }
 
-        Task::create([
+        $task = Task::create([
             'meeting_id' => $meeting->id,
             'meeting_action_item_id' => $actionItem->id,
             'unit_id' => $meeting->unit_id,
@@ -65,6 +70,8 @@ class TaskController extends Controller
 
         $actionItem->update(['converted_to_task' => true]);
 
+        $this->activityLogger->log($meeting, Auth::user(), 'task.created', Auth::user()->name . " membuat Task \"{$task->title}\" dari Action Item.");
+
         return back()->with('success', 'Action item berhasil dijadikan Task.');
     }
 
@@ -76,7 +83,17 @@ class TaskController extends Controller
             'status' => ['required', Rule::in(Task::STATUSES)],
         ]);
 
+        $oldStatus = $task->status;
         $task->update($validated);
+
+        if ($task->meeting) {
+            $this->activityLogger->log(
+                $task->meeting,
+                Auth::user(),
+                'task.status_changed',
+                Auth::user()->name . " mengubah status Task \"{$task->title}\" dari {$oldStatus} menjadi {$validated['status']}.",
+            );
+        }
 
         return back()->with('success', 'Status task berhasil diperbarui.');
     }

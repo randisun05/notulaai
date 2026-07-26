@@ -62,4 +62,9 @@ class Meeting extends Model
     {
         return $this->hasMany(ForumComment::class)->whereNull('parent_id')->orderBy('created_at');
     }
+
+    public function activities(): HasMany
+    {
+        return $this->hasMany(Activity::class)->orderBy('created_at', 'desc');
+    }
 }

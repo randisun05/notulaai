@@ -3,6 +3,7 @@
 namespace App\Jobs;
 
 use App\Models\Meeting;
+use App\Services\Meeting\ActivityLogger;
 use App\Services\Meeting\MeetingProcessingService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -49,5 +50,7 @@ class ProcessMeetingNotula implements ShouldQueue
         ]);
 
         $this->meeting->update(['status' => 'Gagal']);
+
+        app(ActivityLogger::class)->log($this->meeting, null, 'meeting.failed', 'Pemrosesan notula gagal: ' . $errorMessage);
     }
 }

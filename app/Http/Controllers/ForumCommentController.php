@@ -7,6 +7,7 @@ use App\Models\ForumComment;
 use App\Models\Meeting;
 use App\Models\User;
 use App\Services\Forum\MentionParser;
+use App\Services\Meeting\ActivityLogger;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Mail;
@@ -16,8 +17,10 @@ class ForumCommentController extends Controller
 {
     private const MAX_ATTACHMENTS = 5;
 
-    public function __construct(private readonly MentionParser $mentionParser)
-    {
+    public function __construct(
+        private readonly MentionParser $mentionParser,
+        private readonly ActivityLogger $activityLogger,
+    ) {
     }
 
     public function store(Request $request, Meeting $meeting)
@@ -55,6 +58,12 @@ class ForumCommentController extends Controller
         }
 
         $this->notifyMentions($comment, $meeting);
+
+        $activityType = $comment->parent_id ? 'comment.replied' : 'comment.created';
+        $activityDescription = $comment->parent_id
+            ? Auth::user()->name . ' membalas komentar di forum diskusi.'
+            : Auth::user()->name . ' menambahkan komentar di forum diskusi.';
+        $this->activityLogger->log($meeting, Auth::user(), $activityType, $activityDescription);
 
         return back()->with('success', 'Komentar berhasil ditambahkan.');
     }

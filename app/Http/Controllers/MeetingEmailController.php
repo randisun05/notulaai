@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Mail\AiGeneratedEmail;
 use App\Models\Meeting;
 use App\Models\User;
+use App\Services\Meeting\ActivityLogger;
 use App\Services\Meeting\EmailDraftGenerator;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -13,8 +14,10 @@ use Illuminate\Validation\Rule;
 
 class MeetingEmailController extends Controller
 {
-    public function __construct(private readonly EmailDraftGenerator $generator)
-    {
+    public function __construct(
+        private readonly EmailDraftGenerator $generator,
+        private readonly ActivityLogger $activityLogger,
+    ) {
     }
 
     public function generate(Request $request, Meeting $meeting)
@@ -53,6 +56,13 @@ class MeetingEmailController extends Controller
         foreach ($recipients as $recipient) {
             Mail::to($recipient->email)->send(new AiGeneratedEmail($validated['subject'], $validated['body']));
         }
+
+        $this->activityLogger->log(
+            $meeting,
+            Auth::user(),
+            'email.sent',
+            Auth::user()->name . " mengirim email \"{$validated['subject']}\" ke {$recipients->count()} penerima.",
+        );
 
         return back()->with('success', "Email berhasil dikirim ke {$recipients->count()} penerima.");
     }

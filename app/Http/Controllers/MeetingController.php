@@ -9,10 +9,15 @@ use Inertia\Inertia;
 use Illuminate\Support\Facades\Auth;
 use App\Jobs\ProcessMeetingNotula;
 use Illuminate\Support\Facades\Storage;
+use App\Services\Meeting\ActivityLogger;
 use App\Services\Meeting\EmailDraftGenerator;
 
 class MeetingController extends Controller
 {
+    public function __construct(private readonly ActivityLogger $activityLogger)
+    {
+    }
+
     /**
      * Terapkan query filter unit.
      */
@@ -75,7 +80,7 @@ class MeetingController extends Controller
         ]);
 
         // Otomatis set unit_id dan user_id saat membuat
-        Meeting::create([
+        $meeting = Meeting::create([
             'title' => $validated['title'],
             'date' => $validated['date'],
             'agenda' => $validated['agenda'],
@@ -84,6 +89,8 @@ class MeetingController extends Controller
             'unit_id' => $user->unit_id, // WAJIB
             'user_id' => $user->id,
         ]);
+
+        $this->activityLogger->log($meeting, $user, 'meeting.created', "{$user->name} menjadwalkan rapat ini.");
 
         return redirect()->route('meetings.index')->with('success', 'Rapat berhasil dijadwalkan.');
     }
@@ -107,6 +114,7 @@ class MeetingController extends Controller
                 'comments.replies.attachments',
                 'comments.replies.reactions',
                 'comments.replies.mentionedUsers:id,name',
+                'activities.user:id,name',
             ]),
             'unitUsers' => User::where('unit_id', $meeting->unit_id)->get(['id', 'name', 'email']),
             'emailPurposes' => EmailDraftGenerator::PURPOSES,
@@ -204,6 +212,8 @@ class MeetingController extends Controller
             'source_file_path' => $sourceFilePath,
             'status' => 'Memproses',
         ]);
+
+        $this->activityLogger->log($meeting, Auth::user(), 'meeting.processing_started', Auth::user()->name . ' memulai proses pembuatan notula.');
 
         // Panggil Job untuk diproses di latar belakang
         ProcessMeetingNotula::dispatch($meeting);
