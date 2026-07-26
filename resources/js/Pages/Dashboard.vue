@@ -4,22 +4,20 @@ import { Head, Link } from '@inertiajs/vue3';
 import {
     DocumentTextIcon,
     CheckCircleIcon,
-    UsersIcon
+    CalendarDaysIcon,
+    ClipboardDocumentCheckIcon,
+    ExclamationTriangleIcon,
+    ChartBarIcon,
 } from '@heroicons/vue/24/outline';
 import { computed } from 'vue';
 
 const props = defineProps({
-    stats: {
-        type: Object,
-        required: true,
-    },
-    recentMeetings: {
-        type: Array,
-        required: true,
-    }
+    stats: { type: Object, required: true },
+    recentMeetings: { type: Array, required: true },
+    weeklyMeetings: { type: Array, default: () => [] },
+    taskStatusBreakdown: { type: Array, default: () => [] },
 });
 
-// Helper untuk format tanggal
 const formatDate = (dateString) => {
     return new Date(dateString).toLocaleDateString('id-ID', {
         day: 'numeric',
@@ -28,13 +26,34 @@ const formatDate = (dateString) => {
     });
 };
 
-// Data untuk card statistik
 const statCards = computed(() => [
-    { name: 'Total Rapat', href: route('meetings.index'), icon: DocumentTextIcon, stat: props.stats.total_meetings },
-    { name: 'Rapat Diproses', href: route('meetings.index'), icon: CheckCircleIcon, stat: props.stats.processed_meetings },
-    { name: 'Total User (di Unit Anda)', href: '#', icon: UsersIcon, stat: props.stats.total_users }, // Nanti bisa diarahkan ke halaman user
+    { name: 'Rapat Hari Ini', icon: CalendarDaysIcon, stat: props.stats.meetings_today, tone: 'default' },
+    { name: 'Rapat Minggu Ini', icon: DocumentTextIcon, stat: props.stats.meetings_this_week, tone: 'default' },
+    { name: 'Task Selesai', icon: CheckCircleIcon, stat: props.stats.tasks_completed, tone: 'good' },
+    { name: 'Task Overdue', icon: ExclamationTriangleIcon, stat: props.stats.tasks_overdue, tone: props.stats.tasks_overdue > 0 ? 'critical' : 'default' },
+    { name: 'Progress Task', icon: ClipboardDocumentCheckIcon, stat: `${props.stats.progress_percent}%`, tone: 'default' },
 ]);
 
+const toneClasses = {
+    default: 'text-gray-900',
+    good: 'text-[#0ca30c]',
+    critical: 'text-[#d03b3b]',
+};
+
+// --- Chart: Volume Rapat 8 Minggu Terakhir (bar tunggal, hue kategori slot-1) ---
+const maxWeekly = computed(() => Math.max(1, ...props.weeklyMeetings.map((w) => w.count)));
+const CHART_SERIES_BLUE = '#2a78d6';
+
+// --- Chart: Distribusi Status Task (bar horizontal, urutan tetap sesuai alur status) ---
+const STATUS_COLORS = {
+    Todo: '#898781',
+    'In Progress': '#2a78d6',
+    Waiting: '#eda100',
+    Review: '#4a3aa7',
+    Done: '#0ca30c',
+    Cancelled: '#c3c2b7',
+};
+const maxStatusCount = computed(() => Math.max(1, ...props.taskStatusBreakdown.map((s) => s.count)));
 </script>
 
 <template>
@@ -46,24 +65,68 @@ const statCards = computed(() => [
         </template>
 
         <div class="py-12">
-            <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
+            <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-8">
 
-                <!-- Card Statistik -->
+                <!-- Stat Tiles -->
                 <div>
                     <h3 class="text-base font-semibold leading-6 text-gray-900">Ringkasan</h3>
-                    <dl class="mt-5 grid grid-cols-1 gap-5 sm:grid-cols-3">
+                    <dl class="mt-5 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-5">
                         <div v-for="item in statCards" :key="item.name" class="overflow-hidden rounded-lg bg-white px-4 py-5 shadow sm:p-6">
                             <dt class="truncate text-sm font-medium text-gray-500">
-                                <component :is="item.icon" class="h-6 w-6 text-gray-400 inline-block mr-2" aria-hidden="true" />
+                                <component :is="item.icon" class="h-5 w-5 text-gray-400 inline-block mr-1.5 align-text-bottom" aria-hidden="true" />
                                 {{ item.name }}
                             </dt>
-                            <dd class="mt-1 text-3xl font-semibold tracking-tight text-gray-900">{{ item.stat }}</dd>
+                            <dd class="mt-1 text-3xl font-semibold tracking-tight" :class="toneClasses[item.tone]">{{ item.stat }}</dd>
                         </div>
                     </dl>
                 </div>
 
+                <!-- Charts -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+                    <!-- Volume Rapat -->
+                    <div class="bg-white overflow-hidden shadow-sm rounded-lg p-6">
+                        <h3 class="text-sm font-semibold text-gray-700 mb-4 flex items-center gap-1.5">
+                            <ChartBarIcon class="h-4 w-4 text-gray-400" /> Volume Rapat (8 Minggu Terakhir)
+                        </h3>
+                        <div v-if="weeklyMeetings.every(w => w.count === 0)" class="text-sm text-gray-400 py-10 text-center">Belum ada data rapat.</div>
+                        <div v-else class="flex items-end gap-2 h-40">
+                            <div v-for="week in weeklyMeetings" :key="week.label" class="flex-1 flex flex-col items-center justify-end h-full group relative">
+                                <span class="text-xs text-gray-500 mb-1 opacity-0 group-hover:opacity-100 transition-opacity">{{ week.count }}</span>
+                                <div
+                                    class="w-full rounded-t-sm transition-all"
+                                    :style="{ height: `${Math.max(4, (week.count / maxWeekly) * 100)}%`, backgroundColor: CHART_SERIES_BLUE }"
+                                    :title="`${week.label}: ${week.count} rapat`"
+                                ></div>
+                                <span class="text-[10px] text-gray-400 mt-1 whitespace-nowrap">{{ week.label }}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Distribusi Status Task -->
+                    <div class="bg-white overflow-hidden shadow-sm rounded-lg p-6">
+                        <h3 class="text-sm font-semibold text-gray-700 mb-4 flex items-center gap-1.5">
+                            <ChartBarIcon class="h-4 w-4 text-gray-400" /> Distribusi Status Task
+                        </h3>
+                        <div v-if="taskStatusBreakdown.every(s => s.count === 0)" class="text-sm text-gray-400 py-10 text-center">Belum ada data task.</div>
+                        <div v-else class="space-y-2.5">
+                            <div v-for="s in taskStatusBreakdown" :key="s.status" class="flex items-center gap-2">
+                                <span class="w-24 text-xs text-gray-500 shrink-0">{{ s.status }}</span>
+                                <div class="flex-1 bg-gray-100 rounded-full h-2.5 overflow-hidden">
+                                    <div
+                                        class="h-full rounded-full"
+                                        :style="{ width: `${(s.count / maxStatusCount) * 100}%`, backgroundColor: STATUS_COLORS[s.status] }"
+                                    ></div>
+                                </div>
+                                <span class="w-6 text-xs text-gray-600 text-right shrink-0">{{ s.count }}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
                 <!-- Daftar Rapat Terbaru -->
-                <div class="mt-12">
+                <div>
                      <h3 class="text-base font-semibold leading-6 text-gray-900 mb-5">Rapat Terbaru</h3>
                      <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
                         <div class="overflow-x-auto">
@@ -112,4 +175,3 @@ const statCards = computed(() => [
         </div>
     </AuthenticatedLayout>
 </template>
-
