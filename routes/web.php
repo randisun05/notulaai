@@ -18,6 +18,7 @@ use App\Http\Controllers\ForumCommentReactionController;
 use App\Http\Controllers\TaskDispositionController;
 use App\Http\Controllers\AnalyticsController;
 use App\Http\Controllers\TaskExportController;
+use App\Http\Controllers\ApiTokenController;
 
 Route::get('/', function () {
     return Inertia::render('Welcome', [
@@ -37,6 +38,10 @@ Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+
+    // API Tokens (self-service Sanctum personal access tokens)
+    Route::post('/api-tokens', [ApiTokenController::class, 'store'])->name('api-tokens.store');
+    Route::delete('/api-tokens/{token}', [ApiTokenController::class, 'destroy'])->name('api-tokens.destroy');
 
     // Meeting Routes
     Route::get('/meetings', [MeetingController::class, 'index'])->name('meetings.index');
