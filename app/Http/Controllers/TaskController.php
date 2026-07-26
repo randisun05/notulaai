@@ -101,6 +101,8 @@ class TaskController extends Controller
                 'activities.user:id,name',
                 'dispositions.fromUser:id,name',
                 'dispositions.toUser:id,name',
+                'evidences.user:id,name',
+                'evidences.attachments',
             ]),
             'statuses' => Task::STATUSES,
             'unitUsers' => User::where('unit_id', $task->unit_id)->get(['id', 'name']),
@@ -150,28 +152,80 @@ class TaskController extends Controller
     {
         $this->authorize('update', $task);
 
-        // "Done" hanya boleh dicapai lewat approve(), bukan lewat dropdown status
-        // biasa — supaya penyelesaian Task selalu melalui persetujuan.
-        $selectableStatuses = array_values(array_diff(Task::STATUSES, ['Done']));
+        // "Done" hanya lewat approve() (persetujuan), "Review" hanya lewat
+        // submitForReview() (wajib lampirkan bukti pengerjaan) — dropdown status
+        // biasa cuma untuk transisi antar status kerja yang tidak butuh bukti.
+        $selectableStatuses = array_values(array_diff(Task::STATUSES, ['Done', 'Review']));
 
         $validated = $request->validate([
             'status' => ['required', Rule::in($selectableStatuses)],
         ], [
-            'status.in' => 'Status "Done" hanya bisa dicapai lewat persetujuan (ajukan status "Review" terlebih dahulu).',
+            'status.in' => 'Status "Done" hanya bisa dicapai lewat persetujuan, dan "Review" hanya bisa diajukan lewat "Ajukan untuk Review" dengan bukti pengerjaan.',
         ]);
 
         $oldStatus = $task->status;
         $task->update($validated);
 
-        $activityType = $validated['status'] === 'Review' ? 'task.approval_requested' : 'task.status_changed';
-        $description = $validated['status'] === 'Review'
-            ? Auth::user()->name . " mengajukan Task \"{$task->title}\" untuk direview."
-            : Auth::user()->name . " mengubah status Task \"{$task->title}\" dari {$oldStatus} menjadi {$validated['status']}.";
+        $description = Auth::user()->name . " mengubah status Task \"{$task->title}\" dari {$oldStatus} menjadi {$validated['status']}.";
 
-        $this->activityLogger->log($task->meeting, Auth::user(), $activityType, $description, $task);
+        $this->activityLogger->log($task->meeting, Auth::user(), 'task.status_changed', $description, $task);
         $this->webhookDispatcher->dispatch('task.status_changed', $task, ['task_id' => $task->id, 'title' => $task->title, 'old_status' => $oldStatus, 'new_status' => $task->status]);
 
         return back()->with('success', 'Status task berhasil diperbarui.');
+    }
+
+    /**
+     * Ajukan Task untuk direview — satu-satunya jalan resmi menuju status "Review",
+     * wajib melampirkan bukti pengerjaan (catatan dan/atau file) supaya approver
+     * (TaskController::approve/reject) punya dasar untuk menilai, bukan cuma
+     * klaim tanpa bukti.
+     */
+    public function submitForReview(Request $request, Task $task)
+    {
+        $this->authorize('update', $task);
+
+        if (in_array($task->status, ['Done', 'Cancelled', 'Review'], true)) {
+            return back()->with('error', 'Task tidak bisa diajukan untuk review dari status saat ini.');
+        }
+
+        $validated = $request->validate([
+            'note' => 'nullable|string|max:2000',
+            'attachments' => 'nullable|array|max:5',
+            'attachments.*' => 'file|max:10240|mimes:jpg,jpeg,png,webp,pdf,doc,docx,xls,xlsx,ppt,pptx,txt',
+        ]);
+
+        if (empty($validated['note']) && empty($request->file('attachments'))) {
+            return back()->withErrors(['note' => 'Lampirkan catatan atau file bukti pengerjaan.'])->withInput();
+        }
+
+        $oldStatus = $task->status;
+
+        $evidence = $task->evidences()->create([
+            'user_id' => Auth::id(),
+            'note' => $validated['note'] ?? null,
+        ]);
+
+        foreach ($request->file('attachments', []) as $file) {
+            $evidence->attachments()->create([
+                'file_path' => $file->store('task_evidence', 'public'),
+                'file_name' => $file->getClientOriginalName(),
+                'file_size' => $file->getSize(),
+                'mime_type' => $file->getClientMimeType(),
+            ]);
+        }
+
+        $task->update(['status' => 'Review']);
+
+        $this->activityLogger->log(
+            $task->meeting,
+            Auth::user(),
+            'task.approval_requested',
+            Auth::user()->name . " mengajukan Task \"{$task->title}\" untuk direview dengan bukti pengerjaan.",
+            $task,
+        );
+        $this->webhookDispatcher->dispatch('task.status_changed', $task, ['task_id' => $task->id, 'title' => $task->title, 'old_status' => $oldStatus, 'new_status' => 'Review']);
+
+        return back()->with('success', 'Task diajukan untuk direview.');
     }
 
     public function approve(Task $task)

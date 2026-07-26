@@ -1,9 +1,11 @@
 <script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import InputError from '@/Components/InputError.vue';
+import Modal from '@/Components/Modal.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
+import SecondaryButton from '@/Components/SecondaryButton.vue';
 import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3';
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 
 const props = defineProps({
     task: { type: Object, required: true },
@@ -15,12 +17,32 @@ const props = defineProps({
 const page = usePage();
 const flashSuccess = computed(() => page.props.flash?.success);
 
-// "Done" hanya bisa dicapai lewat approve(), jadi tidak ditawarkan di dropdown biasa.
-const selectableStatuses = computed(() => props.statuses.filter((s) => s !== 'Done'));
+// "Done" hanya lewat approve(), "Review" hanya lewat form Ajukan untuk Review
+// (wajib bukti pengerjaan) — keduanya tidak ditawarkan di dropdown biasa.
+const selectableStatuses = computed(() => props.statuses.filter((s) => s !== 'Done' && s !== 'Review'));
+const canSubmitForReview = computed(() => !['Done', 'Cancelled', 'Review'].includes(props.task.status));
 
 const updateStatus = (status) => {
     router.patch(route('tasks.update-status', props.task.id), { status }, {
         preserveScroll: true,
+    });
+};
+
+const showReviewModal = ref(false);
+const reviewForm = useForm({ note: '', attachments: [] });
+
+const onReviewFilesChange = (event) => {
+    reviewForm.attachments = Array.from(event.target.files);
+};
+
+const submitForReview = () => {
+    reviewForm.post(route('tasks.submit-for-review', props.task.id), {
+        preserveScroll: true,
+        forceFormData: true,
+        onSuccess: () => {
+            showReviewModal.value = false;
+            reviewForm.reset();
+        },
     });
 };
 
@@ -137,11 +159,35 @@ const priorityColor = (priority) => ({
 
                         <div class="mt-6 pt-6 border-t border-gray-100">
                             <label class="text-sm font-medium text-gray-500">Status</label>
-                            <select :value="task.status" @change="updateStatus($event.target.value)" class="mt-1 block w-full sm:w-64 border-gray-300 rounded-md focus:border-indigo-500 focus:ring-indigo-500">
-                                <option v-for="status in selectableStatuses" :key="status" :value="status">{{ status }}</option>
-                                <option v-if="task.status === 'Done'" value="Done">Done</option>
-                            </select>
-                            <p v-if="task.status !== 'Done'" class="mt-1 text-xs text-gray-400">Untuk menandai selesai, ubah status ke "Review" lalu tunggu persetujuan.</p>
+                            <div class="mt-1 flex flex-wrap items-center gap-3">
+                                <select :value="task.status" @change="updateStatus($event.target.value)" class="block w-full sm:w-64 border-gray-300 rounded-md focus:border-indigo-500 focus:ring-indigo-500">
+                                    <option v-for="status in selectableStatuses" :key="status" :value="status">{{ status }}</option>
+                                    <option v-if="task.status === 'Review'" value="Review">Review</option>
+                                    <option v-if="task.status === 'Done'" value="Done">Done</option>
+                                </select>
+                                <PrimaryButton v-if="canSubmitForReview" @click="showReviewModal = true">Ajukan untuk Review</PrimaryButton>
+                            </div>
+                            <p v-if="task.status !== 'Done'" class="mt-1 text-xs text-gray-400">Untuk menandai selesai: "Ajukan untuk Review" dengan bukti pengerjaan, lalu tunggu persetujuan.</p>
+                        </div>
+
+                        <div v-if="task.evidences?.length" class="mt-6 pt-6 border-t border-gray-100">
+                            <h4 class="text-sm font-medium text-gray-700 mb-2">Bukti Pengerjaan</h4>
+                            <div class="space-y-3">
+                                <div v-for="evidence in task.evidences" :key="evidence.id" class="text-sm border border-gray-200 rounded-md p-3">
+                                    <p class="text-xs text-gray-500 mb-1">
+                                        <span class="font-medium text-gray-700">{{ evidence.user?.name || 'Sistem' }}</span>
+                                        &middot; {{ formattedDateTime(evidence.created_at) }}
+                                    </p>
+                                    <p v-if="evidence.note" class="text-gray-800 whitespace-pre-wrap">{{ evidence.note }}</p>
+                                    <ul v-if="evidence.attachments?.length" class="mt-2 space-y-1">
+                                        <li v-for="file in evidence.attachments" :key="file.id">
+                                            <a :href="`/storage/${file.file_path}`" target="_blank" class="text-indigo-600 hover:text-indigo-900 text-xs">
+                                                📎 {{ file.file_name }}
+                                            </a>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
                         </div>
 
                         <div v-if="task.status === 'Review' && canApprove" class="mt-6 pt-6 border-t border-gray-100 bg-yellow-50 -mx-6 px-6 py-4">
@@ -210,5 +256,31 @@ const priorityColor = (priority) => ({
 
             </div>
         </div>
+
+        <Modal :show="showReviewModal" @close="showReviewModal = false">
+            <form @submit.prevent="submitForReview" class="p-6">
+                <h2 class="text-lg font-medium text-gray-900">Ajukan untuk Review</h2>
+                <p class="mt-1 text-sm text-gray-600">Lampirkan catatan dan/atau file sebagai bukti pengerjaan sebelum diajukan ke approver.</p>
+
+                <div class="mt-4">
+                    <label class="text-sm font-medium text-gray-700">Catatan</label>
+                    <textarea v-model="reviewForm.note" rows="4" class="mt-1 block w-full border-gray-300 rounded-md text-sm focus:border-indigo-500 focus:ring-indigo-500" placeholder="Ceritakan apa yang sudah dikerjakan..."></textarea>
+                    <InputError class="mt-1" :message="reviewForm.errors.note" />
+                </div>
+
+                <div class="mt-4">
+                    <label class="text-sm font-medium text-gray-700">File Bukti (maks. 5 file, 10MB/file)</label>
+                    <input type="file" multiple @change="onReviewFilesChange" class="mt-1 block w-full text-sm" />
+                    <InputError class="mt-1" :message="reviewForm.errors.attachments" />
+                </div>
+
+                <div class="mt-6 flex justify-end">
+                    <SecondaryButton @click="showReviewModal = false">Batal</SecondaryButton>
+                    <PrimaryButton class="ml-3" :class="{ 'opacity-25': reviewForm.processing }" :disabled="reviewForm.processing">
+                        Ajukan
+                    </PrimaryButton>
+                </div>
+            </form>
+        </Modal>
     </AuthenticatedLayout>
 </template>

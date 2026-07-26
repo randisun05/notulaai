@@ -76,6 +76,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/tasks/export/excel', [TaskExportController::class, 'excel'])->name('tasks.export.excel');
     Route::get('/tasks/{task}', [TaskController::class, 'show'])->name('tasks.show');
     Route::patch('/tasks/{task}/status', [TaskController::class, 'updateStatus'])->name('tasks.update-status');
+    Route::post('/tasks/{task}/submit-for-review', [TaskController::class, 'submitForReview'])->name('tasks.submit-for-review');
     Route::post('/tasks/{task}/approve', [TaskController::class, 'approve'])->name('tasks.approve');
     Route::post('/tasks/{task}/reject', [TaskController::class, 'reject'])->name('tasks.reject');
     Route::patch('/tasks/{task}/sla', [TaskController::class, 'updateSla'])->name('tasks.update-sla');

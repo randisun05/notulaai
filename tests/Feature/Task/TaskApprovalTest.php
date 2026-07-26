@@ -40,7 +40,9 @@ class TaskApprovalTest extends TestCase
         $user->syncRoles(['user']);
         $task = Task::create(['unit_id' => $unit->id, 'assignee_id' => $user->id, 'title' => 'Task uji coba', 'status' => 'In Progress']);
 
-        $response = $this->actingAs($user)->patch(route('tasks.update-status', $task), ['status' => 'Review']);
+        // Sejak fitur bukti pengerjaan ditambahkan, "Review" hanya bisa dicapai
+        // lewat submit-for-review (wajib catatan/lampiran), bukan update-status biasa.
+        $response = $this->actingAs($user)->post(route('tasks.submit-for-review', $task), ['note' => 'Sudah selesai dikerjakan.']);
 
         $response->assertRedirect();
         $this->assertSame('Review', $task->fresh()->status);

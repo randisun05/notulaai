@@ -13,6 +13,10 @@ const props = defineProps({
 const page = usePage();
 const flashSuccess = computed(() => page.props.flash?.success);
 
+// "Done" hanya lewat approve(), "Review" hanya lewat "Ajukan untuk Review" di
+// halaman detail (wajib bukti pengerjaan) — tidak ditawarkan di dropdown ini.
+const selectableStatuses = computed(() => props.statuses.filter((s) => s !== 'Done' && s !== 'Review'));
+
 const exportUrl = (routeName) => {
     const query = props.filters.status ? `?status=${encodeURIComponent(props.filters.status)}` : '';
     return route(routeName) + query;
@@ -118,7 +122,9 @@ const formattedDate = (dateString) => {
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap">
                                             <select :value="task.status" @change="updateStatus(task, $event.target.value)" class="text-xs border-gray-300 rounded-md focus:border-indigo-500 focus:ring-indigo-500">
-                                                <option v-for="status in statuses" :key="status" :value="status">{{ status }}</option>
+                                                <option v-for="status in selectableStatuses" :key="status" :value="status">{{ status }}</option>
+                                                <option v-if="task.status === 'Review'" value="Review">Review</option>
+                                                <option v-if="task.status === 'Done'" value="Done">Done</option>
                                             </select>
                                         </td>
                                     </tr>
