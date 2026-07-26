@@ -88,4 +88,56 @@ class AnalyticsController extends Controller
             'maxCount' => $counts->max() ?? 0,
         ]);
     }
+
+    public function overdue()
+    {
+        $user = Auth::user();
+        $isSuperadmin = $user->hasRole('superadmin');
+
+        $taskQuery = Task::query()
+            ->whereNotIn('status', ['Done', 'Cancelled'])
+            ->whereNotNull('deadline')
+            ->whereDate('deadline', '<', today());
+
+        if (!$isSuperadmin) {
+            $taskQuery->where('unit_id', $user->unit_id);
+        }
+
+        $overdueTasks = $taskQuery
+            ->with(['assignee:id,name', 'unit:id,name'])
+            ->orderBy('deadline')
+            ->get()
+            ->map(fn (Task $t) => [
+                'id' => $t->id,
+                'title' => $t->title,
+                'assignee' => $t->assignee?->name ?? $t->assignee_name,
+                'unit' => $t->unit?->name,
+                'priority' => $t->priority,
+                'deadline' => $t->deadline->toDateString(),
+                'days_overdue' => (int) $t->deadline->diffInDays(today()),
+            ]);
+
+        $byUnit = $overdueTasks
+            ->groupBy(fn ($t) => $t['unit'] ?? 'Tidak diketahui')
+            ->map->count()
+            ->map(fn ($count, $unit) => ['unit' => $unit, 'count' => $count])
+            ->values();
+
+        $ageBuckets = collect([
+            '1-3 hari' => fn ($d) => $d <= 3,
+            '4-7 hari' => fn ($d) => $d > 3 && $d <= 7,
+            '8-30 hari' => fn ($d) => $d > 7 && $d <= 30,
+            '> 30 hari' => fn ($d) => $d > 30,
+        ])->map(fn ($matcher, $label) => [
+            'label' => $label,
+            'count' => $overdueTasks->filter(fn ($t) => $matcher($t['days_overdue']))->count(),
+        ])->values();
+
+        return Inertia::render('Analytics/Overdue', [
+            'overdueTasks' => $overdueTasks->values(),
+            'byUnit' => $byUnit,
+            'ageBuckets' => $ageBuckets,
+            'isSuperadmin' => $isSuperadmin,
+        ]);
+    }
 }

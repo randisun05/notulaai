@@ -4,6 +4,7 @@ import { Link } from '@inertiajs/vue3';
 const tabs = [
     { label: 'Produktivitas Tim', route: 'analytics.productivity' },
     { label: 'Heatmap Task', route: 'analytics.heatmap' },
+    { label: 'Overdue Analysis', route: 'analytics.overdue' },
 ];
 </script>
 
