@@ -17,6 +17,7 @@ use App\Http\Controllers\ForumCommentController;
 use App\Http\Controllers\ForumCommentReactionController;
 use App\Http\Controllers\TaskDispositionController;
 use App\Http\Controllers\AnalyticsController;
+use App\Http\Controllers\TaskExportController;
 
 Route::get('/', function () {
     return Inertia::render('Welcome', [
@@ -63,6 +64,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/tasks', [TaskController::class, 'index'])->name('tasks.index');
     Route::get('/tasks/kanban', [TaskController::class, 'kanban'])->name('tasks.kanban');
     Route::get('/tasks/calendar', [TaskController::class, 'calendar'])->name('tasks.calendar');
+    Route::get('/tasks/export/pdf', [TaskExportController::class, 'pdf'])->name('tasks.export.pdf');
+    Route::get('/tasks/export/excel', [TaskExportController::class, 'excel'])->name('tasks.export.excel');
     Route::get('/tasks/{task}', [TaskController::class, 'show'])->name('tasks.show');
     Route::patch('/tasks/{task}/status', [TaskController::class, 'updateStatus'])->name('tasks.update-status');
     Route::post('/tasks/{task}/approve', [TaskController::class, 'approve'])->name('tasks.approve');

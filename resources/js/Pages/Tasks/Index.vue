@@ -13,6 +13,11 @@ const props = defineProps({
 const page = usePage();
 const flashSuccess = computed(() => page.props.flash?.success);
 
+const exportUrl = (routeName) => {
+    const query = props.filters.status ? `?status=${encodeURIComponent(props.filters.status)}` : '';
+    return route(routeName) + query;
+};
+
 const filterByStatus = (status) => {
     router.get(route('tasks.index'), { status: status || undefined }, {
         preserveState: true,
@@ -52,6 +57,12 @@ const formattedDate = (dateString) => {
                     <Link :href="route('tasks.calendar')" class="inline-flex items-center px-4 py-2 bg-white border border-gray-300 rounded-md font-semibold text-xs text-gray-700 uppercase tracking-widest shadow-sm hover:bg-gray-50">
                         Lihat Kalender
                     </Link>
+                    <a :href="exportUrl('tasks.export.pdf')" class="inline-flex items-center px-4 py-2 bg-white border border-gray-300 rounded-md font-semibold text-xs text-gray-700 uppercase tracking-widest shadow-sm hover:bg-gray-50">
+                        Export PDF
+                    </a>
+                    <a :href="exportUrl('tasks.export.excel')" class="inline-flex items-center px-4 py-2 bg-white border border-gray-300 rounded-md font-semibold text-xs text-gray-700 uppercase tracking-widest shadow-sm hover:bg-gray-50">
+                        Export Excel
+                    </a>
                 </div>
             </div>
         </template>
