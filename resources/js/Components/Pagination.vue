@@ -25,14 +25,14 @@ defineProps({
             v-if="links[0].url"
             :href="links[0].url"
             preserve-scroll
-            class="inline-flex items-center px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+            class="btn-secondary"
         >
             &laquo; Sebelumnya
         </Link>
         <!-- Tombol Kiri (Disabled) -->
         <span
             v-else
-            class="inline-flex items-center px-4 py-2 text-sm font-medium text-gray-400 bg-white border border-gray-300 rounded-md cursor-not-allowed"
+            class="btn-secondary opacity-50 cursor-not-allowed"
         >
             &laquo; Sebelumnya
         </span>
@@ -42,14 +42,14 @@ defineProps({
             v-if="links[links.length - 1].url"
             :href="links[links.length - 1].url"
             preserve-scroll
-            class="inline-flex items-center px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+            class="btn-secondary"
         >
             Berikutnya &raquo;
         </Link>
         <!-- Tombol Kanan (Disabled) -->
         <span
             v-else
-            class="inline-flex items-center px-4 py-2 text-sm font-medium text-gray-400 bg-white border border-gray-300 rounded-md cursor-not-allowed"
+            class="btn-secondary opacity-50 cursor-not-allowed"
         >
             Berikutnya &raquo;
         </span>

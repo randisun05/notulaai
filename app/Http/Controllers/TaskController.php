@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Meeting;
 use App\Models\MeetingActionItem;
 use App\Models\Task;
+use App\Models\Unit;
 use App\Models\User;
 use App\Services\Meeting\ActivityLogger;
 use App\Services\Webhook\WebhookDispatcher;
@@ -39,6 +40,7 @@ class TaskController extends Controller
             'tasks' => $tasks,
             'filters' => $request->only(['status']),
             'statuses' => Task::STATUSES,
+            'canManage' => Auth::user()->can('manage', Task::class),
         ]);
     }
 
@@ -107,7 +109,127 @@ class TaskController extends Controller
             'statuses' => Task::STATUSES,
             'unitUsers' => User::where('unit_id', $task->unit_id)->get(['id', 'name']),
             'canApprove' => Auth::user()->can('approve', $task),
+            'canManage' => Auth::user()->can('manage', $task),
         ]);
+    }
+
+    /**
+     * Form buat Task manual — dibatasi admin/superadmin (lihat TaskPolicy::manage),
+     * beda dari storeFromActionItem() yang terbuka untuk semua unit member karena
+     * itu cuma mengonversi hasil AI, bukan membuat definisi task baru dari nol.
+     */
+    public function create()
+    {
+        $this->authorize('manage', Task::class);
+
+        $user = Auth::user();
+        $isSuperadmin = $user->hasRole('superadmin');
+
+        return Inertia::render('Tasks/Create', [
+            'units' => $isSuperadmin ? Unit::all(['id', 'name']) : [],
+            'users' => User::query()
+                ->when(!$isSuperadmin, fn ($q) => $q->where('unit_id', $user->unit_id))
+                ->get(['id', 'name', 'unit_id']),
+            'priorities' => Task::PRIORITIES,
+            'isSuperadmin' => $isSuperadmin,
+            'defaultUnitId' => $user->unit_id,
+        ]);
+    }
+
+    public function store(Request $request)
+    {
+        $this->authorize('manage', Task::class);
+
+        $user = Auth::user();
+        $isSuperadmin = $user->hasRole('superadmin');
+        $unitId = $isSuperadmin ? $request->input('unit_id') : $user->unit_id;
+
+        $validated = $request->validate([
+            'title' => 'required|string|max:255',
+            'description' => 'nullable|string|max:5000',
+            'unit_id' => [$isSuperadmin ? 'required' : 'nullable', 'integer', 'exists:units,id'],
+            'assignee_id' => ['nullable', 'integer', Rule::exists('users', 'id')->where('unit_id', $unitId)],
+            'priority' => ['required', Rule::in(Task::PRIORITIES)],
+            'deadline' => 'nullable|date',
+        ]);
+
+        $assignee = !empty($validated['assignee_id']) ? User::find($validated['assignee_id']) : null;
+
+        $task = Task::create([
+            'unit_id' => $unitId,
+            'assignee_id' => $assignee?->id,
+            'assignee_name' => $assignee?->name,
+            'created_by' => $user->id,
+            'title' => $validated['title'],
+            'description' => $validated['description'] ?? null,
+            'priority' => $validated['priority'],
+            'deadline' => $validated['deadline'] ?? null,
+        ]);
+
+        $this->activityLogger->log(null, $user, 'task.created', $user->name . " membuat Task \"{$task->title}\" secara manual.", $task);
+        $this->webhookDispatcher->dispatch('task.created', $task, ['task_id' => $task->id, 'title' => $task->title, 'status' => $task->status]);
+
+        return redirect()->route('tasks.show', $task)->with('success', 'Task berhasil dibuat.');
+    }
+
+    public function edit(Task $task)
+    {
+        $this->authorize('manage', $task);
+
+        $user = Auth::user();
+        $isSuperadmin = $user->hasRole('superadmin');
+
+        return Inertia::render('Tasks/Edit', [
+            'task' => [
+                'id' => $task->id,
+                'title' => $task->title,
+                'description' => $task->description,
+                'priority' => $task->priority,
+                'deadline' => $task->deadline?->toDateString(),
+                'assignee_id' => $task->assignee_id,
+                'unit_id' => $task->unit_id,
+            ],
+            'units' => $isSuperadmin ? Unit::all(['id', 'name']) : [],
+            'users' => User::query()
+                ->when(!$isSuperadmin, fn ($q) => $q->where('unit_id', $user->unit_id))
+                ->get(['id', 'name', 'unit_id']),
+            'priorities' => Task::PRIORITIES,
+            'isSuperadmin' => $isSuperadmin,
+        ]);
+    }
+
+    public function update(Request $request, Task $task)
+    {
+        $this->authorize('manage', $task);
+
+        $user = Auth::user();
+        $isSuperadmin = $user->hasRole('superadmin');
+        $unitId = $isSuperadmin ? ($request->input('unit_id') ?: $task->unit_id) : $task->unit_id;
+
+        $validated = $request->validate([
+            'title' => 'required|string|max:255',
+            'description' => 'nullable|string|max:5000',
+            'unit_id' => [$isSuperadmin ? 'required' : 'nullable', 'integer', 'exists:units,id'],
+            'assignee_id' => ['nullable', 'integer', Rule::exists('users', 'id')->where('unit_id', $unitId)],
+            'priority' => ['required', Rule::in(Task::PRIORITIES)],
+            'deadline' => 'nullable|date',
+        ]);
+
+        $assignee = !empty($validated['assignee_id']) ? User::find($validated['assignee_id']) : null;
+
+        $task->update([
+            'unit_id' => $unitId,
+            'title' => $validated['title'],
+            'description' => $validated['description'] ?? null,
+            'priority' => $validated['priority'],
+            'deadline' => $validated['deadline'] ?? null,
+            'assignee_id' => $assignee?->id,
+            'assignee_name' => $assignee?->name,
+        ]);
+
+        $this->activityLogger->log($task->meeting, $user, 'task.details_updated', $user->name . " memperbarui detail Task \"{$task->title}\".", $task);
+
+        return redirect()->route('tasks.show', $task)->with('success', 'Task berhasil diperbarui.');
     }
 
     public function storeFromActionItem(Meeting $meeting, MeetingActionItem $actionItem)

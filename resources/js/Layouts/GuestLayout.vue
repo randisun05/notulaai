@@ -4,16 +4,15 @@ import { Link } from '@inertiajs/vue3';
 </script>
 
 <template>
-    <div class="min-h-screen flex flex-col sm:justify-center items-center pt-6 sm:pt-0 bg-gray-100">
+    <div class="min-h-screen flex flex-col sm:justify-center items-center pt-6 sm:pt-0 bg-gradient-to-b from-brand-50 via-white to-white">
         <div>
-            <Link href="/">
-                <ApplicationLogo class="w-20 h-20 fill-current text-gray-500" />
+            <Link href="/" class="flex items-center gap-2">
+                <ApplicationLogo class="w-12 h-12 fill-current text-brand-600" />
+                <span class="text-xl font-bold text-gray-900 tracking-tight">AI Notula</span>
             </Link>
         </div>
 
-        <div
-            class="w-full sm:max-w-md mt-6 px-6 py-4 bg-white shadow-md overflow-hidden sm:rounded-lg"
-        >
+        <div class="w-full sm:max-w-md mt-8 px-8 py-8 card">
             <slot />
         </div>
     </div>

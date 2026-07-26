@@ -74,7 +74,11 @@ Route::middleware('auth')->group(function () {
     Route::get('/tasks/calendar', [TaskController::class, 'calendar'])->name('tasks.calendar');
     Route::get('/tasks/export/pdf', [TaskExportController::class, 'pdf'])->name('tasks.export.pdf');
     Route::get('/tasks/export/excel', [TaskExportController::class, 'excel'])->name('tasks.export.excel');
+    Route::get('/tasks/create', [TaskController::class, 'create'])->name('tasks.create');
+    Route::post('/tasks', [TaskController::class, 'store'])->name('tasks.store');
     Route::get('/tasks/{task}', [TaskController::class, 'show'])->name('tasks.show');
+    Route::get('/tasks/{task}/edit', [TaskController::class, 'edit'])->name('tasks.edit');
+    Route::put('/tasks/{task}', [TaskController::class, 'update'])->name('tasks.update');
     Route::patch('/tasks/{task}/status', [TaskController::class, 'updateStatus'])->name('tasks.update-status');
     Route::post('/tasks/{task}/submit-for-review', [TaskController::class, 'submitForReview'])->name('tasks.submit-for-review');
     Route::post('/tasks/{task}/approve', [TaskController::class, 'approve'])->name('tasks.approve');

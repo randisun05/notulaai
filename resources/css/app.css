@@ -1,3 +1,173 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/*
+ * Design system global AI Notula App.
+ * Tujuan: kelas semantik yang bisa dipakai di semua halaman Vue tanpa
+ * mengulang string utility Tailwind yang panjang di tiap file. Ubah warna/
+ * radius/shadow di satu tempat ini, efeknya konsisten ke seluruh aplikasi.
+ */
+
+@layer base {
+    body {
+        @apply antialiased text-gray-800 bg-gray-50;
+    }
+
+    ::selection {
+        @apply bg-brand-100 text-brand-900;
+    }
+}
+
+@layer components {
+    /* ---------- Buttons ---------- */
+    .btn {
+        @apply inline-flex items-center justify-center gap-1.5 rounded-lg font-semibold transition duration-150 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap;
+    }
+    .btn-sm {
+        @apply px-3 py-1.5 text-xs;
+    }
+    .btn-md {
+        @apply px-4 py-2.5 text-sm;
+    }
+    .btn-primary {
+        @apply btn btn-md bg-brand-600 text-white shadow-sm hover:bg-brand-700 active:bg-brand-800 focus:ring-brand-500;
+    }
+    .btn-secondary {
+        @apply btn btn-md bg-white text-gray-700 border border-gray-300 shadow-sm hover:bg-gray-50 focus:ring-brand-500;
+    }
+    .btn-danger {
+        @apply btn btn-md bg-red-600 text-white shadow-sm hover:bg-red-700 active:bg-red-800 focus:ring-red-500;
+    }
+    .btn-ghost {
+        @apply btn btn-sm bg-transparent text-gray-500 hover:text-gray-800 hover:bg-gray-100 focus:ring-brand-500;
+    }
+    .btn-link {
+        @apply inline-flex items-center gap-1 text-sm font-medium text-brand-600 hover:text-brand-800 transition;
+    }
+
+    /* ---------- Surfaces ---------- */
+    .card {
+        @apply bg-white rounded-2xl shadow-card border border-gray-100;
+    }
+    .card-padded {
+        @apply card p-6;
+    }
+    .card-header {
+        @apply flex items-center justify-between gap-4 mb-5;
+    }
+    .card-title {
+        @apply text-lg font-semibold text-gray-900;
+    }
+    .page-shell {
+        @apply py-10;
+    }
+    .page-container {
+        @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6;
+    }
+    .page-heading {
+        @apply text-xl font-bold text-gray-900 tracking-tight;
+    }
+    .page-subheading {
+        @apply text-sm text-gray-500 mt-0.5;
+    }
+
+    /* ---------- Alerts / flash ---------- */
+    .alert {
+        @apply px-4 py-3 rounded-xl text-sm border;
+    }
+    .alert-success {
+        @apply alert bg-green-50 text-green-800 border-green-200;
+    }
+    .alert-error {
+        @apply alert bg-red-50 text-red-800 border-red-200;
+    }
+    .alert-info {
+        @apply alert bg-brand-50 text-brand-800 border-brand-200;
+    }
+
+    /* ---------- Badges / status pills ---------- */
+    .badge {
+        @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium whitespace-nowrap;
+    }
+    .badge-gray {
+        @apply badge bg-gray-100 text-gray-700;
+    }
+    .badge-blue {
+        @apply badge bg-brand-100 text-brand-700;
+    }
+    .badge-green {
+        @apply badge bg-green-100 text-green-700;
+    }
+    .badge-yellow {
+        @apply badge bg-yellow-100 text-yellow-800;
+    }
+    .badge-orange {
+        @apply badge bg-orange-100 text-orange-700;
+    }
+    .badge-red {
+        @apply badge bg-red-100 text-red-700;
+    }
+
+    /* ---------- Forms ---------- */
+    .form-label {
+        @apply block text-sm font-medium text-gray-700 mb-1;
+    }
+    .form-input {
+        @apply block w-full rounded-lg border-gray-300 shadow-sm text-sm text-gray-900 focus:border-brand-500 focus:ring-brand-500 disabled:bg-gray-50 disabled:text-gray-500;
+    }
+    .form-select {
+        @apply form-input;
+    }
+    .form-textarea {
+        @apply form-input;
+    }
+    .form-error {
+        @apply text-sm text-red-600 mt-1.5;
+    }
+    .form-hint {
+        @apply text-xs text-gray-400 mt-1.5;
+    }
+
+    /* ---------- Tables ---------- */
+    .table-wrap {
+        @apply overflow-x-auto rounded-xl border border-gray-100;
+    }
+    .table-base {
+        @apply min-w-full divide-y divide-gray-100;
+    }
+    .table-head {
+        @apply bg-gray-50;
+    }
+    .table-head-cell {
+        @apply px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider;
+    }
+    .table-body {
+        @apply bg-white divide-y divide-gray-100;
+    }
+    .table-cell {
+        @apply px-6 py-4 text-sm text-gray-700;
+    }
+    .table-row-hover {
+        @apply hover:bg-gray-50/70 transition-colors;
+    }
+
+    /* ---------- Nav (dipakai NavLink.vue / ResponsiveNavLink.vue) ---------- */
+    .nav-link-active {
+        @apply inline-flex items-center px-1 pt-1 border-b-2 border-brand-500 text-sm font-semibold leading-5 text-gray-900 transition duration-150 ease-in-out focus:outline-none;
+    }
+    .nav-link-inactive {
+        @apply inline-flex items-center px-1 pt-1 border-b-2 border-transparent text-sm font-medium leading-5 text-gray-500 hover:text-gray-700 hover:border-gray-300 transition duration-150 ease-in-out focus:outline-none;
+    }
+    .nav-link-mobile-active {
+        @apply block w-full ps-3 pe-4 py-2 border-l-4 border-brand-500 text-start text-base font-semibold text-brand-700 bg-brand-50 transition duration-150 ease-in-out focus:outline-none;
+    }
+    .nav-link-mobile-inactive {
+        @apply block w-full ps-3 pe-4 py-2 border-l-4 border-transparent text-start text-base font-medium text-gray-600 hover:text-gray-800 hover:bg-gray-50 hover:border-gray-300 transition duration-150 ease-in-out focus:outline-none;
+    }
+
+    /* ---------- Empty states ---------- */
+    .empty-state {
+        @apply text-center py-12 text-sm text-gray-400;
+    }
+}

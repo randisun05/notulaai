@@ -18,9 +18,10 @@ class TaskPolicy
     }
 
     /**
-     * Task hanya dibuat lewat konversi Action Item (lihat MeetingPolicy::update
-     * pada meeting sumbernya), bukan form manual — jadi create() di sini hanya
-     * dipakai sebagai pengaman tambahan bila endpoint lain menambahkannya nanti.
+     * Task bisa terbentuk otomatis lewat konversi Action Item (siapa saja yang
+     * boleh update meeting sumbernya) ATAU dibuat manual lewat form (admin/
+     * superadmin saja — lihat manage()). create() di sini menjaga jalur konversi
+     * Action Item tetap terbuka untuk semua unit member, tidak dibatasi manage().
      */
     public function create(User $user): bool
     {
@@ -30,6 +31,20 @@ class TaskPolicy
     public function update(User $user, Task $task): bool
     {
         return $user->id === $task->assignee_id || $this->inScope($user, $task);
+    }
+
+    /**
+     * Buat/edit task manual lewat form (judul, deskripsi, prioritas, deadline,
+     * assignee) — sengaja dibatasi admin/superadmin, beda dari update() di atas
+     * yang untuk operasional harian (status/SLA/disposisi) oleh siapa pun di unit.
+     */
+    public function manage(User $user, ?Task $task = null): bool
+    {
+        if (!$user->hasRole('admin') && !$user->hasRole('superadmin')) {
+            return false;
+        }
+
+        return $task ? $this->inScope($user, $task) : true;
     }
 
     /**
