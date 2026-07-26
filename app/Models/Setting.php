@@ -12,6 +12,7 @@ class Setting extends Model
         'company_address',
         'ai_text_provider',
         'ai_transcription_provider',
+        'ai_ocr_provider',
         'timezone',
     ];
 
@@ -24,6 +25,7 @@ class Setting extends Model
             'company_name' => config('app.name', 'AI Notula App'),
             'ai_text_provider' => config('ai.default_text_provider'),
             'ai_transcription_provider' => config('ai.default_transcription_provider'),
+            'ai_ocr_provider' => config('ai.default_ocr_provider'),
             'timezone' => config('app.timezone', 'Asia/Jakarta'),
         ]);
     }

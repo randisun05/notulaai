@@ -14,6 +14,7 @@ return [
 
     'default_text_provider' => env('AI_TEXT_PROVIDER', 'openrouter'),
     'default_transcription_provider' => env('AI_TRANSCRIPTION_PROVIDER', 'whisper_local'),
+    'default_ocr_provider' => env('AI_OCR_PROVIDER', 'gemini_ocr'),
 
     /*
     |--------------------------------------------------------------------------
@@ -38,6 +39,11 @@ return [
 
         'whisper_local' => [
             'driver' => \App\Services\AI\Providers\WhisperLocalTranscriptionProvider::class,
+        ],
+
+        'gemini_ocr' => [
+            'driver' => \App\Services\AI\Providers\GeminiOcrProvider::class,
+            'model' => env('AI_OCR_MODEL', 'gemini-2.0-flash'),
         ],
     ],
 ];

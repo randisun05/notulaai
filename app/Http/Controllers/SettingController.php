@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Setting;
+use App\Services\AI\Contracts\OcrProvider;
 use App\Services\AI\Contracts\TextGenerationProvider;
 use App\Services\AI\Contracts\TranscriptionProvider;
 use Illuminate\Http\Request;
@@ -20,6 +21,7 @@ class SettingController extends Controller
             'setting' => Setting::current(),
             'textProviders' => $this->providersImplementing(TextGenerationProvider::class),
             'transcriptionProviders' => $this->providersImplementing(TranscriptionProvider::class),
+            'ocrProviders' => $this->providersImplementing(OcrProvider::class),
         ]);
     }
 
@@ -29,6 +31,7 @@ class SettingController extends Controller
 
         $textProviders = $this->providersImplementing(TextGenerationProvider::class);
         $transcriptionProviders = $this->providersImplementing(TranscriptionProvider::class);
+        $ocrProviders = $this->providersImplementing(OcrProvider::class);
 
         $validated = $request->validate([
             'company_name' => 'required|string|max:255',
@@ -36,6 +39,7 @@ class SettingController extends Controller
             'company_logo' => 'nullable|image|max:2048',
             'ai_text_provider' => ['required', Rule::in($textProviders)],
             'ai_transcription_provider' => ['required', Rule::in($transcriptionProviders)],
+            'ai_ocr_provider' => ['required', Rule::in($ocrProviders)],
             'timezone' => 'required|timezone',
         ]);
 

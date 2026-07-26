@@ -152,6 +152,8 @@ class MeetingController extends Controller
             $validated = $request->validate(['text_file' => 'required|file|mimetypes:text/plain,text/markdown']);
         } elseif ($inputType === 'text') {
             $validated = $request->validate(['text_input' => 'required|string']);
+        } elseif ($inputType === 'image') {
+            $validated = $request->validate(['image_file' => 'required|image|mimes:jpg,jpeg,png,webp|max:10240']);
         } else {
             return back()->withErrors(['type' => 'Tipe input tidak valid.']);
         }
@@ -176,6 +178,10 @@ class MeetingController extends Controller
             // Simpan di storage/app/public/text_uploads/filename.txt
             Storage::disk('public')->put($path, $validated['text_input']);
             $sourceFilePath = $path;
+        } elseif ($inputType === 'image') {
+            $file = $validated['image_file'];
+            // Simpan di storage/app/public/image_uploads
+            $sourceFilePath = $file->store('image_uploads', 'public');
         }
 
         // Update meeting dengan path file baru dan ubah status

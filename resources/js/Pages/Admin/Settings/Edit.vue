@@ -11,6 +11,7 @@ const props = defineProps({
     setting: { type: Object, required: true },
     textProviders: { type: Array, required: true },
     transcriptionProviders: { type: Array, required: true },
+    ocrProviders: { type: Array, required: true },
 });
 
 const timezones = [
@@ -26,6 +27,7 @@ const form = useForm({
     company_logo: null,
     ai_text_provider: props.setting.ai_text_provider,
     ai_transcription_provider: props.setting.ai_transcription_provider,
+    ai_ocr_provider: props.setting.ai_ocr_provider,
     timezone: props.setting.timezone,
 });
 
@@ -110,6 +112,14 @@ const submit = () => {
                                     <option v-for="p in transcriptionProviders" :key="p" :value="p">{{ p }}</option>
                                 </select>
                                 <InputError class="mt-2" :message="form.errors.ai_transcription_provider" />
+                            </div>
+
+                            <div>
+                                <InputLabel for="ai_ocr_provider" value="Provider OCR (Gambar)" />
+                                <select id="ai_ocr_provider" v-model="form.ai_ocr_provider" class="mt-1 block w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm">
+                                    <option v-for="p in ocrProviders" :key="p" :value="p">{{ p }}</option>
+                                </select>
+                                <InputError class="mt-2" :message="form.errors.ai_ocr_provider" />
                             </div>
                         </div>
                     </div>

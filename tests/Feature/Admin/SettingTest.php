@@ -49,6 +49,7 @@ class SettingTest extends TestCase
             'company_address' => 'Jl. Contoh No. 1, Jakarta',
             'ai_text_provider' => 'gemini',
             'ai_transcription_provider' => 'whisper_local',
+            'ai_ocr_provider' => 'gemini_ocr',
             'timezone' => 'Asia/Jakarta',
         ]);
 
@@ -66,6 +67,7 @@ class SettingTest extends TestCase
             'company_name' => 'PT Contoh Indonesia',
             'ai_text_provider' => 'not-a-real-provider',
             'ai_transcription_provider' => 'whisper_local',
+            'ai_ocr_provider' => 'gemini_ocr',
             'timezone' => 'Asia/Jakarta',
         ]);
 

@@ -18,13 +18,14 @@ const authUserRole = computed(() => page.props.auth.user.role);
 const flashSuccess = computed(() => page.props.flash?.success);
 
 const activeTab = ref(props.meeting.status === 'Selesai Diproses' ? 'summary' : 'input');
-const inputType = ref('text'); // 'text', 'audio', 'file'
+const inputType = ref('text'); // 'text', 'audio', 'file', 'image'
 
 const form = useForm({
     type: 'text',
     text_input: '',
     audio_file: null,
     text_file: null,
+    image_file: null,
 });
 
 const onFileChange = (event, fileType) => {
@@ -35,9 +36,15 @@ const onFileChange = (event, fileType) => {
     if (fileType === 'audio') {
         form.audio_file = file;
         form.text_file = null; // Reset file lain
+        form.image_file = null;
     } else if (fileType === 'text') {
         form.text_file = file;
         form.audio_file = null; // Reset file lain
+        form.image_file = null;
+    } else if (fileType === 'image') {
+        form.image_file = file;
+        form.audio_file = null; // Reset file lain
+        form.text_file = null;
     }
 };
 
@@ -53,6 +60,8 @@ const submitProcess = () => {
             if (audioInput) audioInput.value = '';
             const textFileInput = document.getElementById('text_file_input');
             if (textFileInput) textFileInput.value = '';
+            const imageInput = document.getElementById('image_input');
+            if (imageInput) imageInput.value = '';
         },
     });
 };
@@ -175,6 +184,7 @@ const deleteMeeting = () => {
                                     <button @click="inputType = 'text'" :class="['whitespace-nowrap pb-4 px-1 border-b-2 font-medium text-sm', inputType === 'text' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300']">Input Teks</button>
                                     <button @click="inputType = 'audio'" :class="['whitespace-nowrap pb-4 px-1 border-b-2 font-medium text-sm', inputType === 'audio' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300']">Upload Audio</button>
                                     <button @click="inputType = 'file'" :class="['whitespace-nowrap pb-4 px-1 border-b-2 font-medium text-sm', inputType === 'file' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300']">Upload File Teks</button>
+                                    <button @click="inputType = 'image'" :class="['whitespace-nowrap pb-4 px-1 border-b-2 font-medium text-sm', inputType === 'image' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300']">Upload Gambar (OCR)</button>
                                 </nav>
                             </div>
 
@@ -194,6 +204,13 @@ const deleteMeeting = () => {
                                      <label for="text_file_input" class="block text-sm font-medium text-gray-700">File Teks (.txt, .md)</label>
                                     <input @change="onFileChange($event, 'text')" id="text_file_input" type="file" accept=".txt,.md" class="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"/>
                                     <InputError class="mt-2" :message="form.errors.text_file" />
+                                </div>
+
+                                <div v-show="inputType === 'image'">
+                                     <label for="image_input" class="block text-sm font-medium text-gray-700">Foto Catatan/Papan Tulis (.jpg, .png, .webp)</label>
+                                     <p class="text-xs text-gray-500 mb-1">Teks pada gambar akan dibaca otomatis oleh AI (OCR) lalu dirangkum.</p>
+                                    <input @change="onFileChange($event, 'image')" id="image_input" type="file" accept=".jpg,.jpeg,.png,.webp" class="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"/>
+                                    <InputError class="mt-2" :message="form.errors.image_file" />
                                 </div>
 
                                 <div class="flex items-center mt-6">

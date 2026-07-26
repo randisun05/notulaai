@@ -17,6 +17,7 @@ class MeetingProcessingService
 {
     private const AUDIO_EXTENSIONS = ['mp3', 'wav', 'm4a'];
     private const TEXT_EXTENSIONS = ['txt', 'md'];
+    private const IMAGE_EXTENSIONS = ['jpg', 'jpeg', 'png', 'webp'];
 
     public function __construct(
         private readonly AiManager $ai,
@@ -83,6 +84,29 @@ class MeetingProcessingService
             }
 
             return $transcript;
+        }
+
+        if (in_array($extension, self::IMAGE_EXTENSIONS)) {
+            $provider = $this->ai->activeOcrProvider();
+            $fileName = basename($filePath);
+
+            try {
+                $result = $this->ai->ocr()->extractText(
+                    absoluteFilePath: Storage::disk('public')->path($filePath),
+                    fileName: $fileName,
+                );
+            } catch (Throwable $e) {
+                $this->logger->logFailure('ocr', $provider, null, $fileName, $e->getMessage(), $meeting, $meeting->creator);
+                throw $e;
+            }
+
+            if (empty(trim($result->content))) {
+                throw new \RuntimeException('Tidak ada teks yang terbaca dari gambar tersebut.');
+            }
+
+            $this->logger->logSuccess('ocr', $provider, $result->model, $fileName, $result->content, null, null, $result->durationMs, $meeting, $meeting->creator);
+
+            return $result->content;
         }
 
         throw new \RuntimeException("Tipe file tidak didukung: {$extension}");

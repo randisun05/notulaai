@@ -3,6 +3,7 @@
 namespace App\Services\AI;
 
 use App\Models\Setting;
+use App\Services\AI\Contracts\OcrProvider;
 use App\Services\AI\Contracts\TextGenerationProvider;
 use App\Services\AI\Contracts\TranscriptionProvider;
 use Illuminate\Contracts\Container\Container;
@@ -28,6 +29,11 @@ class AiManager
         return Setting::current()->ai_transcription_provider ?: Config::get('ai.default_transcription_provider');
     }
 
+    public function activeOcrProvider(): string
+    {
+        return Setting::current()->ai_ocr_provider ?: Config::get('ai.default_ocr_provider');
+    }
+
     public function text(?string $provider = null): TextGenerationProvider
     {
         $provider ??= $this->activeTextProvider();
@@ -40,6 +46,13 @@ class AiManager
         $provider ??= $this->activeTranscriptionProvider();
 
         return $this->resolve($provider, TranscriptionProvider::class);
+    }
+
+    public function ocr(?string $provider = null): OcrProvider
+    {
+        $provider ??= $this->activeOcrProvider();
+
+        return $this->resolve($provider, OcrProvider::class);
     }
 
     private function resolve(string $provider, string $expectedInterface): object
