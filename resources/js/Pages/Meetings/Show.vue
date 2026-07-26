@@ -163,6 +163,10 @@ const deleteMeeting = () => {
                                 <nav class="-mb-px flex space-x-6" aria-label="Tabs">
                                     <button @click="activeTab = 'summary'" :class="['whitespace-nowrap pb-4 px-1 border-b-2 font-medium text-sm', activeTab === 'summary' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300']">Rangkuman</button>
                                     <button @click="activeTab = 'transcript'" :class="['whitespace-nowrap pb-4 px-1 border-b-2 font-medium text-sm', activeTab === 'transcript' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300']">Transkrip Penuh</button>
+                                    <button @click="activeTab = 'action_items'" :class="['whitespace-nowrap pb-4 px-1 border-b-2 font-medium text-sm', activeTab === 'action_items' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300']">
+                                        Action Items
+                                        <span v-if="meeting.action_items?.length" class="ml-1 inline-flex items-center justify-center h-5 min-w-[1.25rem] px-1 rounded-full bg-blue-100 text-blue-700 text-xs font-semibold">{{ meeting.action_items.length }}</span>
+                                    </button>
                                 </nav>
                             </div>
                             <div v-show="activeTab === 'summary'">
@@ -172,6 +176,21 @@ const deleteMeeting = () => {
                             <div v-show="activeTab === 'transcript'">
                                 <h3 class="text-lg font-semibold mb-2">Transkrip Penuh</h3>
                                 <div class="prose max-w-none text-gray-700 whitespace-pre-wrap" v-text="meeting.transcript || 'Transkrip tidak tersedia.'"></div>
+                            </div>
+                            <div v-show="activeTab === 'action_items'">
+                                <h3 class="text-lg font-semibold mb-2">Action Items</h3>
+                                <p v-if="!meeting.action_items?.length" class="text-sm text-gray-500">Tidak ada action item yang terdeteksi AI dari rapat ini.</p>
+                                <ul v-else class="divide-y divide-gray-200 border border-gray-200 rounded-md">
+                                    <li v-for="item in meeting.action_items" :key="item.id" class="p-4 flex items-start justify-between gap-4">
+                                        <div>
+                                            <p class="text-sm font-medium text-gray-900">{{ item.title }}</p>
+                                            <p class="text-xs text-gray-500 mt-1">
+                                                PIC: {{ item.assignee_name || 'Belum ditentukan' }}
+                                                <span v-if="item.deadline"> &middot; Deadline: {{ item.deadline }}</span>
+                                            </p>
+                                        </div>
+                                    </li>
+                                </ul>
                             </div>
                         </div>
 

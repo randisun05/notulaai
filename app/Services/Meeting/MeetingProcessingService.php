@@ -4,6 +4,7 @@ namespace App\Services\Meeting;
 
 use App\Mail\MeetingSummary;
 use App\Models\Meeting;
+use App\Models\MeetingActionItem;
 use App\Models\User;
 use App\Services\AI\AiManager;
 use App\Services\AI\AiRequestLogger;
@@ -22,6 +23,7 @@ class MeetingProcessingService
     public function __construct(
         private readonly AiManager $ai,
         private readonly AiRequestLogger $logger,
+        private readonly ActionItemsParser $actionItemsParser,
     ) {
     }
 
@@ -43,6 +45,10 @@ class MeetingProcessingService
             'status' => 'Selesai Diproses',
         ]);
         $meeting->refresh();
+
+        // Action items bersifat pelengkap: kalau AI gagal menghasilkan/mem-parse-nya,
+        // notula tetap dianggap berhasil diproses (transkrip + rangkuman sudah aman).
+        $this->generateActionItems($meeting, $transcript);
 
         $this->notifyUnit($meeting);
     }
@@ -131,6 +137,53 @@ class MeetingProcessingService
         $this->logger->logSuccess('text', $provider, $model, $prompt, $result->content, $result->promptTokens, $result->completionTokens, $result->durationMs, $meeting, $meeting->creator);
 
         return $result->content;
+    }
+
+    private function generateActionItems(Meeting $meeting, string $transcript): void
+    {
+        $prompt = <<<PROMPT
+        Dari transkrip rapat berikut, ekstrak daftar action item (tindak lanjut) yang disebutkan.
+        Balas HANYA dengan JSON array yang valid, tanpa teks lain dan tanpa markdown code fence.
+        Setiap elemen array berbentuk objek dengan field:
+        - "title": deskripsi singkat tindakan yang harus dilakukan (wajib diisi)
+        - "assignee_name": nama orang/tim penanggung jawab jika disebutkan, atau null jika tidak ada
+        - "deadline": tanggal tenggat dalam format YYYY-MM-DD jika disebutkan, atau null jika tidak ada
+
+        Jika tidak ada action item yang jelas, balas dengan array kosong: []
+
+        Transkrip:
+        {$transcript}
+        PROMPT;
+
+        $provider = $this->ai->activeTextProvider();
+        $model = Config::get("ai.providers.{$provider}.model");
+
+        try {
+            $result = $this->ai->text()->generate($prompt);
+        } catch (Throwable $e) {
+            $this->logger->logFailure('action_items', $provider, $model, $prompt, $e->getMessage(), $meeting, $meeting->creator);
+            Log::warning("Gagal membuat action items untuk Rapat ID {$meeting->id}: " . $e->getMessage());
+
+            return;
+        }
+
+        $this->logger->logSuccess('action_items', $provider, $model, $prompt, $result->content, $result->promptTokens, $result->completionTokens, $result->durationMs, $meeting, $meeting->creator);
+
+        $items = $this->actionItemsParser->parse($result->content);
+
+        $meeting->actionItems()->delete();
+
+        foreach ($items as $index => $item) {
+            MeetingActionItem::create([
+                'meeting_id' => $meeting->id,
+                'title' => $item['title'],
+                'assignee_name' => $item['assignee_name'],
+                'deadline' => $item['deadline'],
+                'order' => $index,
+            ]);
+        }
+
+        Log::info(count($items) . " action item dibuat untuk Rapat ID: {$meeting->id}");
     }
 
     private function notifyUnit(Meeting $meeting): void

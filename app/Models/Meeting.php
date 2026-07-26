@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class Meeting extends Model
@@ -37,5 +38,10 @@ class Meeting extends Model
     public function unit(): BelongsTo
     {
         return $this->belongsTo(Unit::class);
+    }
+
+    public function actionItems(): HasMany
+    {
+        return $this->hasMany(MeetingActionItem::class)->orderBy('order');
     }
 }

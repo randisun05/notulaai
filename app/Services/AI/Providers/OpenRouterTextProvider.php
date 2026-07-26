@@ -4,8 +4,13 @@ namespace App\Services\AI\Providers;
 
 use App\Services\AI\Contracts\TextGenerationProvider;
 use App\Services\AI\DTO\AiTextResult;
+use GuzzleHttp\Client as GuzzleClient;
+use GuzzleHttp\HandlerStack;
+use GuzzleHttp\Middleware;
+use GuzzleHttp\Psr7\Utils;
 use Illuminate\Support\Facades\Config;
 use OpenAI;
+use Psr\Http\Message\ResponseInterface;
 
 class OpenRouterTextProvider implements TextGenerationProvider
 {
@@ -27,6 +32,7 @@ class OpenRouterTextProvider implements TextGenerationProvider
             ->withBaseUri($baseUri)
             ->withHttpHeader('HTTP-Referer', 'https://ai-notula-app.test')
             ->withHttpHeader('X-Title', 'AI Notula App')
+            ->withHttpClient($this->makeHttpClient())
             ->make();
 
         $startedAt = microtime(true);
@@ -48,5 +54,37 @@ class OpenRouterTextProvider implements TextGenerationProvider
             completionTokens: $response->usage->completionTokens,
             durationMs: $durationMs,
         );
+    }
+
+    /**
+     * OpenRouter kadang mengirim `usage.completion_tokens_details` tanpa field
+     * accepted_prediction_tokens/rejected_prediction_tokens, padahal openai-php/client
+     * v0.10.x mewajibkan keduanya (int, bukan nullable) saat hydrate DTO respons —
+     * hasilnya TypeError setiap kali field itu hilang. Tambal di level HTTP response
+     * sebelum diparse oleh client, daripada menunggu upstream package memperbaikinya
+     * (versi yang lebih baru butuh Laravel 11+, sementara app ini masih Laravel 10).
+     */
+    private function makeHttpClient(): GuzzleClient
+    {
+        $stack = HandlerStack::create();
+
+        $stack->push(Middleware::mapResponse(function (ResponseInterface $response) {
+            $body = (string) $response->getBody();
+            $data = json_decode($body, true);
+
+            if (!is_array($data) || !isset($data['usage']['completion_tokens_details']) || !is_array($data['usage']['completion_tokens_details'])) {
+                return $response;
+            }
+
+            $data['usage']['completion_tokens_details'] += [
+                'reasoning_tokens' => 0,
+                'accepted_prediction_tokens' => 0,
+                'rejected_prediction_tokens' => 0,
+            ];
+
+            return $response->withBody(Utils::streamFor(json_encode($data)));
+        }));
+
+        return new GuzzleClient(['handler' => $stack]);
     }
 }

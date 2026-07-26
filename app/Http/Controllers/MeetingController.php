@@ -94,7 +94,7 @@ class MeetingController extends Controller
         $this->authorize('view', $meeting);
 
         return Inertia::render('Meetings/Show', [
-            'meeting' => $meeting
+            'meeting' => $meeting->load('actionItems'),
         ]);
     }
 
