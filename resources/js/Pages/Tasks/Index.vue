@@ -92,6 +92,8 @@ const formattedDate = (dateString) => {
                                     <tr v-for="task in tasks.data" :key="task.id">
                                         <td class="px-6 py-4">
                                             <Link :href="route('tasks.show', task.id)" class="text-sm font-medium text-indigo-600 hover:text-indigo-900">{{ task.title }}</Link>
+                                            <span v-if="task.is_overdue" class="ml-2 text-xs font-semibold px-1.5 py-0.5 rounded-full bg-red-100 text-red-700">Terlambat</span>
+                                            <span v-if="task.is_sla_breached" class="ml-2 text-xs font-semibold px-1.5 py-0.5 rounded-full bg-orange-100 text-orange-700">SLA</span>
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                             <Link v-if="task.meeting" :href="route('meetings.show', task.meeting.id)" class="text-indigo-600 hover:text-indigo-900">{{ task.meeting.title }}</Link>

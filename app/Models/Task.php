@@ -10,6 +10,7 @@ class Task extends Model
 {
     public const STATUSES = ['Todo', 'In Progress', 'Waiting', 'Review', 'Done', 'Cancelled'];
     public const PRIORITIES = ['Low', 'Medium', 'High', 'Urgent'];
+    private const CLOSED_STATUSES = ['Done', 'Cancelled'];
 
     protected $fillable = [
         'meeting_id',
@@ -23,11 +24,16 @@ class Task extends Model
         'priority',
         'status',
         'deadline',
+        'sla_hours',
+        'escalated_at',
     ];
 
     protected $casts = [
         'deadline' => 'date',
+        'escalated_at' => 'datetime',
     ];
+
+    protected $appends = ['is_overdue', 'is_sla_breached'];
 
     public function meeting(): BelongsTo
     {
@@ -62,5 +68,23 @@ class Task extends Model
     public function dispositions(): HasMany
     {
         return $this->hasMany(TaskDisposition::class)->orderBy('created_at', 'desc');
+    }
+
+    public function getIsOverdueAttribute(): bool
+    {
+        if (!$this->deadline || in_array($this->status, self::CLOSED_STATUSES, true)) {
+            return false;
+        }
+
+        return $this->deadline->copy()->endOfDay()->isPast();
+    }
+
+    public function getIsSlaBreachedAttribute(): bool
+    {
+        if (!$this->sla_hours || in_array($this->status, self::CLOSED_STATUSES, true)) {
+            return false;
+        }
+
+        return $this->created_at->copy()->addHours($this->sla_hours)->isPast();
     }
 }

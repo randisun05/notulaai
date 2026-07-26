@@ -64,6 +64,7 @@ Route::middleware('auth')->group(function () {
     Route::patch('/tasks/{task}/status', [TaskController::class, 'updateStatus'])->name('tasks.update-status');
     Route::post('/tasks/{task}/approve', [TaskController::class, 'approve'])->name('tasks.approve');
     Route::post('/tasks/{task}/reject', [TaskController::class, 'reject'])->name('tasks.reject');
+    Route::patch('/tasks/{task}/sla', [TaskController::class, 'updateSla'])->name('tasks.update-sla');
     Route::post('/tasks/{task}/dispositions', [TaskDispositionController::class, 'store'])->name('tasks.dispositions.store');
 
     // Forum Routes

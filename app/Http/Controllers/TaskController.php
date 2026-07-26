@@ -213,4 +213,23 @@ class TaskController extends Controller
 
         return back()->with('success', 'Task dikembalikan untuk diperbaiki.');
     }
+
+    public function updateSla(Request $request, Task $task)
+    {
+        $this->authorize('update', $task);
+
+        $validated = $request->validate([
+            'sla_hours' => 'nullable|integer|min:1|max:8760',
+        ]);
+
+        $task->update($validated);
+
+        $description = $validated['sla_hours']
+            ? Auth::user()->name . " mengatur SLA Task \"{$task->title}\" menjadi {$validated['sla_hours']} jam."
+            : Auth::user()->name . " menghapus SLA Task \"{$task->title}\".";
+
+        $this->activityLogger->log($task->meeting, Auth::user(), 'task.sla_updated', $description, $task);
+
+        return back()->with('success', 'SLA task berhasil diperbarui.');
+    }
 }

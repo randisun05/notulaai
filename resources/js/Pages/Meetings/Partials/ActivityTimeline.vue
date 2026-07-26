@@ -19,6 +19,8 @@ const ICONS = {
     'task.approval_requested': '🙋',
     'task.approved': '✅',
     'task.rejected': '❌',
+    'task.sla_updated': '⏱️',
+    'task.escalated': '🚨',
     'email.sent': '✉️',
 };
 

@@ -44,6 +44,13 @@ const submitDisposition = () => {
     });
 };
 
+const slaForm = useForm({ sla_hours: props.task.sla_hours });
+const submitSla = () => {
+    slaForm.patch(route('tasks.update-sla', props.task.id), {
+        preserveScroll: true,
+    });
+};
+
 const formattedDate = (dateString) => {
     if (!dateString) return 'Belum ditentukan';
     return new Date(dateString).toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' });
@@ -66,7 +73,11 @@ const priorityColor = (priority) => ({
 
     <AuthenticatedLayout>
         <template #header>
-            <h2 class="font-semibold text-xl text-gray-800 leading-tight">{{ task.title }}</h2>
+            <div class="flex items-center gap-3 flex-wrap">
+                <h2 class="font-semibold text-xl text-gray-800 leading-tight">{{ task.title }}</h2>
+                <span v-if="task.is_overdue" class="text-xs font-semibold px-2 py-0.5 rounded-full bg-red-100 text-red-700">Terlambat</span>
+                <span v-if="task.is_sla_breached" class="text-xs font-semibold px-2 py-0.5 rounded-full bg-orange-100 text-orange-700">SLA Terlampaui</span>
+            </div>
         </template>
 
         <div class="py-12">
@@ -104,6 +115,10 @@ const priorityColor = (priority) => ({
                                 <div>
                                     <dt class="text-sm font-medium text-gray-500">Unit</dt>
                                     <dd class="mt-1 text-sm text-gray-800">{{ task.unit?.name || '-' }}</dd>
+                                </div>
+                                <div>
+                                    <dt class="text-sm font-medium text-gray-500">SLA</dt>
+                                    <dd class="mt-1 text-sm text-gray-800">{{ task.sla_hours ? `${task.sla_hours} jam sejak dibuat` : 'Tidak diatur' }}</dd>
                                 </div>
                             </div>
 
@@ -166,6 +181,18 @@ const priorityColor = (priority) => ({
                                     <span v-if="d.note"> &middot; "{{ d.note }}"</span>
                                 </div>
                             </div>
+                        </div>
+
+                        <div class="mt-6 pt-6 border-t border-gray-100">
+                            <h4 class="text-sm font-medium text-gray-700 mb-2">SLA (Batas Waktu Penyelesaian)</h4>
+                            <form @submit.prevent="submitSla" class="flex items-start gap-2">
+                                <div>
+                                    <input v-model="slaForm.sla_hours" type="number" min="1" placeholder="Jam, mis. 48" class="block w-40 border-gray-300 rounded-md text-sm focus:border-indigo-500 focus:ring-indigo-500" />
+                                    <InputError class="mt-1" :message="slaForm.errors.sla_hours" />
+                                </div>
+                                <PrimaryButton :disabled="slaForm.processing">Simpan SLA</PrimaryButton>
+                            </form>
+                            <p class="mt-1 text-xs text-gray-400">Task otomatis dieskalasi ke pembuat Task jika SLA terlampaui atau deadline lewat.</p>
                         </div>
                     </div>
 

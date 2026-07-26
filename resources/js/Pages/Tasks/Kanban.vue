@@ -83,6 +83,10 @@ const priorityColor = (priority) => ({
                                     class="bg-white border border-gray-200 rounded-md p-3 shadow-sm cursor-move hover:shadow-md transition-shadow"
                                 >
                                     <Link :href="route('tasks.show', task.id)" class="text-sm font-medium text-gray-900 hover:text-indigo-600">{{ task.title }}</Link>
+                                    <div class="mt-1 flex gap-1" v-if="task.is_overdue || task.is_sla_breached">
+                                        <span v-if="task.is_overdue" class="text-xs font-semibold px-1.5 py-0.5 rounded-full bg-red-100 text-red-700">Terlambat</span>
+                                        <span v-if="task.is_sla_breached" class="text-xs font-semibold px-1.5 py-0.5 rounded-full bg-orange-100 text-orange-700">SLA</span>
+                                    </div>
                                     <div class="mt-2 flex items-center justify-between">
                                         <span :class="['text-xs px-2 py-0.5 rounded-full', priorityColor(task.priority)]">{{ task.priority }}</span>
                                         <span v-if="formattedDate(task.deadline)" class="text-xs text-gray-400">{{ formattedDate(task.deadline) }}</span>

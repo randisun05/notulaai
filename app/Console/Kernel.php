@@ -2,7 +2,9 @@
 
 namespace App\Console;
 
+use App\Jobs\EscalateOverdueTasks;
 use App\Jobs\SendMeetingReminders;
+use App\Jobs\SendTaskDeadlineReminders;
 use App\Models\Setting;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Console\Kernel as ConsoleKernel;
@@ -14,9 +16,18 @@ class Kernel extends ConsoleKernel
      */
     protected function schedule(Schedule $schedule): void
     {
+        $timezone = Setting::current()->timezone ?? 'Asia/Jakarta';
+
         $schedule->job(new SendMeetingReminders)
             ->dailyAt('07:00')
-            ->timezone(Setting::current()->timezone ?? 'Asia/Jakarta');
+            ->timezone($timezone);
+
+        $schedule->job(new SendTaskDeadlineReminders)
+            ->dailyAt('07:30')
+            ->timezone($timezone);
+
+        $schedule->job(new EscalateOverdueTasks)
+            ->hourly();
     }
 
     /**
