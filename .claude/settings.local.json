@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//c/Users/Acer/.claude/projects/d--Project-ai-notula-app/memory/**)"
+    ]
+  }
+}

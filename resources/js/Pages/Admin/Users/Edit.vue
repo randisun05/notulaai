@@ -1,0 +1,105 @@
+<script setup>
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+import InputLabel from '@/Components/InputLabel.vue';
+import TextInput from '@/Components/TextInput.vue';
+import InputError from '@/Components/InputError.vue';
+import PrimaryButton from '@/Components/PrimaryButton.vue';
+import { Head, useForm } from '@inertiajs/vue3';
+
+// Menggunakan sintaks defineProps yang lebih sederhana
+const props = defineProps(['user', 'units']);
+
+const form = useForm({
+    _method: 'PATCH',
+    name: props.user.name,
+    email: props.user.email,
+    role: props.user.role,
+    unit_id: props.user.unit_id,
+    phone_number: props.user.phone_number || '',
+    password: '',
+    password_confirmation: '',
+});
+
+const submit = () => {
+    form.put(route('admin.users.update', props.user.id), {
+        preserveScroll: true,
+    });
+};
+</script>
+
+<template>
+    <Head :title="'Edit User: ' + user.name" />
+
+    <AuthenticatedLayout>
+        <template #header>
+            <h2 class="font-semibold text-xl text-gray-800 leading-tight">Edit User: {{ user.name }}</h2>
+        </template>
+
+        <div class="py-12">
+            <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
+                <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
+                    <div class="p-6 text-gray-900 max-w-2xl mx-auto">
+                        <form @submit.prevent="submit" class="mt-6 space-y-4">
+                            <div>
+                                <InputLabel for="name" value="Nama" />
+                                <TextInput id="name" type="text" class="mt-1 block w-full" v-model="form.name" required autofocus />
+                                <InputError class="mt-2" :message="form.errors.name" />
+                            </div>
+
+                            <div>
+                                <InputLabel for="email" value="Email" />
+                                <TextInput id="email" type="email" class="mt-1 block w-full" v-model="form.email" required />
+                                <InputError class="mt-2" :message="form.errors.email" />
+                            </div>
+
+                            <div>
+                                <InputLabel for="role" value="Role" />
+                                <select id="role" v-model="form.role" class="mt-1 block w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm">
+                                    <option value="user">User</option>
+                                    <option value="admin">Admin</option>
+                                    <option value="superadmin">Super Admin</option>
+                                </select>
+                                <InputError class="mt-2" :message="form.errors.role" />
+                            </div>
+
+                            <div>
+                                <InputLabel for="unit" value="Unit (Opsional)" />
+                                <select id="unit" v-model="form.unit_id" class="mt-1 block w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm">
+                                    <option :value="null">-- Tidak Ada Unit --</option>
+                                    <option v-for="unit in units" :key="unit.id" :value="unit.id">{{ unit.name }}</option>
+                                </select>
+                                <InputError class="mt-2" :message="form.errors.unit_id" />
+                            </div>
+
+                             <div>
+                                <InputLabel for="phone_number" value="No. HP (Opsional)" />
+                                <TextInput id="phone_number" type="text" class="mt-1 block w-full" v-model="form.phone_number" placeholder="0812..." />
+                                <InputError class="mt-2" :message="form.errors.phone_number" />
+                            </div>
+
+                            <div>
+                                <InputLabel for="password" value="Password Baru (Kosongkan jika tidak diubah)" />
+                                <TextInput id="password" type="password" class="mt-1 block w-full" v-model="form.password" />
+                                <InputError class="mt-2" :message="form.errors.password" />
+                            </div>
+
+                             <div>
+                                <InputLabel for="password_confirmation" value="Konfirmasi Password Baru" />
+                                <TextInput id="password_confirmation" type="password" class="mt-1 block w-full" v-model="form.password_confirmation" />
+                                <InputError class="mt-2" :message="form.errors.password_confirmation" />
+                            </div>
+
+
+                            <div class="flex justify-end mt-6">
+                                <PrimaryButton :class="{ 'opacity-25': form.processing }" :disabled="form.processing">
+                                    Simpan Perubahan
+                                </PrimaryButton>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </AuthenticatedLayout>
+</template>
+
