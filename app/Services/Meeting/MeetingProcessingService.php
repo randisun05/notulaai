@@ -8,6 +8,7 @@ use App\Models\MeetingActionItem;
 use App\Models\User;
 use App\Services\AI\AiManager;
 use App\Services\AI\AiRequestLogger;
+use App\Services\Webhook\WebhookDispatcher;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
@@ -25,6 +26,7 @@ class MeetingProcessingService
         private readonly AiRequestLogger $logger,
         private readonly ActionItemsParser $actionItemsParser,
         private readonly ActivityLogger $activityLogger,
+        private readonly WebhookDispatcher $webhookDispatcher,
     ) {
     }
 
@@ -52,6 +54,7 @@ class MeetingProcessingService
         $this->generateActionItems($meeting, $transcript);
 
         $this->activityLogger->log($meeting, null, 'meeting.processed', 'AI berhasil membuat transkrip dan rangkuman notula.');
+        $this->webhookDispatcher->dispatch('meeting.processed', $meeting, ['meeting_id' => $meeting->id, 'title' => $meeting->title]);
 
         $this->notifyUnit($meeting);
     }

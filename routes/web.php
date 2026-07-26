@@ -20,6 +20,7 @@ use App\Http\Controllers\AnalyticsController;
 use App\Http\Controllers\TaskExportController;
 use App\Http\Controllers\ApiTokenController;
 use App\Http\Controllers\AuditLogController;
+use App\Http\Controllers\WebhookController;
 
 Route::get('/', function () {
     return Inertia::render('Welcome', [
@@ -118,6 +119,12 @@ Route::middleware('auth')->group(function () {
 
         // AUDIT LOG
         Route::get('audit-logs', [AuditLogController::class, 'index'])->name('audit-logs.index');
+
+        // WEBHOOKS
+        Route::get('webhooks', [WebhookController::class, 'index'])->name('webhooks.index');
+        Route::post('webhooks', [WebhookController::class, 'store'])->name('webhooks.store');
+        Route::patch('webhooks/{webhook}', [WebhookController::class, 'update'])->name('webhooks.update');
+        Route::delete('webhooks/{webhook}', [WebhookController::class, 'destroy'])->name('webhooks.destroy');
 
     });
 

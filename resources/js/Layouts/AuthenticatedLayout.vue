@@ -56,6 +56,9 @@ const showingNavigationDropdown = ref(false);
                                     <NavLink :href="route('admin.audit-logs.index')" :active="route().current('admin.audit-logs.*')">
                                         Audit Log
                                     </NavLink>
+                                    <NavLink :href="route('admin.webhooks.index')" :active="route().current('admin.webhooks.*')">
+                                        Webhooks
+                                    </NavLink>
                                 </template>
 
 
@@ -171,6 +174,9 @@ const showingNavigationDropdown = ref(false);
                                 </ResponsiveNavLink>
                                 <ResponsiveNavLink :href="route('admin.audit-logs.index')" :active="route().current('admin.audit-logs.*')">
                                     Audit Log
+                                </ResponsiveNavLink>
+                                <ResponsiveNavLink :href="route('admin.webhooks.index')" :active="route().current('admin.webhooks.*')">
+                                    Webhooks
                                 </ResponsiveNavLink>
                             </div>
                         </div>

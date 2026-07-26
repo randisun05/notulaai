@@ -7,6 +7,7 @@ use App\Models\MeetingActionItem;
 use App\Models\Task;
 use App\Models\User;
 use App\Services\Meeting\ActivityLogger;
+use App\Services\Webhook\WebhookDispatcher;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -15,8 +16,10 @@ use Inertia\Inertia;
 
 class TaskController extends Controller
 {
-    public function __construct(private readonly ActivityLogger $activityLogger)
-    {
+    public function __construct(
+        private readonly ActivityLogger $activityLogger,
+        private readonly WebhookDispatcher $webhookDispatcher,
+    ) {
     }
 
     public function index(Request $request)
@@ -138,6 +141,7 @@ class TaskController extends Controller
         $actionItem->update(['converted_to_task' => true]);
 
         $this->activityLogger->log($meeting, Auth::user(), 'task.created', Auth::user()->name . " membuat Task \"{$task->title}\" dari Action Item.", $task);
+        $this->webhookDispatcher->dispatch('task.created', $task, ['task_id' => $task->id, 'title' => $task->title, 'status' => $task->status]);
 
         return back()->with('success', 'Action item berhasil dijadikan Task.');
     }
@@ -165,6 +169,7 @@ class TaskController extends Controller
             : Auth::user()->name . " mengubah status Task \"{$task->title}\" dari {$oldStatus} menjadi {$validated['status']}.";
 
         $this->activityLogger->log($task->meeting, Auth::user(), $activityType, $description, $task);
+        $this->webhookDispatcher->dispatch('task.status_changed', $task, ['task_id' => $task->id, 'title' => $task->title, 'old_status' => $oldStatus, 'new_status' => $task->status]);
 
         return back()->with('success', 'Status task berhasil diperbarui.');
     }
@@ -186,6 +191,7 @@ class TaskController extends Controller
             Auth::user()->name . " menyetujui Task \"{$task->title}\" sebagai selesai.",
             $task,
         );
+        $this->webhookDispatcher->dispatch('task.approved', $task, ['task_id' => $task->id, 'title' => $task->title]);
 
         return back()->with('success', 'Task disetujui sebagai selesai.');
     }
