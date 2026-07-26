@@ -34,4 +34,9 @@ class ForumComment extends Model
     {
         return $this->hasMany(self::class, 'parent_id')->orderBy('created_at');
     }
+
+    public function attachments(): HasMany
+    {
+        return $this->hasMany(ForumCommentAttachment::class);
+    }
 }

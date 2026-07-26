@@ -17,16 +17,22 @@ const currentUserId = () => page.props.auth.user.id;
 const isSuperadmin = () => page.props.auth.user.role === 'superadmin';
 const canManage = (comment) => comment.user_id === currentUserId() || isSuperadmin();
 
-const newCommentForm = useForm({ body: '' });
+const newCommentForm = useForm({ body: '', attachments: [] });
+const newCommentFileInput = ref(null);
 const submitNewComment = () => {
     newCommentForm.post(route('meetings.comments.store', props.meeting.id), {
         preserveScroll: true,
-        onSuccess: () => newCommentForm.reset(),
+        forceFormData: true,
+        onSuccess: () => {
+            newCommentForm.reset();
+            if (newCommentFileInput.value) newCommentFileInput.value.value = '';
+        },
     });
 };
 
 const replyingTo = ref(null);
-const replyForm = useForm({ body: '', parent_id: null });
+const replyForm = useForm({ body: '', parent_id: null, attachments: [] });
+const replyFileInput = ref(null);
 const startReply = (commentId) => {
     replyingTo.value = commentId;
     replyForm.reset();
@@ -38,11 +44,19 @@ const cancelReply = () => {
 const submitReply = () => {
     replyForm.post(route('meetings.comments.store', props.meeting.id), {
         preserveScroll: true,
+        forceFormData: true,
         onSuccess: () => {
             replyForm.reset();
             replyingTo.value = null;
+            if (replyFileInput.value) replyFileInput.value.value = '';
         },
     });
+};
+
+const formatFileSize = (bytes) => {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 };
 
 const editingId = ref(null);
@@ -84,9 +98,17 @@ const formatDateTime = (value) => {
                 class="block w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm"
             ></textarea>
             <InputError class="mt-2" :message="newCommentForm.errors.body" />
-            <div class="mt-2 flex justify-end">
+            <div class="mt-2 flex items-center justify-between gap-2">
+                <input
+                    ref="newCommentFileInput"
+                    type="file"
+                    multiple
+                    class="text-xs text-gray-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                    @change="newCommentForm.attachments = Array.from($event.target.files)"
+                />
                 <PrimaryButton :disabled="newCommentForm.processing || !newCommentForm.body.trim()">Kirim Komentar</PrimaryButton>
             </div>
+            <InputError class="mt-2" :message="newCommentForm.errors.attachments" />
         </form>
 
         <p v-if="!meeting.comments?.length" class="text-sm text-gray-500">Belum ada komentar. Jadilah yang pertama berdiskusi.</p>
@@ -111,6 +133,14 @@ const formatDateTime = (value) => {
                 </div>
                 <p v-else class="text-sm text-gray-700 mt-1 whitespace-pre-wrap">{{ comment.body }}</p>
 
+                <ul v-if="comment.attachments?.length" class="mt-2 space-y-1">
+                    <li v-for="file in comment.attachments" :key="file.id">
+                        <a :href="`/storage/${file.file_path}`" target="_blank" class="text-xs text-indigo-600 hover:text-indigo-800 underline">
+                            📎 {{ file.file_name }} <span class="text-gray-400">({{ formatFileSize(file.file_size) }})</span>
+                        </a>
+                    </li>
+                </ul>
+
                 <div class="mt-2 flex gap-3 text-xs">
                     <button @click="startReply(comment.id)" class="text-indigo-600 hover:text-indigo-800 font-medium">Balas</button>
                     <template v-if="canManage(comment) && editingId !== comment.id">
@@ -122,6 +152,13 @@ const formatDateTime = (value) => {
                 <form v-if="replyingTo === comment.id" @submit.prevent="submitReply" class="mt-3 ml-6">
                     <textarea v-model="replyForm.body" rows="2" placeholder="Tulis balasan..." class="block w-full text-sm border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm"></textarea>
                     <InputError class="mt-1" :message="replyForm.errors.body" />
+                    <input
+                        ref="replyFileInput"
+                        type="file"
+                        multiple
+                        class="mt-2 text-xs text-gray-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                        @change="replyForm.attachments = Array.from($event.target.files)"
+                    />
                     <div class="mt-2 flex gap-2">
                         <PrimaryButton :disabled="replyForm.processing || !replyForm.body.trim()">Kirim Balasan</PrimaryButton>
                         <SecondaryButton @click="cancelReply">Batal</SecondaryButton>
@@ -143,6 +180,14 @@ const formatDateTime = (value) => {
                             </div>
                         </div>
                         <p v-else class="text-sm text-gray-700 mt-1 whitespace-pre-wrap">{{ reply.body }}</p>
+
+                        <ul v-if="reply.attachments?.length" class="mt-2 space-y-1">
+                            <li v-for="file in reply.attachments" :key="file.id">
+                                <a :href="`/storage/${file.file_path}`" target="_blank" class="text-xs text-indigo-600 hover:text-indigo-800 underline">
+                                    📎 {{ file.file_name }} <span class="text-gray-400">({{ formatFileSize(file.file_size) }})</span>
+                                </a>
+                            </li>
+                        </ul>
 
                         <div v-if="canManage(reply) && editingId !== reply.id" class="mt-1 flex gap-3 text-xs">
                             <button @click="startEdit(reply)" class="text-gray-500 hover:text-gray-700">Edit</button>
