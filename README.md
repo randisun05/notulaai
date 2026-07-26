@@ -1,3 +1,26 @@
+# AI Notula App
+
+AI Meeting Workspace: transkrip & rangkuman notula otomatis (Whisper/Gemini), action items, task management dengan approval workflow, forum diskusi per rapat, dashboard & analytics, dan fitur enterprise (multi-tenant per unit, API token, audit log, webhook, SSO Google/Microsoft). Dibangun di atas Laravel 10 + Inertia.js + Vue 3.
+
+## Menjalankan dengan Docker Compose
+
+Cara ini tidak butuh PHP/MySQL/Node terpasang di komputer — semuanya jalan di container.
+
+```bash
+cp .env.example .env
+php artisan key:generate   # atau isi APP_KEY manual di .env jika belum punya PHP lokal
+
+docker compose up -d --build
+docker compose exec app php artisan migrate --seed
+```
+
+Aplikasi bisa diakses di `http://localhost:8080`. Service yang berjalan: `app` (PHP-FPM), `nginx` (web server, port 8080), `mysql`, `redis`, `queue` (worker `queue:work`), `scheduler` (`schedule:work` — menjalankan reminder/eskalasi task terjadwal).
+
+Catatan:
+- `docker-compose.yml` otomatis mengarahkan `DB_HOST`/`REDIS_HOST` ke service Docker (`mysql`/`redis`) dan mengaktifkan `CACHE_DRIVER`/`SESSION_DRIVER`/`QUEUE_CONNECTION=redis`, terlepas dari apa pun yang tertulis di `.env` untuk key tersebut — variabel lain di `.env` (API key AI, kredensial SMTP/OAuth, dst.) tetap dipakai apa adanya.
+- File upload (lampiran forum, logo perusahaan) disimpan di named volume `storage_data`, dibagi antara `app` dan `nginx` supaya keduanya melihat isi yang sama.
+- Setelah ganti kode, `docker compose up -d --build` untuk build ulang image (assets Vite dan `vendor/` di-bake saat build image, bukan lewat bind mount).
+
 <p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
 
 <p align="center">
