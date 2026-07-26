@@ -1,6 +1,8 @@
 <script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import InputError from '@/Components/InputError.vue';
+import InputLabel from '@/Components/InputLabel.vue';
+import TextInput from '@/Components/TextInput.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import DangerButton from '@/Components/DangerButton.vue'; // <-- Import Tombol Merah
 import { Head, useForm, usePage, Link, router } from '@inertiajs/vue3';
@@ -72,6 +74,30 @@ const sendEmail = () => {
             selectedRecipients.value = [];
         },
     });
+};
+
+const chatMessages = ref([...(props.meeting.chat_messages || [])]);
+const chatQuestion = ref('');
+const chatAsking = ref(false);
+const chatError = ref('');
+
+const askChat = async () => {
+    const question = chatQuestion.value.trim();
+    if (!question || chatAsking.value) return;
+
+    chatMessages.value.push({ id: `local-${Date.now()}`, role: 'user', content: question });
+    chatQuestion.value = '';
+    chatAsking.value = true;
+    chatError.value = '';
+
+    try {
+        const { data } = await axios.post(route('meetings.chat.store', props.meeting.id), { question });
+        chatMessages.value.push(data);
+    } catch (e) {
+        chatError.value = e.response?.data?.error || 'Gagal mendapat jawaban dari AI.';
+    } finally {
+        chatAsking.value = false;
+    }
 };
 
 const activeTab = ref(props.meeting.status === 'Selesai Diproses' ? 'summary' : 'input');
@@ -225,6 +251,7 @@ const deleteMeeting = () => {
                                         <span v-if="meeting.action_items?.length" class="ml-1 inline-flex items-center justify-center h-5 min-w-[1.25rem] px-1 rounded-full bg-blue-100 text-blue-700 text-xs font-semibold">{{ meeting.action_items.length }}</span>
                                     </button>
                                     <button @click="activeTab = 'email_ai'" :class="['whitespace-nowrap pb-4 px-1 border-b-2 font-medium text-sm', activeTab === 'email_ai' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300']">Email AI</button>
+                                    <button @click="activeTab = 'chat_ai'" :class="['whitespace-nowrap pb-4 px-1 border-b-2 font-medium text-sm', activeTab === 'chat_ai' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300']">Tanya AI</button>
                                 </nav>
                             </div>
                             <div v-show="activeTab === 'summary'">
@@ -298,6 +325,29 @@ const deleteMeeting = () => {
                                         Kirim Email
                                     </PrimaryButton>
                                 </div>
+                            </div>
+                            <div v-show="activeTab === 'chat_ai'">
+                                <h3 class="text-lg font-semibold mb-2">Tanya AI Tentang Rapat Ini</h3>
+                                <p class="text-sm text-gray-500 mb-4">Contoh: "Apa keputusan rapat?", "Siapa PIC-nya?", "Apa saja deadline-nya?"</p>
+
+                                <div class="border border-gray-200 rounded-md p-4 h-80 overflow-y-auto space-y-3 mb-4 bg-gray-50">
+                                    <p v-if="chatMessages.length === 0" class="text-sm text-gray-400 text-center mt-10">Belum ada percakapan. Silakan mulai bertanya di bawah.</p>
+                                    <div v-for="msg in chatMessages" :key="msg.id" :class="msg.role === 'user' ? 'text-right' : 'text-left'">
+                                        <div :class="['inline-block max-w-[80%] px-3 py-2 rounded-lg text-sm', msg.role === 'user' ? 'bg-indigo-600 text-white' : 'bg-white border border-gray-200 text-gray-800']">
+                                            {{ msg.content }}
+                                        </div>
+                                    </div>
+                                    <div v-if="chatAsking" class="text-left">
+                                        <div class="inline-block px-3 py-2 rounded-lg text-sm bg-white border border-gray-200 text-gray-400 italic">AI sedang mengetik...</div>
+                                    </div>
+                                </div>
+
+                                <p v-if="chatError" class="text-sm text-red-600 mb-2">{{ chatError }}</p>
+
+                                <form @submit.prevent="askChat" class="flex gap-2">
+                                    <TextInput type="text" class="block w-full" v-model="chatQuestion" placeholder="Ketik pertanyaan Anda..." :disabled="chatAsking" />
+                                    <PrimaryButton :disabled="chatAsking || !chatQuestion.trim()">Kirim</PrimaryButton>
+                                </form>
                             </div>
                         </div>
 

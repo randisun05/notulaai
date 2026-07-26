@@ -44,4 +44,14 @@ class Meeting extends Model
     {
         return $this->hasMany(MeetingActionItem::class)->orderBy('order');
     }
+
+    public function tasks(): HasMany
+    {
+        return $this->hasMany(Task::class);
+    }
+
+    public function chatMessages(): HasMany
+    {
+        return $this->hasMany(MeetingChatMessage::class)->orderBy('created_at');
+    }
 }

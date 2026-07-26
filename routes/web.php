@@ -12,6 +12,7 @@ use App\Http\Controllers\UserController;
 use App\Http\Controllers\SettingController;
 use App\Http\Controllers\TaskController;
 use App\Http\Controllers\MeetingEmailController;
+use App\Http\Controllers\MeetingChatController;
 
 Route::get('/', function () {
     return Inertia::render('Welcome', [
@@ -48,6 +49,9 @@ Route::middleware('auth')->group(function () {
     // AI Email Generator
     Route::post('/meetings/{meeting}/emails/generate', [MeetingEmailController::class, 'generate'])->name('meetings.emails.generate');
     Route::post('/meetings/{meeting}/emails/send', [MeetingEmailController::class, 'send'])->name('meetings.emails.send');
+
+    // AI Chat per Meeting
+    Route::post('/meetings/{meeting}/chat', [MeetingChatController::class, 'store'])->name('meetings.chat.store');
 
     // Task Routes
     Route::get('/tasks', [TaskController::class, 'index'])->name('tasks.index');

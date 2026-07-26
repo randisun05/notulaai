@@ -96,7 +96,7 @@ class MeetingController extends Controller
         $this->authorize('view', $meeting);
 
         return Inertia::render('Meetings/Show', [
-            'meeting' => $meeting->load('actionItems'),
+            'meeting' => $meeting->load('actionItems', 'chatMessages'),
             'unitUsers' => User::where('unit_id', $meeting->unit_id)->get(['id', 'name', 'email']),
             'emailPurposes' => EmailDraftGenerator::PURPOSES,
         ]);
