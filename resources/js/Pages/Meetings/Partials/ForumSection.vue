@@ -32,6 +32,23 @@ const toggleReaction = (comment, emoji) => {
     router.post(route('comments.reactions.toggle', comment.id), { emoji }, { preserveScroll: true });
 };
 
+const escapeHtml = (str) => str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+
+const renderBody = (comment) => {
+    let html = escapeHtml(comment.body);
+
+    (comment.mentioned_users || []).forEach((u) => {
+        const escapedName = escapeHtml(u.name).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const re = new RegExp('@' + escapedName, 'gi');
+        html = html.replace(re, (match) => `<span class="text-indigo-600 font-medium">${match}</span>`);
+    });
+
+    return html;
+};
+
 const newCommentForm = useForm({ body: '', attachments: [] });
 const newCommentFileInput = ref(null);
 const submitNewComment = () => {
@@ -109,7 +126,7 @@ const formatDateTime = (value) => {
             <textarea
                 v-model="newCommentForm.body"
                 rows="3"
-                placeholder="Tulis komentar tentang rapat ini..."
+                placeholder="Tulis komentar tentang rapat ini... (ketik @Nama Lengkap untuk menyebut anggota unit)"
                 class="block w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm"
             ></textarea>
             <InputError class="mt-2" :message="newCommentForm.errors.body" />
@@ -146,7 +163,7 @@ const formatDateTime = (value) => {
                         <SecondaryButton @click="cancelEdit">Batal</SecondaryButton>
                     </div>
                 </div>
-                <p v-else class="text-sm text-gray-700 mt-1 whitespace-pre-wrap">{{ comment.body }}</p>
+                <p v-else class="text-sm text-gray-700 mt-1 whitespace-pre-wrap" v-html="renderBody(comment)"></p>
 
                 <ul v-if="comment.attachments?.length" class="mt-2 space-y-1">
                     <li v-for="file in comment.attachments" :key="file.id">
@@ -206,7 +223,7 @@ const formatDateTime = (value) => {
                                 <SecondaryButton @click="cancelEdit">Batal</SecondaryButton>
                             </div>
                         </div>
-                        <p v-else class="text-sm text-gray-700 mt-1 whitespace-pre-wrap">{{ reply.body }}</p>
+                        <p v-else class="text-sm text-gray-700 mt-1 whitespace-pre-wrap" v-html="renderBody(reply)"></p>
 
                         <ul v-if="reply.attachments?.length" class="mt-2 space-y-1">
                             <li v-for="file in reply.attachments" :key="file.id">

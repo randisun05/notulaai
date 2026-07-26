@@ -2,15 +2,23 @@
 
 namespace App\Http\Controllers;
 
+use App\Mail\CommentMentionNotification;
 use App\Models\ForumComment;
 use App\Models\Meeting;
+use App\Models\User;
+use App\Services\Forum\MentionParser;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
 
 class ForumCommentController extends Controller
 {
     private const MAX_ATTACHMENTS = 5;
+
+    public function __construct(private readonly MentionParser $mentionParser)
+    {
+    }
 
     public function store(Request $request, Meeting $meeting)
     {
@@ -46,6 +54,8 @@ class ForumCommentController extends Controller
             ]);
         }
 
+        $this->notifyMentions($comment, $meeting);
+
         return back()->with('success', 'Komentar berhasil ditambahkan.');
     }
 
@@ -58,6 +68,8 @@ class ForumCommentController extends Controller
         ]);
 
         $comment->update($validated);
+
+        $this->notifyMentions($comment, $comment->meeting);
 
         return back()->with('success', 'Komentar berhasil diperbarui.');
     }
@@ -83,5 +95,31 @@ class ForumCommentController extends Controller
         $comment->delete();
 
         return back()->with('success', 'Komentar berhasil dihapus.');
+    }
+
+    /**
+     * Deteksi "@Nama" di body komentar, simpan sebagai mention, dan kirim
+     * email notifikasi ke user yang disebut (kecuali menyebut diri sendiri).
+     */
+    private function notifyMentions(ForumComment $comment, Meeting $meeting): void
+    {
+        $candidates = User::where('unit_id', $meeting->unit_id)
+            ->where('id', '!=', $comment->user_id)
+            ->get(['id', 'name', 'email']);
+
+        $mentioned = $this->mentionParser->extract($comment->body, $candidates);
+
+        $previouslyMentionedIds = $comment->mentionedUsers()->pluck('users.id')->all();
+        $comment->mentionedUsers()->sync($mentioned->pluck('id'));
+
+        // Hanya kirim email untuk mention yang baru muncul, supaya edit komentar
+        // yang mention-nya tidak berubah tidak mengirim email berulang kali.
+        $newlyMentioned = $mentioned->whereNotIn('id', $previouslyMentionedIds);
+
+        foreach ($newlyMentioned as $user) {
+            if ($user->email) {
+                Mail::to($user->email)->send(new CommentMentionNotification($comment, $user));
+            }
+        }
     }
 }
