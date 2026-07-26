@@ -16,6 +16,7 @@ use App\Http\Controllers\MeetingChatController;
 use App\Http\Controllers\ForumCommentController;
 use App\Http\Controllers\ForumCommentReactionController;
 use App\Http\Controllers\TaskDispositionController;
+use App\Http\Controllers\AnalyticsController;
 
 Route::get('/', function () {
     return Inertia::render('Welcome', [
@@ -66,6 +67,9 @@ Route::middleware('auth')->group(function () {
     Route::post('/tasks/{task}/reject', [TaskController::class, 'reject'])->name('tasks.reject');
     Route::patch('/tasks/{task}/sla', [TaskController::class, 'updateSla'])->name('tasks.update-sla');
     Route::post('/tasks/{task}/dispositions', [TaskDispositionController::class, 'store'])->name('tasks.dispositions.store');
+
+    // Analytics Routes
+    Route::get('/analytics/productivity', [AnalyticsController::class, 'productivity'])->name('analytics.productivity');
 
     // Forum Routes
     Route::post('/meetings/{meeting}/comments', [ForumCommentController::class, 'store'])->name('meetings.comments.store');

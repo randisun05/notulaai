@@ -62,4 +62,9 @@ class User extends Authenticatable
     {
         return $this->hasMany(Meeting::class, 'user_id');
     }
+
+    public function assignedTasks(): HasMany
+    {
+        return $this->hasMany(Task::class, 'assignee_id');
+    }
 }

@@ -38,6 +38,9 @@ const showingNavigationDropdown = ref(false);
                                 <NavLink :href="route('tasks.index')" :active="route().current('tasks.*')">
                                     Task
                                 </NavLink>
+                                <NavLink :href="route('analytics.productivity')" :active="route().current('analytics.*')">
+                                    Analitik
+                                </NavLink>
 
 
                                 <template v-if="$page.props.auth.user.role === 'superadmin'">
@@ -141,6 +144,9 @@ const showingNavigationDropdown = ref(false);
                         </ResponsiveNavLink>
                         <ResponsiveNavLink :href="route('tasks.index')" :active="route().current('tasks.*')">
                             Task
+                        </ResponsiveNavLink>
+                        <ResponsiveNavLink :href="route('analytics.productivity')" :active="route().current('analytics.*')">
+                            Analitik
                         </ResponsiveNavLink>
                     </div>
 
