@@ -18,7 +18,7 @@ class UserController extends Controller
      */
     public function index(Request $request)
     {
-        $this->authorize('access-admin-panel');
+        $this->authorize('viewAny', User::class);
 
         $users = User::query()
             ->with('unit')
@@ -40,18 +40,18 @@ class UserController extends Controller
      */
     public function store(Request $request)
     {
-        $this->authorize('access-admin-panel');
+        $this->authorize('create', User::class);
 
         $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:'.User::class,
             'password' => ['required', Rules\Password::defaults()],
-            'role' => ['required', Rule::in(['User', 'Admin', 'Super Admin'])],
+            'role' => ['required', Rule::in(['user', 'admin', 'superadmin'])],
             'unit_id' => 'nullable|exists:units,id',
             'phone_number' => 'nullable|string|max:20',
         ]);
 
-        User::create([
+        $user = User::create([
             'name' => $request->name,
             'email' => $request->email,
             'password' => Hash::make($request->password),
@@ -59,6 +59,8 @@ class UserController extends Controller
             'unit_id' => $request->unit_id,
             'phone_number' => $request->phone_number,
         ]);
+
+        $user->syncRoles([$request->role]);
 
         return to_route('admin.users.index')->with('success', 'User berhasil dibuat.');
     }
@@ -69,7 +71,7 @@ class UserController extends Controller
      */
     public function edit(User $user)
     {
-        $this->authorize('access-admin-panel');
+        $this->authorize('update', $user);
 
         return Inertia::render('Admin/Users/Edit', [
             'user' => $user->load('unit'),
@@ -82,12 +84,12 @@ class UserController extends Controller
      */
     public function update(Request $request, User $user)
     {
-        $this->authorize('access-admin-panel');
+        $this->authorize('update', $user);
 
         $request->validate([
             'name' => 'required|string|max:255',
             'email' => ['required', 'string', 'email', 'max:255', Rule::unique('users')->ignore($user->id)],
-            'role' => ['required', Rule::in(['User', 'Admin', 'Super Admin'])],
+            'role' => ['required', Rule::in(['user', 'admin', 'superadmin'])],
             'unit_id' => 'nullable|exists:units,id',
             'phone_number' => 'nullable|string|max:20',
             'password' => ['nullable', 'confirmed', Rules\Password::defaults()],
@@ -100,6 +102,7 @@ class UserController extends Controller
         }
 
         $user->save();
+        $user->syncRoles([$request->role]);
 
         return to_route('admin.users.index')->with('success', 'User berhasil diperbarui.');
     }
@@ -109,12 +112,11 @@ class UserController extends Controller
      */
     public function destroy(User $user)
     {
-        $this->authorize('access-admin-panel');
-
-        // Tambahan: Logika untuk mencegah Super Admin menghapus diri sendiri
         if ($user->id === auth()->id()) {
             return to_route('admin.users.index')->with('error', 'Anda tidak dapat menghapus akun Anda sendiri.');
         }
+
+        $this->authorize('delete', $user);
 
         $user->delete();
 

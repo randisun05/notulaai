@@ -8,8 +8,6 @@ use Inertia\Inertia;
 use Illuminate\Support\Facades\Auth;
 use App\Jobs\ProcessMeetingNotula;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Validation\Rule;
-use Illuminate\Support\Facades\Gate;
 
 class MeetingController extends Controller
 {
@@ -22,7 +20,7 @@ class MeetingController extends Controller
         $query = Meeting::query();
 
         // Jika bukan superadmin, filter berdasarkan unit
-        if ($user->role !== 'superadmin') {
+        if (!$user->hasRole('superadmin')) {
             $query->where('unit_id', $user->unit_id);
         }
 
@@ -93,11 +91,7 @@ class MeetingController extends Controller
      */
     public function show(Meeting $meeting)
     {
-        // Pastikan user hanya bisa melihat rapat di unitnya
-        // (Super Admin bisa lihat semua)
-        if (Auth::user()->role !== 'superadmin' && $meeting->unit_id !== Auth::user()->unit_id) {
-            abort(403, 'Akses ditolak.');
-        }
+        $this->authorize('view', $meeting);
 
         return Inertia::render('Meetings/Show', [
             'meeting' => $meeting
@@ -109,10 +103,8 @@ class MeetingController extends Controller
      */
     public function edit(Meeting $meeting)
     {
-        // Cek hak akses
-        if (Auth::user()->role !== 'superadmin' && $meeting->unit_id !== Auth::user()->unit_id) {
-            abort(403, 'Akses ditolak.');
-        }
+        $this->authorize('update', $meeting);
+
          // Hanya boleh edit jika status masih Dijadwalkan
         if ($meeting->status !== 'Dijadwalkan') {
              return redirect()->route('meetings.show', $meeting->id)->with('error', 'Rapat yang sudah diproses tidak dapat diedit.');
@@ -128,10 +120,7 @@ class MeetingController extends Controller
      */
     public function update(Request $request, Meeting $meeting)
     {
-        // Cek hak akses
-        if (Auth::user()->role !== 'superadmin' && $meeting->unit_id !== Auth::user()->unit_id) {
-            abort(403, 'Akses ditolak.');
-        }
+        $this->authorize('update', $meeting);
 
         $validated = $request->validate([
             'title' => 'required|string|max:255',
@@ -150,7 +139,7 @@ class MeetingController extends Controller
      */
     public function process(Request $request, Meeting $meeting)
     {
-        // Otorisasi: Cek apakah user boleh proses rapat ini
+        $this->authorize('process', $meeting);
 
         $inputType = $request->input('type');
         $validated = [];
@@ -207,15 +196,7 @@ class MeetingController extends Controller
      */
     public function destroy(Meeting $meeting)
     {
-        $user = Auth::user();
-        // Cek hak akses (Hanya Admin unit atau Super Admin)
-        if ($user->role === 'user') {
-             abort(403, 'Anda tidak memiliki hak untuk menghapus rapat.');
-        }
-
-        if ($user->role !== 'superadmin' && $meeting->unit_id !== $user->unit_id) {
-            abort(403, 'Akses ditolak.');
-        }
+        $this->authorize('delete', $meeting);
 
         // Hapus file fisik jika ada
         if ($meeting->source_file_path) {

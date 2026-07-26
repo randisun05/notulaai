@@ -14,6 +14,8 @@ class UnitController extends Controller
      */
     public function index(Request $request)
     {
+        $this->authorize('viewAny', Unit::class);
+
         $units = Unit::query()
             ->when($request->input('search'), function ($q, $search) {
                 $q->where('name', 'like', "%{$search}%");
@@ -33,6 +35,8 @@ class UnitController extends Controller
      */
     public function store(Request $request)
     {
+        $this->authorize('create', Unit::class);
+
         $validated = $request->validate([
             'name' => 'required|string|max:255|unique:units',
         ]);
@@ -60,6 +64,8 @@ class UnitController extends Controller
      */
     public function update(Request $request, Unit $unit)
     {
+        $this->authorize('update', $unit);
+
         $validated = $request->validate([
             'name' => 'required|string|max:255|unique:units,name,' . $unit->id,
         ]);
@@ -74,6 +80,8 @@ class UnitController extends Controller
      */
     public function destroy(Unit $unit)
     {
+        $this->authorize('delete', $unit);
+
         // Pengecekan jika ada user di unit ini
         if ($unit->users()->count() > 0) {
             return redirect()->back()->with('error', 'Tidak dapat menghapus unit yang masih memiliki anggota.');

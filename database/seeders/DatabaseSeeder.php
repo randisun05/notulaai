@@ -107,5 +107,7 @@ class DatabaseSeeder extends Seeder
             'transcript' => "Citra: Oke tim, mari kita bahas proyek Alpha. Secara keseluruhan, proyek ini selesai tepat waktu. Apa saja kendala yang kita hadapi? \nDev1: Integrasi dengan API pihak ketiga sempat memakan waktu lebih lama dari estimasi.",
             'summary' => "Poin Penting:\n- Proyek Alpha selesai sesuai jadwal.\n- Terdapat kendala pada integrasi API eksternal.\n\nAction Items:\n- Buat dokumentasi best practice untuk integrasi API (PIC: Tim Developer)."
         ]);
+
+        $this->call(RolePermissionSeeder::class);
     }
 }
