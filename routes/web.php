@@ -19,6 +19,7 @@ use App\Http\Controllers\TaskDispositionController;
 use App\Http\Controllers\AnalyticsController;
 use App\Http\Controllers\TaskExportController;
 use App\Http\Controllers\ApiTokenController;
+use App\Http\Controllers\AuditLogController;
 
 Route::get('/', function () {
     return Inertia::render('Welcome', [
@@ -101,7 +102,7 @@ Route::middleware('auth')->group(function () {
         // Rute untuk CRUD Unit
         Route::get('units', [UnitController::class, 'index'])->name('units.index');
         Route::post('units', [UnitController::class, 'store'])->name('units.store');
-        // ... (Rute unit lainnya) ...
+        Route::put('units/{unit}', [UnitController::class, 'update'])->name('units.update');
         Route::delete('units/{unit}', [UnitController::class, 'destroy'])->name('units.destroy');
 
         // RUTE MANAJEMEN USER (TAMBAHKAN INI)
@@ -114,6 +115,9 @@ Route::middleware('auth')->group(function () {
         // RUTE PENGATURAN APLIKASI
         Route::get('settings', [SettingController::class, 'edit'])->name('settings.edit');
         Route::put('settings', [SettingController::class, 'update'])->name('settings.update');
+
+        // AUDIT LOG
+        Route::get('audit-logs', [AuditLogController::class, 'index'])->name('audit-logs.index');
 
     });
 

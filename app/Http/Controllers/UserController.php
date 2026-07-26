@@ -5,7 +5,9 @@ namespace App\Http\Controllers;
 use App\Http\Controllers\Controller;
 use App\Models\Unit;
 use App\Models\User;
+use App\Services\Audit\AuditLogger;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules;
@@ -13,6 +15,10 @@ use Inertia\Inertia;
 
 class UserController extends Controller
 {
+    public function __construct(private readonly AuditLogger $auditLogger)
+    {
+    }
+
     /**
      * Display a listing of the resource.
      */
@@ -62,6 +68,8 @@ class UserController extends Controller
 
         $user->syncRoles([$request->role]);
 
+        $this->auditLogger->log(Auth::user(), 'user.created', "Membuat user \"{$user->name}\" ({$user->email}) dengan role {$user->role}", $user);
+
         return to_route('admin.users.index')->with('success', 'User berhasil dibuat.');
     }
 
@@ -95,6 +103,8 @@ class UserController extends Controller
             'password' => ['nullable', 'confirmed', Rules\Password::defaults()],
         ]);
 
+        $previousRole = $user->role;
+
         $user->fill($request->only(['name', 'email', 'role', 'unit_id', 'phone_number']));
 
         if ($request->filled('password')) {
@@ -103,6 +113,12 @@ class UserController extends Controller
 
         $user->save();
         $user->syncRoles([$request->role]);
+
+        $this->auditLogger->log(Auth::user(), 'user.updated', "Memperbarui user \"{$user->name}\" ({$user->email})", $user, [
+            'role_changed' => $previousRole !== $user->role,
+            'previous_role' => $previousRole,
+            'new_role' => $user->role,
+        ]);
 
         return to_route('admin.users.index')->with('success', 'User berhasil diperbarui.');
     }
@@ -117,6 +133,8 @@ class UserController extends Controller
         }
 
         $this->authorize('delete', $user);
+
+        $this->auditLogger->log(Auth::user(), 'user.deleted', "Menghapus user \"{$user->name}\" ({$user->email})");
 
         $user->delete();
 

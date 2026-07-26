@@ -6,13 +6,19 @@ use App\Models\Setting;
 use App\Services\AI\Contracts\OcrProvider;
 use App\Services\AI\Contracts\TextGenerationProvider;
 use App\Services\AI\Contracts\TranscriptionProvider;
+use App\Services\Audit\AuditLogger;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 
 class SettingController extends Controller
 {
+    public function __construct(private readonly AuditLogger $auditLogger)
+    {
+    }
+
     public function edit()
     {
         $this->authorize('access-admin-panel');
@@ -54,6 +60,8 @@ class SettingController extends Controller
         unset($validated['company_logo']);
 
         $setting->update($validated);
+
+        $this->auditLogger->log(Auth::user(), 'setting.updated', 'Memperbarui pengaturan aplikasi', $setting);
 
         return back()->with('success', 'Pengaturan berhasil disimpan.');
     }

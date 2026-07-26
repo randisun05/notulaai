@@ -53,6 +53,9 @@ const showingNavigationDropdown = ref(false);
                                     <NavLink :href="route('admin.settings.edit')" :active="route().current('admin.settings.*')">
                                         Pengaturan
                                     </NavLink>
+                                    <NavLink :href="route('admin.audit-logs.index')" :active="route().current('admin.audit-logs.*')">
+                                        Audit Log
+                                    </NavLink>
                                 </template>
 
 
@@ -165,6 +168,9 @@ const showingNavigationDropdown = ref(false);
                                 </ResponsiveNavLink>
                                 <ResponsiveNavLink :href="route('admin.settings.edit')" :active="route().current('admin.settings.*')">
                                     Pengaturan
+                                </ResponsiveNavLink>
+                                <ResponsiveNavLink :href="route('admin.audit-logs.index')" :active="route().current('admin.audit-logs.*')">
+                                    Audit Log
                                 </ResponsiveNavLink>
                             </div>
                         </div>

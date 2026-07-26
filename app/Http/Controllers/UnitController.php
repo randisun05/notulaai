@@ -4,11 +4,17 @@ namespace App\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Models\Unit;
+use App\Services\Audit\AuditLogger;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 
 class UnitController extends Controller
 {
+    public function __construct(private readonly AuditLogger $auditLogger)
+    {
+    }
+
     /**
      * Menampilkan daftar semua unit.
      */
@@ -41,7 +47,9 @@ class UnitController extends Controller
             'name' => 'required|string|max:255|unique:units',
         ]);
 
-        Unit::create($validated);
+        $unit = Unit::create($validated);
+
+        $this->auditLogger->log(Auth::user(), 'unit.created', "Membuat unit \"{$unit->name}\"", $unit);
 
         return redirect()->back()->with('success', 'Unit berhasil dibuat.');
     }
@@ -72,6 +80,8 @@ class UnitController extends Controller
 
         $unit->update($validated);
 
+        $this->auditLogger->log(Auth::user(), 'unit.updated', "Memperbarui unit \"{$unit->name}\"", $unit);
+
         return redirect()->back()->with('success', 'Unit berhasil diperbarui.');
     }
 
@@ -86,6 +96,8 @@ class UnitController extends Controller
         if ($unit->users()->count() > 0) {
             return redirect()->back()->with('error', 'Tidak dapat menghapus unit yang masih memiliki anggota.');
         }
+
+        $this->auditLogger->log(Auth::user(), 'unit.deleted', "Menghapus unit \"{$unit->name}\"");
 
         $unit->delete();
         return redirect()->back()->with('success', 'Unit berhasil dihapus.');
