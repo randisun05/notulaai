@@ -38,6 +38,44 @@ class TaskController extends Controller
         ]);
     }
 
+    public function kanban()
+    {
+        $user = Auth::user();
+
+        $tasks = Task::query()
+            ->when(!$user->hasRole('superadmin'), fn ($q) => $q->where('unit_id', $user->unit_id))
+            ->with(['meeting:id,title', 'assignee:id,name'])
+            ->orderBy('deadline')
+            ->get()
+            ->groupBy('status');
+
+        $tasksByStatus = collect(Task::STATUSES)->mapWithKeys(fn ($status) => [
+            $status => ($tasks->get($status) ?? collect())->values(),
+        ]);
+
+        return Inertia::render('Tasks/Kanban', [
+            'tasksByStatus' => $tasksByStatus,
+            'statuses' => Task::STATUSES,
+        ]);
+    }
+
+    public function show(Task $task)
+    {
+        $this->authorize('view', $task);
+
+        return Inertia::render('Tasks/Show', [
+            'task' => $task->load([
+                'meeting:id,title',
+                'assignee:id,name,email',
+                'creator:id,name',
+                'unit:id,name',
+                'actionItem',
+                'activities.user:id,name',
+            ]),
+            'statuses' => Task::STATUSES,
+        ]);
+    }
+
     public function storeFromActionItem(Meeting $meeting, MeetingActionItem $actionItem)
     {
         $this->authorize('update', $meeting);
@@ -70,7 +108,7 @@ class TaskController extends Controller
 
         $actionItem->update(['converted_to_task' => true]);
 
-        $this->activityLogger->log($meeting, Auth::user(), 'task.created', Auth::user()->name . " membuat Task \"{$task->title}\" dari Action Item.");
+        $this->activityLogger->log($meeting, Auth::user(), 'task.created', Auth::user()->name . " membuat Task \"{$task->title}\" dari Action Item.", $task);
 
         return back()->with('success', 'Action item berhasil dijadikan Task.');
     }
@@ -86,14 +124,13 @@ class TaskController extends Controller
         $oldStatus = $task->status;
         $task->update($validated);
 
-        if ($task->meeting) {
-            $this->activityLogger->log(
-                $task->meeting,
-                Auth::user(),
-                'task.status_changed',
-                Auth::user()->name . " mengubah status Task \"{$task->title}\" dari {$oldStatus} menjadi {$validated['status']}.",
-            );
-        }
+        $this->activityLogger->log(
+            $task->meeting,
+            Auth::user(),
+            'task.status_changed',
+            Auth::user()->name . " mengubah status Task \"{$task->title}\" dari {$oldStatus} menjadi {$validated['status']}.",
+            $task,
+        );
 
         return back()->with('success', 'Status task berhasil diperbarui.');
     }

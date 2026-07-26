@@ -43,7 +43,12 @@ const formattedDate = (dateString) => {
 
     <AuthenticatedLayout>
         <template #header>
-            <h2 class="font-semibold text-xl text-gray-800 leading-tight">Daftar Task</h2>
+            <div class="flex justify-between items-center">
+                <h2 class="font-semibold text-xl text-gray-800 leading-tight">Daftar Task</h2>
+                <Link :href="route('tasks.kanban')" class="inline-flex items-center px-4 py-2 bg-white border border-gray-300 rounded-md font-semibold text-xs text-gray-700 uppercase tracking-widest shadow-sm hover:bg-gray-50">
+                    Lihat Kanban
+                </Link>
+            </div>
         </template>
 
         <div class="py-12">
@@ -81,7 +86,7 @@ const formattedDate = (dateString) => {
                                     </tr>
                                     <tr v-for="task in tasks.data" :key="task.id">
                                         <td class="px-6 py-4">
-                                            <div class="text-sm font-medium text-gray-900">{{ task.title }}</div>
+                                            <Link :href="route('tasks.show', task.id)" class="text-sm font-medium text-indigo-600 hover:text-indigo-900">{{ task.title }}</Link>
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                             <Link v-if="task.meeting" :href="route('meetings.show', task.meeting.id)" class="text-indigo-600 hover:text-indigo-900">{{ task.meeting.title }}</Link>

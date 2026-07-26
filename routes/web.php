@@ -57,6 +57,8 @@ Route::middleware('auth')->group(function () {
 
     // Task Routes
     Route::get('/tasks', [TaskController::class, 'index'])->name('tasks.index');
+    Route::get('/tasks/kanban', [TaskController::class, 'kanban'])->name('tasks.kanban');
+    Route::get('/tasks/{task}', [TaskController::class, 'show'])->name('tasks.show');
     Route::patch('/tasks/{task}/status', [TaskController::class, 'updateStatus'])->name('tasks.update-status');
 
     // Forum Routes

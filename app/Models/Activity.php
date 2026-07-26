@@ -9,6 +9,7 @@ class Activity extends Model
 {
     protected $fillable = [
         'meeting_id',
+        'task_id',
         'user_id',
         'type',
         'description',
@@ -17,6 +18,11 @@ class Activity extends Model
     public function meeting(): BelongsTo
     {
         return $this->belongsTo(Meeting::class);
+    }
+
+    public function task(): BelongsTo
+    {
+        return $this->belongsTo(Task::class);
     }
 
     public function user(): BelongsTo
