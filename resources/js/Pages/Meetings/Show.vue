@@ -29,10 +29,26 @@ const props = defineProps({
 const page = usePage();
 const authUserRole = computed(() => page.props.auth.user.role);
 const flashSuccess = computed(() => page.props.flash?.success);
+const flashError = computed(() => page.props.flash?.error);
 
 const convertToTask = (item) => {
     router.post(route('meetings.action-items.convert', { meeting: props.meeting.id, actionItem: item.id }), {}, {
         preserveScroll: true,
+    });
+};
+
+const hasConvertedActionItem = computed(() => (props.meeting.action_items || []).some((item) => item.converted_to_task));
+const regeneratingActionItems = ref(false);
+
+const regenerateActionItems = () => {
+    if (!confirm('Generate ulang Action Items? Daftar yang sekarang akan diganti dengan hasil baru dari transkrip.')) {
+        return;
+    }
+
+    regeneratingActionItems.value = true;
+    router.post(route('meetings.action-items.regenerate', props.meeting.id), {}, {
+        preserveScroll: true,
+        onFinish: () => { regeneratingActionItems.value = false; },
     });
 };
 
@@ -216,6 +232,10 @@ const deleteMeeting = () => {
                     <span class="block sm:inline">{{ flashSuccess }}</span>
                 </div>
 
+                <div v-if="flashError" class="mb-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
+                    <span class="block sm:inline">{{ flashError }}</span>
+                </div>
+
                  <div class="flex flex-wrap gap-x-6 gap-y-2 text-sm text-gray-500 mb-6">
                      <div><span class="font-semibold text-gray-700">Tanggal:</span> {{ formattedDate }}</div>
                      <div>
@@ -265,7 +285,20 @@ const deleteMeeting = () => {
                                 <div class="prose max-w-none text-gray-700 whitespace-pre-wrap" v-text="meeting.transcript || 'Transkrip tidak tersedia.'"></div>
                             </div>
                             <div v-show="activeTab === 'action_items'">
-                                <h3 class="text-lg font-semibold mb-2">Action Items</h3>
+                                <div class="flex items-center justify-between mb-2">
+                                    <h3 class="text-lg font-semibold">Action Items</h3>
+                                    <button
+                                        v-if="!hasConvertedActionItem"
+                                        @click="regenerateActionItems"
+                                        :disabled="regeneratingActionItems"
+                                        class="text-xs font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 px-3 py-1.5 rounded-md disabled:opacity-50"
+                                    >
+                                        {{ regeneratingActionItems ? 'Men-generate ulang...' : 'Generate Ulang' }}
+                                    </button>
+                                    <span v-else class="text-xs text-gray-400" title="Sudah ada action item yang dijadikan Task, tidak bisa generate ulang">
+                                        Generate ulang tidak tersedia (sudah ada yang jadi Task)
+                                    </span>
+                                </div>
                                 <p v-if="!meeting.action_items?.length" class="text-sm text-gray-500">Tidak ada action item yang terdeteksi AI dari rapat ini.</p>
                                 <ul v-else class="divide-y divide-gray-200 border border-gray-200 rounded-md">
                                     <li v-for="item in meeting.action_items" :key="item.id" class="p-4 flex items-start justify-between gap-4">

@@ -11,6 +11,7 @@ use App\Jobs\ProcessMeetingNotula;
 use Illuminate\Support\Facades\Storage;
 use App\Services\Meeting\ActivityLogger;
 use App\Services\Meeting\EmailDraftGenerator;
+use App\Services\Meeting\MeetingProcessingService;
 
 class MeetingController extends Controller
 {
@@ -214,6 +215,29 @@ class MeetingController extends Controller
 
         return redirect()->route('meetings.show', $meeting->id)
             ->with('success', 'Notula sedang diproses. Halaman akan diperbarui setelah selesai.');
+    }
+
+    /**
+     * Generate ulang Action Items dari transkrip yang sudah ada (tanpa re-upload file).
+     */
+    public function regenerateActionItems(Meeting $meeting, MeetingProcessingService $processingService)
+    {
+        $this->authorize('update', $meeting);
+
+        try {
+            $count = $processingService->regenerateActionItems($meeting);
+        } catch (\RuntimeException $e) {
+            return back()->with('error', $e->getMessage());
+        }
+
+        $this->activityLogger->log(
+            $meeting,
+            Auth::user(),
+            'meeting.action_items_regenerated',
+            Auth::user()->name . " men-generate ulang Action Items ({$count} item)."
+        );
+
+        return back()->with('success', "Action items berhasil digenerate ulang ({$count} item).");
     }
 
     /**

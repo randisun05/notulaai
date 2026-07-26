@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
+use RuntimeException;
 use Throwable;
 
 class MeetingProcessingService
@@ -28,6 +29,33 @@ class MeetingProcessingService
         private readonly ActivityLogger $activityLogger,
         private readonly WebhookDispatcher $webhookDispatcher,
     ) {
+    }
+
+    /**
+     * Generate ulang action items dari transkrip yang sudah ada, tanpa perlu re-upload file.
+     *
+     * Anti-duplikat: (1) generateActionItems() selalu hapus dulu action items lama sebelum
+     * membuat yang baru, jadi klik berkali-kali tidak pernah menumpuk; (2) generate ulang
+     * DITOLAK kalau ada action item yang sudah dijadikan Task — kalau item itu ikut dihapus,
+     * relasi Task ke action item sumbernya jadi terputus, dan AI berpotensi mengusulkan lagi
+     * item yang sama sebagai entri baru yang belum ter-convert, yang lalu bisa "Jadikan Task"
+     * lagi jadi Task kedua untuk pekerjaan yang sama.
+     *
+     * @return int jumlah action item hasil generate ulang
+     */
+    public function regenerateActionItems(Meeting $meeting): int
+    {
+        if (empty($meeting->transcript)) {
+            throw new RuntimeException('Rapat ini belum memiliki transkrip untuk digenerate ulang.');
+        }
+
+        if ($meeting->actionItems()->where('converted_to_task', true)->exists()) {
+            throw new RuntimeException('Tidak bisa generate ulang: sudah ada action item dari rapat ini yang dijadikan Task.');
+        }
+
+        $this->generateActionItems($meeting, $meeting->transcript);
+
+        return $meeting->actionItems()->count();
     }
 
     public function process(Meeting $meeting): void

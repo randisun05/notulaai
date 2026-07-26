@@ -59,6 +59,7 @@ Route::middleware('auth')->group(function () {
      Route::delete('/meetings/{meeting}', [MeetingController::class, 'destroy'])->name('meetings.destroy'); // <-- TAMBAHKAN INI
 
     Route::post('/meetings/{meeting}/action-items/{actionItem}/convert-to-task', [TaskController::class, 'storeFromActionItem'])->name('meetings.action-items.convert');
+    Route::post('/meetings/{meeting}/action-items/regenerate', [MeetingController::class, 'regenerateActionItems'])->name('meetings.action-items.regenerate');
 
     // AI Email Generator
     Route::post('/meetings/{meeting}/emails/generate', [MeetingEmailController::class, 'generate'])->name('meetings.emails.generate');
