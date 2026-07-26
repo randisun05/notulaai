@@ -8,8 +8,10 @@ import {
     ClipboardDocumentCheckIcon,
     ExclamationTriangleIcon,
     ChartBarIcon,
+    SparklesIcon,
 } from '@heroicons/vue/24/outline';
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
+import axios from 'axios';
 
 const props = defineProps({
     stats: { type: Object, required: true },
@@ -17,6 +19,24 @@ const props = defineProps({
     weeklyMeetings: { type: Array, default: () => [] },
     taskStatusBreakdown: { type: Array, default: () => [] },
 });
+
+const insight = ref(null);
+const insightLoading = ref(false);
+const insightError = ref('');
+
+const generateInsight = async () => {
+    insightLoading.value = true;
+    insightError.value = '';
+
+    try {
+        const { data } = await axios.post(route('dashboard.insight'));
+        insight.value = data.insight;
+    } catch (e) {
+        insightError.value = e.response?.data?.error || 'Gagal membuat insight.';
+    } finally {
+        insightLoading.value = false;
+    }
+};
 
 const formatDate = (dateString) => {
     return new Date(dateString).toLocaleDateString('id-ID', {
@@ -79,6 +99,25 @@ const maxStatusCount = computed(() => Math.max(1, ...props.taskStatusBreakdown.m
                             <dd class="mt-1 text-3xl font-semibold tracking-tight" :class="toneClasses[item.tone]">{{ item.stat }}</dd>
                         </div>
                     </dl>
+                </div>
+
+                <!-- AI Insight -->
+                <div class="bg-white overflow-hidden shadow-sm rounded-lg p-6">
+                    <div class="flex items-center justify-between gap-3 flex-wrap">
+                        <h3 class="text-sm font-semibold text-gray-700 flex items-center gap-1.5">
+                            <SparklesIcon class="h-4 w-4 text-gray-400" /> AI Insight
+                        </h3>
+                        <button
+                            @click="generateInsight"
+                            :disabled="insightLoading"
+                            class="inline-flex items-center px-3 py-1.5 bg-indigo-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-indigo-500 disabled:opacity-50"
+                        >
+                            {{ insightLoading ? 'Membuat...' : (insight ? 'Buat Ulang' : 'Buat Insight') }}
+                        </button>
+                    </div>
+                    <p v-if="insightError" class="mt-3 text-sm text-red-600">{{ insightError }}</p>
+                    <p v-else-if="insight" class="mt-3 text-sm text-gray-700 whitespace-pre-wrap">{{ insight }}</p>
+                    <p v-else class="mt-3 text-sm text-gray-400">Klik "Buat Insight" untuk mendapatkan ringkasan AI dari data di atas.</p>
                 </div>
 
                 <!-- Charts -->

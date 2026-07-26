@@ -5,12 +5,45 @@ namespace App\Http\Controllers;
 use App\Models\Meeting;
 use App\Models\Task;
 use App\Models\User;
+use App\Services\Analytics\DashboardInsightGenerator;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 
 class DashboardController extends Controller
 {
+    public function __construct(private readonly DashboardInsightGenerator $insightGenerator)
+    {
+    }
+
     public function index()
+    {
+        $data = $this->buildDashboardData();
+
+        return Inertia::render('Dashboard', $data);
+    }
+
+    public function insight()
+    {
+        $data = $this->buildDashboardData();
+
+        try {
+            $insight = $this->insightGenerator->generate(
+                $data['stats'],
+                $data['weeklyMeetings'],
+                $data['taskStatusBreakdown'],
+                Auth::user(),
+            );
+        } catch (\Throwable $e) {
+            return response()->json(['error' => 'Gagal membuat insight: ' . $e->getMessage()], 500);
+        }
+
+        return response()->json(['insight' => $insight]);
+    }
+
+    /**
+     * @return array{stats: array<string, int>, recentMeetings: \Illuminate\Support\Collection, weeklyMeetings: \Illuminate\Support\Collection, taskStatusBreakdown: \Illuminate\Support\Collection}
+     */
+    private function buildDashboardData(): array
     {
         $user = Auth::user();
         $isSuperadmin = $user->hasRole('superadmin');
@@ -64,11 +97,11 @@ class DashboardController extends Controller
             'count' => (clone $taskQuery)->where('status', $status)->count(),
         ])->values();
 
-        return Inertia::render('Dashboard', [
+        return [
             'stats' => $stats,
             'recentMeetings' => $recentMeetings,
             'weeklyMeetings' => $weeklyMeetings,
             'taskStatusBreakdown' => $taskStatusBreakdown,
-        ]);
+        ];
     }
 }

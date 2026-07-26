@@ -29,6 +29,8 @@ Route::get('/', function () {
 
 Route::get('/dashboard', [DashboardController::class, 'index'])
     ->middleware(['auth', 'verified'])->name('dashboard');
+Route::post('/dashboard/insight', [DashboardController::class, 'insight'])
+    ->middleware(['auth', 'verified'])->name('dashboard.insight');
 
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
