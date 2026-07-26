@@ -96,8 +96,11 @@ class TaskController extends Controller
                 'unit:id,name',
                 'actionItem',
                 'activities.user:id,name',
+                'dispositions.fromUser:id,name',
+                'dispositions.toUser:id,name',
             ]),
             'statuses' => Task::STATUSES,
+            'unitUsers' => User::where('unit_id', $task->unit_id)->get(['id', 'name']),
         ]);
     }
 

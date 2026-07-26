@@ -15,6 +15,7 @@ use App\Http\Controllers\MeetingEmailController;
 use App\Http\Controllers\MeetingChatController;
 use App\Http\Controllers\ForumCommentController;
 use App\Http\Controllers\ForumCommentReactionController;
+use App\Http\Controllers\TaskDispositionController;
 
 Route::get('/', function () {
     return Inertia::render('Welcome', [
@@ -61,6 +62,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/tasks/calendar', [TaskController::class, 'calendar'])->name('tasks.calendar');
     Route::get('/tasks/{task}', [TaskController::class, 'show'])->name('tasks.show');
     Route::patch('/tasks/{task}/status', [TaskController::class, 'updateStatus'])->name('tasks.update-status');
+    Route::post('/tasks/{task}/dispositions', [TaskDispositionController::class, 'store'])->name('tasks.dispositions.store');
 
     // Forum Routes
     Route::post('/meetings/{meeting}/comments', [ForumCommentController::class, 'store'])->name('meetings.comments.store');

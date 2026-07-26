@@ -58,4 +58,9 @@ class Task extends Model
     {
         return $this->hasMany(Activity::class)->orderBy('created_at', 'desc');
     }
+
+    public function dispositions(): HasMany
+    {
+        return $this->hasMany(TaskDisposition::class)->orderBy('created_at', 'desc');
+    }
 }
