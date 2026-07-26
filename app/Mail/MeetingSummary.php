@@ -3,6 +3,7 @@
 namespace App\Mail;
 
 use App\Models\Meeting;
+use App\Models\Setting;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Mail\Mailable;
@@ -19,6 +20,7 @@ class MeetingSummary extends Mailable
      */
     public $meeting;
     public $user;
+    public $setting;
 
     /**
      * Buat instance pesan baru.
@@ -28,6 +30,7 @@ class MeetingSummary extends Mailable
         $this->meeting = $meeting;
         // Kita load relasi creator (pembuat rapat) agar bisa digunakan di template email
         $this->user = $meeting->creator;
+        $this->setting = Setting::current();
     }
 
     /**

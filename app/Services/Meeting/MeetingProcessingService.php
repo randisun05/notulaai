@@ -56,7 +56,7 @@ class MeetingProcessingService
         $extension = strtolower(pathinfo($filePath, PATHINFO_EXTENSION));
 
         if (in_array($extension, self::AUDIO_EXTENSIONS)) {
-            $provider = Config::get('ai.default_transcription_provider');
+            $provider = $this->ai->activeTranscriptionProvider();
             $fileName = basename($filePath);
 
             try {
@@ -94,7 +94,7 @@ class MeetingProcessingService
             . 'Use headings (<h3>), unordered lists (<ul><li>) for key points, and bold tags (<b>) to highlight action items or names. '
             . 'Here is the transcript: ' . $transcript;
 
-        $provider = Config::get('ai.default_text_provider');
+        $provider = $this->ai->activeTextProvider();
         $model = Config::get("ai.providers.{$provider}.model");
 
         try {

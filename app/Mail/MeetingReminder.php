@@ -3,6 +3,7 @@
 namespace App\Mail;
 
 use App\Models\Meeting;
+use App\Models\Setting;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Mail\Mailable;
@@ -15,6 +16,7 @@ class MeetingReminder extends Mailable
     use Queueable, SerializesModels;
 
     public $meeting;
+    public $setting;
 
     /**
      * Create a new message instance.
@@ -22,6 +24,7 @@ class MeetingReminder extends Mailable
     public function __construct(Meeting $meeting)
     {
         $this->meeting = $meeting;
+        $this->setting = Setting::current();
     }
 
     /**

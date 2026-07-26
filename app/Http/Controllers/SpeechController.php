@@ -2,10 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Services\AI\AiManager;
 use App\Services\AI\AiRequestLogger;
 use App\Services\AI\Contracts\TranscriptionProvider;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Storage;
 
 class SpeechController extends Controller
@@ -13,6 +13,7 @@ class SpeechController extends Controller
     public function __construct(
         private readonly TranscriptionProvider $transcription,
         private readonly AiRequestLogger $logger,
+        private readonly AiManager $ai,
     ) {
     }
 
@@ -24,7 +25,7 @@ class SpeechController extends Controller
 
         $path = $request->file('file')->store('audio', 'public');
         $fileName = basename($path);
-        $provider = Config::get('ai.default_transcription_provider');
+        $provider = $this->ai->activeTranscriptionProvider();
 
         try {
             $result = $this->transcription->transcribe(

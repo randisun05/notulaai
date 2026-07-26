@@ -69,7 +69,7 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>Notula AI</h1>
+            <h1>{{ $setting->company_name ?? 'Notula AI' }}</h1>
         </div>
         <div class="content">
             {{--
@@ -105,7 +105,10 @@
             @endif
         </div>
         <div class="footer">
-            <p>&copy; {{ date('Y') }} Notula AI. Semua hak cipta dilindungi.</p>
+            <p>&copy; {{ date('Y') }} {{ $setting->company_name ?? 'Notula AI' }}. Semua hak cipta dilindungi.</p>
+            @if($setting->company_address ?? null)
+                <p>{{ $setting->company_address }}</p>
+            @endif
         </div>
     </div>
 </body>

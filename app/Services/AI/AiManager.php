@@ -2,6 +2,7 @@
 
 namespace App\Services\AI;
 
+use App\Models\Setting;
 use App\Services\AI\Contracts\TextGenerationProvider;
 use App\Services\AI\Contracts\TranscriptionProvider;
 use Illuminate\Contracts\Container\Container;
@@ -13,16 +14,30 @@ class AiManager
     {
     }
 
+    /**
+     * Provider aktif bisa di-override lewat halaman Settings (Admin); jika belum
+     * pernah diatur, jatuh kembali ke default di config/ai.php.
+     */
+    public function activeTextProvider(): string
+    {
+        return Setting::current()->ai_text_provider ?: Config::get('ai.default_text_provider');
+    }
+
+    public function activeTranscriptionProvider(): string
+    {
+        return Setting::current()->ai_transcription_provider ?: Config::get('ai.default_transcription_provider');
+    }
+
     public function text(?string $provider = null): TextGenerationProvider
     {
-        $provider ??= Config::get('ai.default_text_provider');
+        $provider ??= $this->activeTextProvider();
 
         return $this->resolve($provider, TextGenerationProvider::class);
     }
 
     public function transcription(?string $provider = null): TranscriptionProvider
     {
-        $provider ??= Config::get('ai.default_transcription_provider');
+        $provider ??= $this->activeTranscriptionProvider();
 
         return $this->resolve($provider, TranscriptionProvider::class);
     }

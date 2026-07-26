@@ -14,7 +14,7 @@
 </head>
 <body>
     <div class="container">
-        <div class="header">Pengingat Rapat</div>
+        <div class="header">Pengingat Rapat — {{ $setting->company_name ?? 'Notula AI' }}</div>
         <div class="content">
             <p>Halo, <strong>{{ $meeting->creator->name }}</strong>,</p>
             <p>Ini adalah pengingat bahwa Anda memiliki rapat yang dijadwalkan hari ini:</p>
@@ -26,7 +26,10 @@
             <p>Silakan persiapkan diri Anda. Terima kasih.</p>
         </div>
         <div class="footer">
-            <p>Email ini dikirim secara otomatis oleh Sistem AI-Notula.</p>
+            <p>Email ini dikirim secara otomatis oleh Sistem {{ $setting->company_name ?? 'Notula AI' }}.</p>
+            @if($setting->company_address ?? null)
+                <p>{{ $setting->company_address }}</p>
+            @endif
         </div>
     </div>
 </body>

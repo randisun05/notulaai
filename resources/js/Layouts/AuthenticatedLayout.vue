@@ -44,6 +44,9 @@ const showingNavigationDropdown = ref(false);
                                     <NavLink :href="route('admin.users.index')" :active="route().current('admin.users.*')">
                                         Manajemen User
                                     </NavLink>
+                                    <NavLink :href="route('admin.settings.edit')" :active="route().current('admin.settings.*')">
+                                        Pengaturan
+                                    </NavLink>
                                 </template>
 
 
@@ -147,6 +150,9 @@ const showingNavigationDropdown = ref(false);
                                 </ResponsiveNavLink>
                                 <ResponsiveNavLink :href="route('admin.users.index')" :active="route().current('admin.users.*')">
                                     Manajemen User
+                                </ResponsiveNavLink>
+                                <ResponsiveNavLink :href="route('admin.settings.edit')" :active="route().current('admin.settings.*')">
+                                    Pengaturan
                                 </ResponsiveNavLink>
                             </div>
                         </div>

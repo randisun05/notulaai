@@ -9,6 +9,7 @@ use App\Http\Controllers\MeetingController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\UserController;
+use App\Http\Controllers\SettingController;
 
 Route::get('/', function () {
     return Inertia::render('Welcome', [
@@ -61,6 +62,10 @@ Route::middleware('auth')->group(function () {
         Route::put('users/{user}', [UserController::class, 'update'])->name('users.update');
         Route::post('users', [UserController::class, 'store'])->name('users.store');
         Route::delete('users/{user}', [UserController::class, 'destroy'])->name('users.destroy');
+
+        // RUTE PENGATURAN APLIKASI
+        Route::get('settings', [SettingController::class, 'edit'])->name('settings.edit');
+        Route::put('settings', [SettingController::class, 'update'])->name('settings.update');
 
     });
 

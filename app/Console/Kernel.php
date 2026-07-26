@@ -3,6 +3,7 @@
 namespace App\Console;
 
 use App\Jobs\SendMeetingReminders;
+use App\Models\Setting;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Console\Kernel as ConsoleKernel;
 
@@ -15,7 +16,7 @@ class Kernel extends ConsoleKernel
     {
         $schedule->job(new SendMeetingReminders)
             ->dailyAt('07:00')
-            ->timezone('Asia/Jakarta');
+            ->timezone(Setting::current()->timezone ?? 'Asia/Jakarta');
     }
 
     /**
