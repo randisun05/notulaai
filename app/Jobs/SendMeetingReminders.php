@@ -17,6 +17,9 @@ class SendMeetingReminders implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
+    public $tries = 3;
+    public $backoff = [60, 300, 900];
+
     /**
      * Create a new job instance.
      */
@@ -71,6 +74,17 @@ class SendMeetingReminders implements ShouldQueue
                 }
             }
         }
+    }
+
+    /**
+     * Dipanggil Laravel setelah percobaan terakhir ($tries) tetap gagal.
+     */
+    public function failed(\Throwable $e): void
+    {
+        Log::error('Job SendMeetingReminders gagal permanen: ' . $e->getMessage(), [
+            'file' => $e->getFile(),
+            'line' => $e->getLine(),
+        ]);
     }
 }
 

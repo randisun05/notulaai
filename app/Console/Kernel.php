@@ -13,13 +13,9 @@ class Kernel extends ConsoleKernel
      */
     protected function schedule(Schedule $schedule): void
     {
-        // $schedule->command('inspire')->hourly();
-          // TAMBAHKAN JADWAL INI
-            // $schedule->job(new SendMeetingReminders)
-            //         ->dailyAt('07:00') // Jalankan setiap hari jam 7 pagi
-            //         ->timezone('Asia/Jakarta');
-
-            $schedule->job(new \App\Jobs\SendMeetingReminders)->everyMinute();
+        $schedule->job(new SendMeetingReminders)
+            ->dailyAt('07:00')
+            ->timezone('Asia/Jakarta');
     }
 
     /**

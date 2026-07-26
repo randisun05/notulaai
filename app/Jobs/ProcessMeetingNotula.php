@@ -10,6 +10,7 @@ use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
+use Throwable;
 
 class ProcessMeetingNotula implements ShouldQueue
 {
@@ -17,6 +18,8 @@ class ProcessMeetingNotula implements ShouldQueue
 
     public $meeting;
     public $timeout = 300; // 5 menit timeout
+    public $tries = 3;
+    public $backoff = [30, 90, 180];
 
     public function __construct(Meeting $meeting)
     {
@@ -25,22 +28,26 @@ class ProcessMeetingNotula implements ShouldQueue
 
     public function handle(MeetingProcessingService $processor): void
     {
-        try {
-            $processor->process($this->meeting);
-        } catch (\Exception $e) {
-            $errorMessage = $e->getMessage();
-            if ($e instanceof \OpenAI\Exceptions\ErrorException) {
-                $errorMessage = 'OpenAI API Error: ' . $e->getMessage();
-            }
+        $processor->process($this->meeting);
+    }
 
-            Log::error("Gagal memproses notula untuk Rapat ID {$this->meeting->id}", [
-                'error_message' => $errorMessage,
-                'file' => $e->getFile(),
-                'line' => $e->getLine(),
-                'trace' => $e->getTraceAsString(),
-            ]);
-
-            $this->meeting->update(['status' => 'Gagal']);
+    /**
+     * Dipanggil Laravel setelah percobaan terakhir ($tries) tetap gagal.
+     */
+    public function failed(Throwable $e): void
+    {
+        $errorMessage = $e->getMessage();
+        if ($e instanceof \OpenAI\Exceptions\ErrorException) {
+            $errorMessage = 'OpenAI API Error: ' . $e->getMessage();
         }
+
+        Log::error("Gagal memproses notula untuk Rapat ID {$this->meeting->id}", [
+            'error_message' => $errorMessage,
+            'file' => $e->getFile(),
+            'line' => $e->getLine(),
+            'trace' => $e->getTraceAsString(),
+        ]);
+
+        $this->meeting->update(['status' => 'Gagal']);
     }
 }
