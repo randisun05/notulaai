@@ -5,7 +5,8 @@ import InputError from '@/Components/InputError.vue';
 import InputLabel from '@/Components/InputLabel.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import TextInput from '@/Components/TextInput.vue';
-import { Head, Link, useForm } from '@inertiajs/vue3';
+import { Head, Link, useForm, usePage } from '@inertiajs/vue3';
+import { computed } from 'vue';
 
 defineProps({
     canResetPassword: {
@@ -15,6 +16,9 @@ defineProps({
         type: String,
     },
 });
+
+const page = usePage();
+const flashError = computed(() => page.props.flash?.error);
 
 const form = useForm({
     email: '',
@@ -35,6 +39,10 @@ const submit = () => {
 
         <div v-if="status" class="mb-4 font-medium text-sm text-green-600">
             {{ status }}
+        </div>
+
+        <div v-if="flashError" class="mb-4 font-medium text-sm text-red-600">
+            {{ flashError }}
         </div>
 
         <form @submit.prevent="submit">
@@ -90,5 +98,31 @@ const submit = () => {
                 </PrimaryButton>
             </div>
         </form>
+
+        <div class="mt-6">
+            <div class="relative">
+                <div class="absolute inset-0 flex items-center">
+                    <div class="w-full border-t border-gray-300"></div>
+                </div>
+                <div class="relative flex justify-center text-sm">
+                    <span class="px-2 bg-white text-gray-500">Atau masuk dengan</span>
+                </div>
+            </div>
+
+            <div class="mt-4 grid grid-cols-2 gap-3">
+                <a
+                    :href="route('social.redirect', 'google')"
+                    class="inline-flex justify-center items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+                >
+                    Google
+                </a>
+                <a
+                    :href="route('social.redirect', 'microsoft')"
+                    class="inline-flex justify-center items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+                >
+                    Microsoft
+                </a>
+            </div>
+        </div>
     </GuestLayout>
 </template>
