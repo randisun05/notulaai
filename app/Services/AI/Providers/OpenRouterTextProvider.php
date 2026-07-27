@@ -85,6 +85,10 @@ class OpenRouterTextProvider implements TextGenerationProvider
             return $response->withBody(Utils::streamFor(json_encode($data)));
         }));
 
-        return new GuzzleClient(['handler' => $stack]);
+        return new GuzzleClient([
+            'handler' => $stack,
+            'connect_timeout' => 10,
+            'timeout' => (int) Config::get('ai.http_timeout', 60),
+        ]);
     }
 }

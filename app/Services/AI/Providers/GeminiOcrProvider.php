@@ -24,9 +24,7 @@ class GeminiOcrProvider implements OcrProvider
 
     public function extractText(string $absoluteFilePath, string $fileName): AiTextResult
     {
-        $apiKey = Config::get('services.gemini.key');
-
-        if (empty($apiKey)) {
+        if (empty(Config::get('gemini.api_key'))) {
             throw new \RuntimeException('GEMINI_API_KEY tidak ditemukan. Cek .env.');
         }
 
@@ -43,8 +41,7 @@ class GeminiOcrProvider implements OcrProvider
 
         $startedAt = microtime(true);
 
-        $result = Gemini::client($apiKey)
-            ->generativeModel(model: $this->model)
+        $result = Gemini::generativeModel(model: $this->model)
             ->generateContent([
                 $prompt,
                 new Blob(

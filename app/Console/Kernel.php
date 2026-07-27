@@ -28,6 +28,10 @@ class Kernel extends ConsoleKernel
 
         $schedule->job(new EscalateOverdueTasks)
             ->hourly();
+
+        $schedule->command('meetings:fail-stuck', ['--minutes=10'])
+            ->everyFiveMinutes()
+            ->withoutOverlapping();
     }
 
     /**

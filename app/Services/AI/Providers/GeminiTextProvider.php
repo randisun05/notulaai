@@ -15,16 +15,13 @@ class GeminiTextProvider implements TextGenerationProvider
 
     public function generate(string $prompt): AiTextResult
     {
-        $apiKey = Config::get('services.gemini.key');
-
-        if (empty($apiKey)) {
+        if (empty(Config::get('gemini.api_key'))) {
             throw new \RuntimeException('GEMINI_API_KEY tidak ditemukan. Cek .env.');
         }
 
         $startedAt = microtime(true);
 
-        $result = Gemini::client($apiKey)
-            ->generativeModel(model: $this->model)
+        $result = Gemini::generativeModel(model: $this->model)
             ->generateContent($prompt);
 
         $durationMs = (microtime(true) - $startedAt) * 1000;

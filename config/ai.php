@@ -12,9 +12,21 @@ return [
     | Mengganti provider cukup dengan mengubah env ini, tanpa menyentuh kode.
     */
 
-    'default_text_provider' => env('AI_TEXT_PROVIDER', 'openrouter'),
+    'default_text_provider' => env('AI_TEXT_PROVIDER', 'gemini'),
     'default_transcription_provider' => env('AI_TRANSCRIPTION_PROVIDER', 'whisper_local'),
     'default_ocr_provider' => env('AI_OCR_PROVIDER', 'gemini_ocr'),
+
+    /*
+    |--------------------------------------------------------------------------
+    | HTTP Timeout
+    |--------------------------------------------------------------------------
+    |
+    | Batas detik menunggu respons HTTP untuk provider yang tidak punya
+    | pengaturan timeout sendiri (mis. OpenRouter). Mencegah request yang
+    | menggantung membuat proses rangkuman macet tanpa batas waktu.
+    */
+
+    'http_timeout' => env('AI_HTTP_TIMEOUT', 60),
 
     /*
     |--------------------------------------------------------------------------
