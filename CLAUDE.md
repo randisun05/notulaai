@@ -63,6 +63,13 @@ entry in `config/ai.php` under `providers`. No controller/job changes needed.
 Current drivers: `gemini` (default text/OCR, `gemini-2.0-flash`), `openrouter` (fallback text,
 free-tier model), `whisper_local` (the Flask sidecar).
 
+**Rate limiting:** every LLM-calling route (`meetings.chat.store`, `meetings.emails.generate|send`,
+`meetings.action-items.regenerate`, `meetings.process`, `dashboard.insight`, `/stt/test`) carries
+`throttle:ai`. The `ai` limiter (`AppServiceProvider::boot`, tunable via `config('ai.rate_limits')` /
+`AI_RATE_*`) stacks per-minute + per-day-per-user + per-day-per-unit limits. A 429 is rendered
+(`bootstrap/app.php` `withExceptions`) as a localized `{error: ...}` JSON for XHR or `back()->with('error')`
+for Inertia POSTs.
+
 **Fallback chain:** `AiManager::text()/transcription()/ocr()` (called with no argument) return a
 `Fallback*Provider` wrapper that walks `[active provider, ...config('ai.fallbacks.<capability>')]`
 in order, returning the first success. `text` defaults to falling back to `openrouter`

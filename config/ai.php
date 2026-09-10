@@ -43,6 +43,23 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Rate Limits
+    |--------------------------------------------------------------------------
+    |
+    | Dipakai oleh limiter "ai" (App\Providers\AppServiceProvider) untuk semua
+    | endpoint yang memanggil LLM: chat per rapat, generate/kirim email AI,
+    | generate ulang action items, proses notula, dan dashboard insight.
+    | Tiga lapis: per menit & per hari per user, plus batas harian per unit.
+    */
+
+    'rate_limits' => [
+        'per_minute' => (int) env('AI_RATE_PER_MINUTE', 20),
+        'per_day' => (int) env('AI_RATE_PER_DAY', 200),
+        'per_unit_per_day' => (int) env('AI_RATE_PER_UNIT_PER_DAY', 1500),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | HTTP Timeout
     |--------------------------------------------------------------------------
     |

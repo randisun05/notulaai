@@ -9,7 +9,9 @@ use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use Illuminate\Http\Exceptions\ThrottleRequestsException;
 use Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets;
+use Illuminate\Http\Request;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -42,6 +44,24 @@ return Application::configure(basePath: dirname(__DIR__))
             'password',
             'password_confirmation',
         ]);
+
+        // Friendly, localized message when an AI (or any throttled) endpoint is
+        // rate-limited, for both the axios calls and the Inertia POSTs.
+        $exceptions->render(function (ThrottleRequestsException $e, Request $request) {
+            $retryAfter = $e->getHeaders()['Retry-After'] ?? null;
+            $message = 'Terlalu banyak permintaan dalam waktu singkat.'
+                .($retryAfter ? " Coba lagi dalam {$retryAfter} detik." : ' Coba lagi sebentar lagi.');
+
+            if ($request->expectsJson()) {
+                return response()->json(['error' => $message], 429, $e->getHeaders());
+            }
+
+            if ($request->header('X-Inertia')) {
+                return back()->with('error', $message);
+            }
+
+            return null;
+        });
     })
     ->withSchedule(function (Schedule $schedule) {
         // withSchedule() runs on every `artisan` invocation (Artisan::starting),

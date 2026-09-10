@@ -35,7 +35,7 @@ Route::get('/', function () {
 Route::get('/dashboard', [DashboardController::class, 'index'])
     ->middleware(['auth', 'verified'])->name('dashboard');
 Route::post('/dashboard/insight', [DashboardController::class, 'insight'])
-    ->middleware(['auth', 'verified'])->name('dashboard.insight');
+    ->middleware(['auth', 'verified', 'throttle:ai'])->name('dashboard.insight');
 
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
@@ -51,7 +51,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/meetings/create', [MeetingController::class, 'create'])->name('meetings.create'); // Rute untuk menampilkan form
     Route::post('/meetings', [MeetingController::class, 'store'])->name('meetings.store'); // Rute untuk menyimpan data
     Route::get('/meetings/{meeting}', [MeetingController::class, 'show'])->name('meetings.show');
-    Route::post('/meetings/{meeting}/process', [MeetingController::class, 'process'])->name('meetings.process'); // Rute baru untuk memproses notula
+    Route::post('/meetings/{meeting}/process', [MeetingController::class, 'process'])->middleware('throttle:ai')->name('meetings.process'); // Rute baru untuk memproses notula
 
     // --- TAMBAHKAN DUA ROUTE INI ---
     Route::get('/meetings/{meeting}/edit', [MeetingController::class, 'edit'])->name('meetings.edit');
@@ -60,14 +60,14 @@ Route::middleware('auth')->group(function () {
     Route::delete('/meetings/{meeting}', [MeetingController::class, 'destroy'])->name('meetings.destroy'); // <-- TAMBAHKAN INI
 
     Route::post('/meetings/{meeting}/action-items/{actionItem}/convert-to-task', [TaskController::class, 'storeFromActionItem'])->name('meetings.action-items.convert');
-    Route::post('/meetings/{meeting}/action-items/regenerate', [MeetingController::class, 'regenerateActionItems'])->name('meetings.action-items.regenerate');
+    Route::post('/meetings/{meeting}/action-items/regenerate', [MeetingController::class, 'regenerateActionItems'])->middleware('throttle:ai')->name('meetings.action-items.regenerate');
 
     // AI Email Generator
-    Route::post('/meetings/{meeting}/emails/generate', [MeetingEmailController::class, 'generate'])->name('meetings.emails.generate');
-    Route::post('/meetings/{meeting}/emails/send', [MeetingEmailController::class, 'send'])->name('meetings.emails.send');
+    Route::post('/meetings/{meeting}/emails/generate', [MeetingEmailController::class, 'generate'])->middleware('throttle:ai')->name('meetings.emails.generate');
+    Route::post('/meetings/{meeting}/emails/send', [MeetingEmailController::class, 'send'])->middleware('throttle:ai')->name('meetings.emails.send');
 
     // AI Chat per Meeting
-    Route::post('/meetings/{meeting}/chat', [MeetingChatController::class, 'store'])->name('meetings.chat.store');
+    Route::post('/meetings/{meeting}/chat', [MeetingChatController::class, 'store'])->middleware('throttle:ai')->name('meetings.chat.store');
 
     // Task Routes
     Route::get('/tasks', [TaskController::class, 'index'])->name('tasks.index');
@@ -136,6 +136,6 @@ Route::middleware('auth')->group(function () {
 
 });
 
-Route::post('/stt/test', [SpeechController::class, 'transcribe']);
+Route::post('/stt/test', [SpeechController::class, 'transcribe'])->middleware('throttle:ai');
 
 require __DIR__.'/auth.php';
