@@ -9,9 +9,7 @@ use Illuminate\Support\Facades\Auth;
 
 class MeetingChatController extends Controller
 {
-    public function __construct(private readonly MeetingChatService $chat)
-    {
-    }
+    public function __construct(private readonly MeetingChatService $chat) {}
 
     public function store(Request $request, Meeting $meeting)
     {
@@ -28,7 +26,7 @@ class MeetingChatController extends Controller
         try {
             $answer = $this->chat->ask($meeting, $validated['question'], Auth::user());
         } catch (\Throwable $e) {
-            return response()->json(['error' => 'Gagal mendapat jawaban dari AI: ' . $e->getMessage()], 500);
+            return response()->json(['error' => 'Gagal mendapat jawaban dari AI: '.$e->getMessage()], 500);
         }
 
         return response()->json([

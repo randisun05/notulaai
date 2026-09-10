@@ -19,7 +19,9 @@ use Throwable;
 class MeetingProcessingService
 {
     private const AUDIO_EXTENSIONS = ['mp3', 'wav', 'm4a'];
+
     private const TEXT_EXTENSIONS = ['txt', 'md'];
+
     private const IMAGE_EXTENSIONS = ['jpg', 'jpeg', 'png', 'webp'];
 
     public function __construct(
@@ -28,8 +30,7 @@ class MeetingProcessingService
         private readonly ActionItemsParser $actionItemsParser,
         private readonly ActivityLogger $activityLogger,
         private readonly WebhookDispatcher $webhookDispatcher,
-    ) {
-    }
+    ) {}
 
     /**
      * Generate ulang action items dari transkrip yang sudah ada, tanpa perlu re-upload file.
@@ -90,8 +91,8 @@ class MeetingProcessingService
     private function extractTranscript(Meeting $meeting): string
     {
         $filePath = $meeting->source_file_path;
-        if (!$filePath || !Storage::disk('public')->exists($filePath)) {
-            throw new \RuntimeException("File sumber tidak ditemukan di path: {$filePath}");
+        if (! $filePath || ! Storage::disk('public')->exists($filePath)) {
+            throw new RuntimeException("File sumber tidak ditemukan di path: {$filePath}");
         }
 
         $extension = strtolower(pathinfo($filePath, PATHINFO_EXTENSION));
@@ -120,7 +121,7 @@ class MeetingProcessingService
             $transcript = Storage::disk('public')->get($filePath);
 
             if (empty(trim($transcript))) {
-                throw new \RuntimeException('Transkrip kosong, tidak bisa membuat rangkuman.');
+                throw new RuntimeException('Transkrip kosong, tidak bisa membuat rangkuman.');
             }
 
             return $transcript;
@@ -141,7 +142,7 @@ class MeetingProcessingService
             }
 
             if (empty(trim($result->content))) {
-                throw new \RuntimeException('Tidak ada teks yang terbaca dari gambar tersebut.');
+                throw new RuntimeException('Tidak ada teks yang terbaca dari gambar tersebut.');
             }
 
             $this->logger->logSuccess('ocr', $provider, $result->model, $fileName, $result->content, null, null, $result->durationMs, $meeting, $meeting->creator);
@@ -149,14 +150,14 @@ class MeetingProcessingService
             return $result->content;
         }
 
-        throw new \RuntimeException("Tipe file tidak didukung: {$extension}");
+        throw new RuntimeException("Tipe file tidak didukung: {$extension}");
     }
 
     private function summarize(Meeting $meeting, string $transcript): string
     {
         $prompt = 'You are a helpful assistant that summarizes meeting transcripts. Create a summary in well-structured HTML format. '
-            . 'Use headings (<h3>), unordered lists (<ul><li>) for key points, and bold tags (<b>) to highlight action items or names. '
-            . 'Here is the transcript: ' . $transcript;
+            .'Use headings (<h3>), unordered lists (<ul><li>) for key points, and bold tags (<b>) to highlight action items or names. '
+            .'Here is the transcript: '.$transcript;
 
         $provider = $this->ai->activeTextProvider();
         $model = Config::get("ai.providers.{$provider}.model");
@@ -196,7 +197,7 @@ class MeetingProcessingService
             $result = $this->ai->text()->generate($prompt);
         } catch (Throwable $e) {
             $this->logger->logFailure('action_items', $provider, $model, $prompt, $e->getMessage(), $meeting, $meeting->creator);
-            Log::warning("Gagal membuat action items untuk Rapat ID {$meeting->id}: " . $e->getMessage());
+            Log::warning("Gagal membuat action items untuk Rapat ID {$meeting->id}: ".$e->getMessage());
 
             return;
         }
@@ -217,13 +218,14 @@ class MeetingProcessingService
             ]);
         }
 
-        Log::info(count($items) . " action item dibuat untuk Rapat ID: {$meeting->id}");
+        Log::info(count($items)." action item dibuat untuk Rapat ID: {$meeting->id}");
     }
 
     private function notifyUnit(Meeting $meeting): void
     {
-        if (!$meeting->unit_id) {
+        if (! $meeting->unit_id) {
             Log::warning("Tidak ada unit_id untuk Rapat ID: {$meeting->id}, email tidak dikirim.");
+
             return;
         }
 
@@ -233,6 +235,7 @@ class MeetingProcessingService
 
         if ($usersInUnit->isEmpty()) {
             Log::warning("Tidak ada user ditemukan di unit ID {$meeting->unit_id}, email tidak dikirim.");
+
             return;
         }
 
@@ -243,7 +246,7 @@ class MeetingProcessingService
                 Mail::to($user->email)->send(new MeetingSummary($meeting));
                 Log::info("Email hasil rapat terkirim ke {$user->email}");
             } catch (\Exception $e) {
-                Log::error("Gagal mengirim email hasil rapat ke {$user->email}: " . $e->getMessage());
+                Log::error("Gagal mengirim email hasil rapat ke {$user->email}: ".$e->getMessage());
             }
         }
     }

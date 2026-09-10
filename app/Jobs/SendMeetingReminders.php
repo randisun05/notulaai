@@ -18,6 +18,7 @@ class SendMeetingReminders implements ShouldQueue
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     public $tries = 3;
+
     public $backoff = [60, 300, 900];
 
     /**
@@ -42,22 +43,25 @@ class SendMeetingReminders implements ShouldQueue
 
         if ($todayMeetings->isEmpty()) {
             Log::info('Tidak ada rapat terjadwal hari ini.');
+
             return;
         }
 
         foreach ($todayMeetings as $meeting) {
             // PERBAIKAN: Ambil semua user dari unit rapat
-            if (!$meeting->unit_id) {
+            if (! $meeting->unit_id) {
                 Log::warning("Rapat ID: {$meeting->id} tidak memiliki unit_id. Dilewati.");
+
                 continue;
             }
 
             $usersInUnit = User::where('unit_id', $meeting->unit_id)
-                                ->whereNotNull('email') // Hanya user yang punya email
-                                ->get();
+                ->whereNotNull('email') // Hanya user yang punya email
+                ->get();
 
             if ($usersInUnit->isEmpty()) {
                 Log::warning("Tidak ada user yang ditemukan di unit ID {$meeting->unit_id} untuk Rapat ID: {$meeting->id}.");
+
                 continue;
             }
 
@@ -70,7 +74,7 @@ class SendMeetingReminders implements ShouldQueue
 
                     Log::info("Email pengingat terkirim ke {$user->email} (Rapat ID: {$meeting->id})");
                 } catch (\Exception $e) {
-                    Log::error("Gagal mengirim email pengingat ke {$user->email}: " . $e->getMessage());
+                    Log::error("Gagal mengirim email pengingat ke {$user->email}: ".$e->getMessage());
                 }
             }
         }
@@ -81,10 +85,9 @@ class SendMeetingReminders implements ShouldQueue
      */
     public function failed(\Throwable $e): void
     {
-        Log::error('Job SendMeetingReminders gagal permanen: ' . $e->getMessage(), [
+        Log::error('Job SendMeetingReminders gagal permanen: '.$e->getMessage(), [
             'file' => $e->getFile(),
             'line' => $e->getLine(),
         ]);
     }
 }
-

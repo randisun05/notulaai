@@ -3,16 +3,16 @@
 namespace App\Models;
 
 use App\Models\Concerns\ScopedToUnit;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class Meeting extends Model
 {
     use HasFactory, ScopedToUnit;
 
-     protected $fillable = [
+    protected $fillable = [
         'user_id',
         'unit_id', // Ditambahkan
         'title',
@@ -22,7 +22,7 @@ class Meeting extends Model
         'status',
         'transcript',
         'summary',
-         'source_file_path', // Ditambahkan di sini
+        'source_file_path', // Ditambahkan di sini
     ];
 
     /**

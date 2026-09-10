@@ -14,8 +14,7 @@ class SpeechController extends Controller
         private readonly TranscriptionProvider $transcription,
         private readonly AiRequestLogger $logger,
         private readonly AiManager $ai,
-    ) {
-    }
+    ) {}
 
     public function transcribe(Request $request)
     {

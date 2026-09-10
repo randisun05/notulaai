@@ -4,9 +4,9 @@ namespace App\Http\Controllers;
 
 use App\Exports\TasksExport;
 use App\Models\Task;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Barryvdh\DomPDF\Facade\Pdf;
 use Maatwebsite\Excel\Facades\Excel;
 
 class TaskExportController extends Controller
@@ -15,12 +15,12 @@ class TaskExportController extends Controller
     {
         $pdf = Pdf::loadView('exports.tasks-pdf', ['tasks' => $this->filteredTasks($request)]);
 
-        return $pdf->download('tasks-' . now()->format('Y-m-d') . '.pdf');
+        return $pdf->download('tasks-'.now()->format('Y-m-d').'.pdf');
     }
 
     public function excel(Request $request)
     {
-        return Excel::download(new TasksExport($this->filteredTasks($request)), 'tasks-' . now()->format('Y-m-d') . '.xlsx');
+        return Excel::download(new TasksExport($this->filteredTasks($request)), 'tasks-'.now()->format('Y-m-d').'.xlsx');
     }
 
     private function filteredTasks(Request $request)

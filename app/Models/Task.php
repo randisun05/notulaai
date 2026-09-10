@@ -12,7 +12,9 @@ class Task extends Model
     use ScopedToUnit;
 
     public const STATUSES = ['Todo', 'In Progress', 'Waiting', 'Review', 'Done', 'Cancelled'];
+
     public const PRIORITIES = ['Low', 'Medium', 'High', 'Urgent'];
+
     private const CLOSED_STATUSES = ['Done', 'Cancelled'];
 
     protected $fillable = [
@@ -80,7 +82,7 @@ class Task extends Model
 
     public function getIsOverdueAttribute(): bool
     {
-        if (!$this->deadline || in_array($this->status, self::CLOSED_STATUSES, true)) {
+        if (! $this->deadline || in_array($this->status, self::CLOSED_STATUSES, true)) {
             return false;
         }
 
@@ -89,7 +91,7 @@ class Task extends Model
 
     public function getIsSlaBreachedAttribute(): bool
     {
-        if (!$this->sla_hours || in_array($this->status, self::CLOSED_STATUSES, true)) {
+        if (! $this->sla_hours || in_array($this->status, self::CLOSED_STATUSES, true)) {
             return false;
         }
 

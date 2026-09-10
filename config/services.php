@@ -31,27 +31,27 @@ return [
         'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
     ],
     'huggingface' => [
-    'key' => env('HF_API_KEY'),
-],
+        'key' => env('HF_API_KEY'),
+    ],
 
- 'gemini' => [
-    'key' => env('GEMINI_API_KEY'),
-],
+    'gemini' => [
+        'key' => env('GEMINI_API_KEY'),
+    ],
 
-'stt_service' => [
-    'url' => env('STT_SERVICE_URL', 'http://127.0.0.1:5055/transcribe'),
-],
+    'stt_service' => [
+        'url' => env('STT_SERVICE_URL', 'http://127.0.0.1:5055/transcribe'),
+    ],
 
-'google' => [
-    'client_id' => env('GOOGLE_CLIENT_ID'),
-    'client_secret' => env('GOOGLE_CLIENT_SECRET'),
-    'redirect' => env('GOOGLE_REDIRECT_URI'),
-],
+    'google' => [
+        'client_id' => env('GOOGLE_CLIENT_ID'),
+        'client_secret' => env('GOOGLE_CLIENT_SECRET'),
+        'redirect' => env('GOOGLE_REDIRECT_URI'),
+    ],
 
-'microsoft' => [
-    'client_id' => env('MICROSOFT_CLIENT_ID'),
-    'client_secret' => env('MICROSOFT_CLIENT_SECRET'),
-    'redirect' => env('MICROSOFT_REDIRECT_URI'),
-],
+    'microsoft' => [
+        'client_id' => env('MICROSOFT_CLIENT_ID'),
+        'client_secret' => env('MICROSOFT_CLIENT_SECRET'),
+        'redirect' => env('MICROSOFT_REDIRECT_URI'),
+    ],
 
 ];

@@ -11,6 +11,7 @@ use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
+use OpenAI\Exceptions\ErrorException;
 use Throwable;
 
 class ProcessMeetingNotula implements ShouldQueue
@@ -18,8 +19,11 @@ class ProcessMeetingNotula implements ShouldQueue
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     public $meeting;
+
     public $timeout = 300; // 5 menit timeout
+
     public $tries = 3;
+
     public $backoff = [30, 90, 180];
 
     public function __construct(Meeting $meeting)
@@ -38,8 +42,8 @@ class ProcessMeetingNotula implements ShouldQueue
     public function failed(Throwable $e): void
     {
         $errorMessage = $e->getMessage();
-        if ($e instanceof \OpenAI\Exceptions\ErrorException) {
-            $errorMessage = 'OpenAI API Error: ' . $e->getMessage();
+        if ($e instanceof ErrorException) {
+            $errorMessage = 'OpenAI API Error: '.$e->getMessage();
         }
 
         Log::error("Gagal memproses notula untuk Rapat ID {$this->meeting->id}", [
@@ -51,6 +55,6 @@ class ProcessMeetingNotula implements ShouldQueue
 
         $this->meeting->update(['status' => 'Gagal']);
 
-        app(ActivityLogger::class)->log($this->meeting, null, 'meeting.failed', 'Pemrosesan notula gagal: ' . $errorMessage);
+        app(ActivityLogger::class)->log($this->meeting, null, 'meeting.failed', 'Pemrosesan notula gagal: '.$errorMessage);
     }
 }

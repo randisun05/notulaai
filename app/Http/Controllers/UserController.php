@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Controllers\Controller;
 use App\Models\Unit;
 use App\Models\User;
 use App\Services\Audit\AuditLogger;
@@ -15,9 +14,7 @@ use Inertia\Inertia;
 
 class UserController extends Controller
 {
-    public function __construct(private readonly AuditLogger $auditLogger)
-    {
-    }
+    public function __construct(private readonly AuditLogger $auditLogger) {}
 
     /**
      * Display a listing of the resource.
@@ -72,7 +69,6 @@ class UserController extends Controller
 
         return to_route('admin.users.index')->with('success', 'User berhasil dibuat.');
     }
-
 
     /**
      * Show the form for editing the specified resource.
@@ -141,4 +137,3 @@ class UserController extends Controller
         return to_route('admin.users.index')->with('success', 'User berhasil dihapus.');
     }
 }
-

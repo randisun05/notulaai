@@ -17,8 +17,7 @@ class MeetingEmailController extends Controller
     public function __construct(
         private readonly EmailDraftGenerator $generator,
         private readonly ActivityLogger $activityLogger,
-    ) {
-    }
+    ) {}
 
     public function generate(Request $request, Meeting $meeting)
     {
@@ -31,7 +30,7 @@ class MeetingEmailController extends Controller
         try {
             $draft = $this->generator->generate($meeting, $validated['purpose'], Auth::user());
         } catch (\Throwable $e) {
-            return response()->json(['error' => 'Gagal membuat draft email: ' . $e->getMessage()], 500);
+            return response()->json(['error' => 'Gagal membuat draft email: '.$e->getMessage()], 500);
         }
 
         return response()->json($draft);
@@ -61,7 +60,7 @@ class MeetingEmailController extends Controller
             $meeting,
             Auth::user(),
             'email.sent',
-            Auth::user()->name . " mengirim email \"{$validated['subject']}\" ke {$recipients->count()} penerima.",
+            Auth::user()->name." mengirim email \"{$validated['subject']}\" ke {$recipients->count()} penerima.",
         );
 
         return back()->with('success', "Email berhasil dikirim ke {$recipients->count()} penerima.");

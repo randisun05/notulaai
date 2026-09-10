@@ -9,6 +9,7 @@ use App\Mail\TaskEscalationNotice;
 use App\Models\Task;
 use App\Models\Unit;
 use App\Models\User;
+use App\Services\Meeting\ActivityLogger;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Mail;
 use Tests\TestCase;
@@ -31,7 +32,7 @@ class TaskEscalationJobTest extends TestCase
             'deadline' => now()->subDays(3)->toDateString(),
         ]);
 
-        (new EscalateOverdueTasks())->handle(app(\App\Services\Meeting\ActivityLogger::class));
+        (new EscalateOverdueTasks)->handle(app(ActivityLogger::class));
 
         $task->refresh();
         $this->assertNotNull($task->escalated_at);
@@ -54,7 +55,7 @@ class TaskEscalationJobTest extends TestCase
             'escalated_at' => now()->subDay(),
         ]);
 
-        (new EscalateOverdueTasks())->handle(app(\App\Services\Meeting\ActivityLogger::class));
+        (new EscalateOverdueTasks)->handle(app(ActivityLogger::class));
 
         Mail::assertNothingQueued();
         $this->assertDatabaseMissing('activities', ['task_id' => $task->id, 'type' => 'task.escalated']);
@@ -74,7 +75,7 @@ class TaskEscalationJobTest extends TestCase
             'deadline' => now()->addDays(5)->toDateString(),
         ]);
 
-        (new EscalateOverdueTasks())->handle(app(\App\Services\Meeting\ActivityLogger::class));
+        (new EscalateOverdueTasks)->handle(app(ActivityLogger::class));
 
         Mail::assertNothingQueued();
     }
@@ -93,7 +94,7 @@ class TaskEscalationJobTest extends TestCase
             'deadline' => now()->addDay()->toDateString(),
         ]);
 
-        (new SendTaskDeadlineReminders())->handle();
+        (new SendTaskDeadlineReminders)->handle();
 
         Mail::assertQueued(TaskDeadlineReminder::class, fn ($mail) => $mail->hasTo($assignee->email));
     }
@@ -112,7 +113,7 @@ class TaskEscalationJobTest extends TestCase
             'deadline' => now()->addWeek()->toDateString(),
         ]);
 
-        (new SendTaskDeadlineReminders())->handle();
+        (new SendTaskDeadlineReminders)->handle();
 
         Mail::assertNothingQueued();
     }

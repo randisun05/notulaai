@@ -15,12 +15,12 @@ class MentionParserTest extends TestCase
     {
         parent::setUp();
 
-        $this->parser = new MentionParser();
+        $this->parser = new MentionParser;
     }
 
     private function makeUser(int $id, string $name): User
     {
-        $user = new User();
+        $user = new User;
         $user->id = $id;
         $user->name = $name;
 

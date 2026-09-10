@@ -11,9 +11,7 @@ use Illuminate\Support\Facades\Config;
 
 class AiManager
 {
-    public function __construct(private readonly Container $container)
-    {
-    }
+    public function __construct(private readonly Container $container) {}
 
     /**
      * Provider aktif bisa di-override lewat halaman Settings (Admin); jika belum
@@ -59,7 +57,7 @@ class AiManager
     {
         $config = Config::get("ai.providers.{$provider}");
 
-        if (!$config || !isset($config['driver'])) {
+        if (! $config || ! isset($config['driver'])) {
             throw new \InvalidArgumentException("AI provider [{$provider}] tidak dikonfigurasi di config/ai.php.");
         }
 
@@ -67,7 +65,7 @@ class AiManager
             'model' => $config['model'] ?? null,
         ]);
 
-        if (!$instance instanceof $expectedInterface) {
+        if (! $instance instanceof $expectedInterface) {
             throw new \InvalidArgumentException("Driver untuk provider [{$provider}] harus mengimplementasikan {$expectedInterface}.");
         }
 

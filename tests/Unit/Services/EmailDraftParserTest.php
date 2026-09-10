@@ -13,7 +13,7 @@ class EmailDraftParserTest extends TestCase
     {
         parent::setUp();
 
-        $this->parser = new EmailDraftParser();
+        $this->parser = new EmailDraftParser;
     }
 
     public function test_parses_clean_json_object(): void

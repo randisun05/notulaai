@@ -3,9 +3,9 @@
 namespace Database\Seeders;
 
 // use Illuminate\Database\Console\Seeds\WithoutModelEvents;
+use App\Models\Meeting;
 use App\Models\Unit;
 use App\Models\User;
-use App\Models\Meeting;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
 
@@ -16,15 +16,15 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-         Unit::create([
+        Unit::create([
             'name' => 'Pusbin',
         ]);
 
-          Unit::create([
+        Unit::create([
             'name' => 'SDM',
         ]);
 
-         User::create([
+        User::create([
             'name' => 'Super Admin',
             'email' => 'admin@example.com',
             'password' => Hash::make('password'),
@@ -42,7 +42,7 @@ class DatabaseSeeder extends Seeder
             'phone_number' => '081572398890',
         ]);
 
-         User::create([
+        User::create([
             'name' => 'Admin Unit',
             'email' => 'unit2@example.com',
             'password' => Hash::make('password'),
@@ -69,7 +69,7 @@ class DatabaseSeeder extends Seeder
             'phone_number' => '081572398890',
         ]);
 
-         Meeting::create([
+        Meeting::create([
             'id' => 1,
             'title' => 'Rapat Kinerja Q3',
             'unit_id' => 1,
@@ -79,12 +79,12 @@ class DatabaseSeeder extends Seeder
             'status' => 'Selesai Diproses',
             'user_id' => 2,
             'transcript' => "Budi: Selamat pagi semua. Mari kita mulai rapat kinerja Q3. Citra, bisa dimulai dari update tim marketing?\nCitra: Tentu, Pak Budi. Untuk Q3, campaign digital kita berhasil melampaui target sebesar 20%...",
-            'summary' => "Poin Penting:\n- Campaign digital marketing Q3 melampaui target 20%.\n- Perlu fokus pada retensi pelanggan di Q4.\n\nAction Items:\n- Tim Marketing menyiapkan proposal budget untuk campaign Q4 (PIC: Citra).\n- Tim Sales melakukan analisis customer churn rate (PIC: Budi)."
+            'summary' => "Poin Penting:\n- Campaign digital marketing Q3 melampaui target 20%.\n- Perlu fokus pada retensi pelanggan di Q4.\n\nAction Items:\n- Tim Marketing menyiapkan proposal budget untuk campaign Q4 (PIC: Citra).\n- Tim Sales melakukan analisis customer churn rate (PIC: Budi).",
         ]);
 
         Meeting::create([
             'id' => 2,
-               'unit_id' => 1,
+            'unit_id' => 1,
             'title' => 'Brainstorming Fitur Baru',
             'date' => '2025-10-28 14:00:00',
             'agenda' => 'Diskusi ide untuk fitur aplikasi mobile selanjutnya.',
@@ -92,12 +92,12 @@ class DatabaseSeeder extends Seeder
             'status' => 'Dijadwalkan',
             'user_id' => 2,
             'transcript' => null,
-            'summary' => null
+            'summary' => null,
         ]);
 
         Meeting::create([
             'id' => 3,
-               'unit_id' => 2,
+            'unit_id' => 2,
             'title' => 'Evaluasi Proyek "Alpha"',
             'date' => '2025-10-20 09:00:00',
             'agenda' => 'Post-mortem dan evaluasi keberhasilan proyek Alpha.',
@@ -105,7 +105,7 @@ class DatabaseSeeder extends Seeder
             'status' => 'Selesai Diproses',
             'user_id' => 3,
             'transcript' => "Citra: Oke tim, mari kita bahas proyek Alpha. Secara keseluruhan, proyek ini selesai tepat waktu. Apa saja kendala yang kita hadapi? \nDev1: Integrasi dengan API pihak ketiga sempat memakan waktu lebih lama dari estimasi.",
-            'summary' => "Poin Penting:\n- Proyek Alpha selesai sesuai jadwal.\n- Terdapat kendala pada integrasi API eksternal.\n\nAction Items:\n- Buat dokumentasi best practice untuk integrasi API (PIC: Tim Developer)."
+            'summary' => "Poin Penting:\n- Proyek Alpha selesai sesuai jadwal.\n- Terdapat kendala pada integrasi API eksternal.\n\nAction Items:\n- Buat dokumentasi best practice untuk integrasi API (PIC: Tim Developer).",
         ]);
 
         $this->call(RolePermissionSeeder::class);

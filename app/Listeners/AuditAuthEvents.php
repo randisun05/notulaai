@@ -9,9 +9,7 @@ use Illuminate\Auth\Events\Logout;
 
 class AuditAuthEvents
 {
-    public function __construct(private readonly AuditLogger $auditLogger)
-    {
-    }
+    public function __construct(private readonly AuditLogger $auditLogger) {}
 
     public function handleLogin(Login $event): void
     {
@@ -26,7 +24,7 @@ class AuditAuthEvents
         /** @var User|null $user */
         $user = $event->user;
 
-        if (!$user) {
+        if (! $user) {
             return;
         }
 

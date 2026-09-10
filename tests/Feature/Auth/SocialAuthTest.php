@@ -36,7 +36,7 @@ class SocialAuthTest extends TestCase
     {
         $user = User::factory()->create(['email' => 'budi@example.com']);
 
-        $socialiteUser = new SocialiteUser();
+        $socialiteUser = new SocialiteUser;
         $socialiteUser->email = 'budi@example.com';
 
         $provider = Mockery::mock(Provider::class);
@@ -53,7 +53,7 @@ class SocialAuthTest extends TestCase
 
     public function test_callback_rejects_email_with_no_matching_account(): void
     {
-        $socialiteUser = new SocialiteUser();
+        $socialiteUser = new SocialiteUser;
         $socialiteUser->email = 'tidak-terdaftar@example.com';
 
         $provider = Mockery::mock(Provider::class);

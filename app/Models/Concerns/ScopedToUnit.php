@@ -18,6 +18,6 @@ trait ScopedToUnit
             return $query;
         }
 
-        return $query->where($this->getTable() . '.unit_id', $user->unit_id);
+        return $query->where($this->getTable().'.unit_id', $user->unit_id);
     }
 }

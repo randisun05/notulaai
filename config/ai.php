@@ -1,5 +1,10 @@
 <?php
 
+use App\Services\AI\Providers\GeminiOcrProvider;
+use App\Services\AI\Providers\GeminiTextProvider;
+use App\Services\AI\Providers\OpenRouterTextProvider;
+use App\Services\AI\Providers\WhisperLocalTranscriptionProvider;
+
 return [
 
     /*
@@ -40,21 +45,21 @@ return [
 
     'providers' => [
         'openrouter' => [
-            'driver' => \App\Services\AI\Providers\OpenRouterTextProvider::class,
+            'driver' => OpenRouterTextProvider::class,
             'model' => env('AI_OPENROUTER_MODEL', 'openai/gpt-oss-20b:free'),
         ],
 
         'gemini' => [
-            'driver' => \App\Services\AI\Providers\GeminiTextProvider::class,
+            'driver' => GeminiTextProvider::class,
             'model' => env('AI_GEMINI_MODEL', 'gemini-2.0-flash'),
         ],
 
         'whisper_local' => [
-            'driver' => \App\Services\AI\Providers\WhisperLocalTranscriptionProvider::class,
+            'driver' => WhisperLocalTranscriptionProvider::class,
         ],
 
         'gemini_ocr' => [
-            'driver' => \App\Services\AI\Providers\GeminiOcrProvider::class,
+            'driver' => GeminiOcrProvider::class,
             'model' => env('AI_OCR_MODEL', 'gemini-2.0-flash'),
         ],
     ],

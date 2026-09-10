@@ -18,9 +18,7 @@ class GeminiOcrProvider implements OcrProvider
         'webp' => MimeType::IMAGE_WEBP,
     ];
 
-    public function __construct(private readonly string $model)
-    {
-    }
+    public function __construct(private readonly string $model) {}
 
     public function extractText(string $absoluteFilePath, string $fileName): AiTextResult
     {
@@ -31,13 +29,13 @@ class GeminiOcrProvider implements OcrProvider
         $extension = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
         $mimeType = self::MIME_TYPES[$extension] ?? null;
 
-        if (!$mimeType) {
+        if (! $mimeType) {
             throw new \RuntimeException("Tipe gambar tidak didukung untuk OCR: {$extension}");
         }
 
         $prompt = 'Ekstrak seluruh teks yang terbaca pada gambar ini apa adanya (verbatim), '
-            . 'termasuk dari catatan tulisan tangan atau papan tulis. Jangan menambahkan komentar, '
-            . 'hanya kembalikan teksnya saja.';
+            .'termasuk dari catatan tulisan tangan atau papan tulis. Jangan menambahkan komentar, '
+            .'hanya kembalikan teksnya saja.';
 
         $startedAt = microtime(true);
 

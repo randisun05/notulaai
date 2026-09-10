@@ -25,21 +25,21 @@ class ActionItemsParser
 
         $decoded = json_decode($json, true);
 
-        if (!is_array($decoded) && preg_match('/\[.*\]/s', $json, $matches)) {
+        if (! is_array($decoded) && preg_match('/\[.*\]/s', $json, $matches)) {
             $decoded = json_decode($matches[0], true);
         }
 
-        if (!is_array($decoded)) {
+        if (! is_array($decoded)) {
             Log::warning('Respons action items bukan JSON yang valid, dilewati.', ['raw' => $raw]);
 
             return [];
         }
 
         return collect($decoded)
-            ->filter(fn ($item) => is_array($item) && !empty($item['title']))
+            ->filter(fn ($item) => is_array($item) && ! empty($item['title']))
             ->map(fn ($item) => [
                 'title' => (string) $item['title'],
-                'assignee_name' => !empty($item['assignee_name']) ? (string) $item['assignee_name'] : null,
+                'assignee_name' => ! empty($item['assignee_name']) ? (string) $item['assignee_name'] : null,
                 'deadline' => $this->parseDeadline($item['deadline'] ?? null),
             ])
             ->values()
@@ -48,7 +48,7 @@ class ActionItemsParser
 
     private function parseDeadline(mixed $value): ?string
     {
-        if (empty($value) || !is_string($value)) {
+        if (empty($value) || ! is_string($value)) {
             return null;
         }
 

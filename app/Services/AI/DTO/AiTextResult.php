@@ -11,6 +11,5 @@ class AiTextResult
         public readonly ?int $promptTokens = null,
         public readonly ?int $completionTokens = null,
         public readonly ?float $durationMs = null,
-    ) {
-    }
+    ) {}
 }

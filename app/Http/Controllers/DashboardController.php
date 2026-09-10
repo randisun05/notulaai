@@ -6,14 +6,13 @@ use App\Models\Meeting;
 use App\Models\Task;
 use App\Models\User;
 use App\Services\Analytics\DashboardInsightGenerator;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 
 class DashboardController extends Controller
 {
-    public function __construct(private readonly DashboardInsightGenerator $insightGenerator)
-    {
-    }
+    public function __construct(private readonly DashboardInsightGenerator $insightGenerator) {}
 
     public function index()
     {
@@ -34,14 +33,14 @@ class DashboardController extends Controller
                 Auth::user(),
             );
         } catch (\Throwable $e) {
-            return response()->json(['error' => 'Gagal membuat insight: ' . $e->getMessage()], 500);
+            return response()->json(['error' => 'Gagal membuat insight: '.$e->getMessage()], 500);
         }
 
         return response()->json(['insight' => $insight]);
     }
 
     /**
-     * @return array{stats: array<string, int>, recentMeetings: \Illuminate\Support\Collection, weeklyMeetings: \Illuminate\Support\Collection, taskStatusBreakdown: \Illuminate\Support\Collection}
+     * @return array{stats: array<string, int>, recentMeetings: Collection, weeklyMeetings: Collection, taskStatusBreakdown: Collection}
      */
     private function buildDashboardData(): array
     {

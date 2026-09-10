@@ -9,9 +9,7 @@ use Illuminate\Support\Facades\Config;
 
 class GeminiTextProvider implements TextGenerationProvider
 {
-    public function __construct(private readonly string $model)
-    {
-    }
+    public function __construct(private readonly string $model) {}
 
     public function generate(string $prompt): AiTextResult
     {

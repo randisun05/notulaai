@@ -18,6 +18,7 @@ class EscalateOverdueTasks implements ShouldQueue
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     public $tries = 3;
+
     public $backoff = [60, 300, 900];
 
     public function handle(ActivityLogger $activityLogger): void
@@ -32,6 +33,7 @@ class EscalateOverdueTasks implements ShouldQueue
 
         if ($candidates->isEmpty()) {
             Log::info('Tidak ada task yang perlu dieskalasi.');
+
             return;
         }
 
@@ -48,12 +50,12 @@ class EscalateOverdueTasks implements ShouldQueue
                 $task,
             );
 
-            if (!empty($task->creator?->email)) {
+            if (! empty($task->creator?->email)) {
                 try {
                     Mail::to($task->creator->email)->send(new TaskEscalationNotice($task, $reason));
                     Log::info("Eskalasi Task ID {$task->id} terkirim ke {$task->creator->email}.");
                 } catch (\Exception $e) {
-                    Log::error("Gagal mengirim email eskalasi Task ID {$task->id}: " . $e->getMessage());
+                    Log::error("Gagal mengirim email eskalasi Task ID {$task->id}: ".$e->getMessage());
                 }
             }
         }
@@ -64,7 +66,7 @@ class EscalateOverdueTasks implements ShouldQueue
      */
     public function failed(\Throwable $e): void
     {
-        Log::error('Job EscalateOverdueTasks gagal permanen: ' . $e->getMessage(), [
+        Log::error('Job EscalateOverdueTasks gagal permanen: '.$e->getMessage(), [
             'file' => $e->getFile(),
             'line' => $e->getLine(),
         ]);

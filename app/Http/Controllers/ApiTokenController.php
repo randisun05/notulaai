@@ -10,9 +10,7 @@ use Laravel\Sanctum\PersonalAccessToken;
 
 class ApiTokenController extends Controller
 {
-    public function __construct(private readonly AuditLogger $auditLogger)
-    {
-    }
+    public function __construct(private readonly AuditLogger $auditLogger) {}
 
     public function store(Request $request): RedirectResponse
     {

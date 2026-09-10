@@ -40,7 +40,7 @@ class SocialAuthController extends Controller
 
         $user = User::where('email', $socialUser->getEmail())->first();
 
-        if (!$user) {
+        if (! $user) {
             return redirect()->route('login')->with('error', 'Akun dengan email tersebut belum terdaftar. Hubungi admin untuk didaftarkan terlebih dahulu.');
         }
 

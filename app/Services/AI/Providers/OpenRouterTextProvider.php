@@ -14,9 +14,7 @@ use Psr\Http\Message\ResponseInterface;
 
 class OpenRouterTextProvider implements TextGenerationProvider
 {
-    public function __construct(private readonly string $model)
-    {
-    }
+    public function __construct(private readonly string $model) {}
 
     public function generate(string $prompt): AiTextResult
     {
@@ -72,7 +70,7 @@ class OpenRouterTextProvider implements TextGenerationProvider
             $body = (string) $response->getBody();
             $data = json_decode($body, true);
 
-            if (!is_array($data) || !isset($data['usage']['completion_tokens_details']) || !is_array($data['usage']['completion_tokens_details'])) {
+            if (! is_array($data) || ! isset($data['usage']['completion_tokens_details']) || ! is_array($data['usage']['completion_tokens_details'])) {
                 return $response;
             }
 

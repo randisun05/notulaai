@@ -22,15 +22,14 @@ class EmailDraftGenerator
         private readonly AiManager $ai,
         private readonly AiRequestLogger $logger,
         private readonly EmailDraftParser $parser,
-    ) {
-    }
+    ) {}
 
     /**
      * @return array{subject: string, body: string}
      */
     public function generate(Meeting $meeting, string $purpose, ?User $requestedBy = null): array
     {
-        if (!array_key_exists($purpose, self::PURPOSES)) {
+        if (! array_key_exists($purpose, self::PURPOSES)) {
             throw new \InvalidArgumentException("Tujuan email tidak dikenal: {$purpose}");
         }
 
@@ -49,7 +48,7 @@ class EmailDraftGenerator
 
         $this->logger->logSuccess('email_draft', $provider, $model, $prompt, $result->content, $result->promptTokens, $result->completionTokens, $result->durationMs, $meeting, $requestedBy);
 
-        return $this->parser->parse($result->content, self::PURPOSES[$purpose] . ': ' . $meeting->title);
+        return $this->parser->parse($result->content, self::PURPOSES[$purpose].': '.$meeting->title);
     }
 
     private function buildPrompt(Meeting $meeting, string $purpose): string

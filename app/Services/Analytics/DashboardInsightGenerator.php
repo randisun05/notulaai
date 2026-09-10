@@ -5,8 +5,8 @@ namespace App\Services\Analytics;
 use App\Models\User;
 use App\Services\AI\AiManager;
 use App\Services\AI\AiRequestLogger;
-use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Config;
 use Throwable;
 
 class DashboardInsightGenerator
@@ -14,13 +14,12 @@ class DashboardInsightGenerator
     public function __construct(
         private readonly AiManager $ai,
         private readonly AiRequestLogger $logger,
-    ) {
-    }
+    ) {}
 
     /**
-     * @param array<string, int> $stats
-     * @param Collection<int, array{label: string, count: int}> $weeklyMeetings
-     * @param Collection<int, array{status: string, count: int}> $taskStatusBreakdown
+     * @param  array<string, int>  $stats
+     * @param  Collection<int, array{label: string, count: int}>  $weeklyMeetings
+     * @param  Collection<int, array{status: string, count: int}>  $taskStatusBreakdown
      */
     public function generate(array $stats, Collection $weeklyMeetings, Collection $taskStatusBreakdown, ?User $requestedBy = null): string
     {

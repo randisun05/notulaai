@@ -13,7 +13,7 @@ class ActionItemsParserTest extends TestCase
     {
         parent::setUp();
 
-        $this->parser = new ActionItemsParser();
+        $this->parser = new ActionItemsParser;
     }
 
     public function test_parses_clean_json_array(): void

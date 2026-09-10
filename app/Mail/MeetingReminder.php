@@ -5,8 +5,8 @@ namespace App\Mail;
 use App\Models\Meeting;
 use App\Models\Setting;
 use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Mail\Mailable;
+use Illuminate\Mail\Mailables\Attachment;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
@@ -16,6 +16,7 @@ class MeetingReminder extends Mailable
     use Queueable, SerializesModels;
 
     public $meeting;
+
     public $setting;
 
     /**
@@ -33,7 +34,7 @@ class MeetingReminder extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: 'Pengingat Rapat: ' . $this->meeting->title,
+            subject: 'Pengingat Rapat: '.$this->meeting->title,
         );
     }
 
@@ -51,7 +52,7 @@ class MeetingReminder extends Mailable
     /**
      * Get the attachments for the message.
      *
-     * @return array<int, \Illuminate\Mail\Mailables\Attachment>
+     * @return array<int, Attachment>
      */
     public function attachments(): array
     {

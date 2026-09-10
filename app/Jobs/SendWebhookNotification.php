@@ -17,14 +17,14 @@ class SendWebhookNotification implements ShouldQueue
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     public $tries = 3;
+
     public $backoff = [10, 60, 300];
 
     public function __construct(
         private readonly Webhook $webhook,
         private readonly string $event,
         private readonly array $data,
-    ) {
-    }
+    ) {}
 
     public function handle(): void
     {

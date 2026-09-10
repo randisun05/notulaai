@@ -18,7 +18,7 @@ class WebhookDispatcher
     {
         $unitId = $subject->unit_id ?? null;
 
-        if (!$unitId) {
+        if (! $unitId) {
             return;
         }
 

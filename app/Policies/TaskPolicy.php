@@ -40,7 +40,7 @@ class TaskPolicy
      */
     public function manage(User $user, ?Task $task = null): bool
     {
-        if (!$user->hasRole('admin') && !$user->hasRole('superadmin')) {
+        if (! $user->hasRole('admin') && ! $user->hasRole('superadmin')) {
             return false;
         }
 

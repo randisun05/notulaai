@@ -14,13 +14,13 @@ use Throwable;
 class MeetingChatService
 {
     private const MAX_TRANSCRIPT_CHARS = 8000;
+
     private const MAX_HISTORY_MESSAGES = 10;
 
     public function __construct(
         private readonly AiManager $ai,
         private readonly AiRequestLogger $logger,
-    ) {
-    }
+    ) {}
 
     public function ask(Meeting $meeting, string $question, ?User $user): MeetingChatMessage
     {
@@ -76,7 +76,7 @@ class MeetingChatService
             ->take(self::MAX_HISTORY_MESSAGES)
             ->get()
             ->reverse()
-            ->map(fn ($m) => ($m->role === 'user' ? 'Pengguna' : 'Asisten') . ': ' . $m->content)
+            ->map(fn ($m) => ($m->role === 'user' ? 'Pengguna' : 'Asisten').': '.$m->content)
             ->implode("\n");
 
         return <<<PROMPT

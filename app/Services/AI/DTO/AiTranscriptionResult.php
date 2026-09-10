@@ -9,6 +9,5 @@ class AiTranscriptionResult
         public readonly string $provider,
         public readonly ?string $language = null,
         public readonly ?float $durationMs = null,
-    ) {
-    }
+    ) {}
 }

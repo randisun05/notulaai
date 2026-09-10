@@ -17,6 +17,7 @@ class SendTaskDeadlineReminders implements ShouldQueue
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     public $tries = 3;
+
     public $backoff = [60, 300, 900];
 
     public function handle(): void
@@ -31,6 +32,7 @@ class SendTaskDeadlineReminders implements ShouldQueue
 
         if ($dueTomorrow->isEmpty()) {
             Log::info('Tidak ada task yang jatuh tempo besok.');
+
             return;
         }
 
@@ -43,7 +45,7 @@ class SendTaskDeadlineReminders implements ShouldQueue
                 Mail::to($task->assignee->email)->send(new TaskDeadlineReminder($task));
                 Log::info("Pengingat deadline Task ID {$task->id} terkirim ke {$task->assignee->email}.");
             } catch (\Exception $e) {
-                Log::error("Gagal mengirim pengingat deadline Task ID {$task->id}: " . $e->getMessage());
+                Log::error("Gagal mengirim pengingat deadline Task ID {$task->id}: ".$e->getMessage());
             }
         }
     }
@@ -53,7 +55,7 @@ class SendTaskDeadlineReminders implements ShouldQueue
      */
     public function failed(\Throwable $e): void
     {
-        Log::error('Job SendTaskDeadlineReminders gagal permanen: ' . $e->getMessage(), [
+        Log::error('Job SendTaskDeadlineReminders gagal permanen: '.$e->getMessage(), [
             'file' => $e->getFile(),
             'line' => $e->getLine(),
         ]);

@@ -23,10 +23,10 @@ class EventServiceProvider extends ServiceProvider
             SendEmailVerificationNotification::class,
         ],
         Login::class => [
-            AuditAuthEvents::class . '@handleLogin',
+            AuditAuthEvents::class.'@handleLogin',
         ],
         Logout::class => [
-            AuditAuthEvents::class . '@handleLogout',
+            AuditAuthEvents::class.'@handleLogout',
         ],
         SocialiteWasCalled::class => [
             'SocialiteProviders\\Microsoft\\MicrosoftExtendSocialite@handle',

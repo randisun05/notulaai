@@ -55,7 +55,7 @@ class TaskExportTest extends TestCase
         $response = $this->actingAs($user)->get(route('tasks.export.excel'));
 
         $response->assertOk();
-        Excel::assertDownloaded('tasks-' . now()->format('Y-m-d') . '.xlsx');
+        Excel::assertDownloaded('tasks-'.now()->format('Y-m-d').'.xlsx');
     }
 
     public function test_export_only_includes_tasks_from_users_unit(): void
@@ -72,10 +72,10 @@ class TaskExportTest extends TestCase
 
         $this->actingAs($user)->get(route('tasks.export.excel'))->assertOk();
 
-        Excel::assertDownloaded('tasks-' . now()->format('Y-m-d') . '.xlsx', function (TasksExport $export) {
+        Excel::assertDownloaded('tasks-'.now()->format('Y-m-d').'.xlsx', function (TasksExport $export) {
             $titles = $export->collection()->pluck('title');
 
-            return $titles->contains('Task saya') && !$titles->contains('Task unit lain');
+            return $titles->contains('Task saya') && ! $titles->contains('Task unit lain');
         });
     }
 }

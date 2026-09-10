@@ -32,6 +32,6 @@ class MeetingPolicy
 
     public function delete(User $user, Meeting $meeting): bool
     {
-        return !$user->hasRole('user') && $this->inScope($user, $meeting);
+        return ! $user->hasRole('user') && $this->inScope($user, $meeting);
     }
 }

@@ -20,8 +20,7 @@ class ForumCommentController extends Controller
     public function __construct(
         private readonly MentionParser $mentionParser,
         private readonly ActivityLogger $activityLogger,
-    ) {
-    }
+    ) {}
 
     public function store(Request $request, Meeting $meeting)
     {
@@ -30,11 +29,11 @@ class ForumCommentController extends Controller
         $validated = $request->validate([
             'body' => 'required|string|max:5000',
             'parent_id' => 'nullable|integer|exists:forum_comments,id',
-            'attachments' => 'nullable|array|max:' . self::MAX_ATTACHMENTS,
+            'attachments' => 'nullable|array|max:'.self::MAX_ATTACHMENTS,
             'attachments.*' => 'file|max:5120|mimes:jpg,jpeg,png,webp,pdf,doc,docx,xls,xlsx,ppt,pptx,txt',
         ]);
 
-        if (!empty($validated['parent_id'])) {
+        if (! empty($validated['parent_id'])) {
             $parent = ForumComment::findOrFail($validated['parent_id']);
             if ($parent->meeting_id !== $meeting->id) {
                 abort(404);
@@ -61,8 +60,8 @@ class ForumCommentController extends Controller
 
         $activityType = $comment->parent_id ? 'comment.replied' : 'comment.created';
         $activityDescription = $comment->parent_id
-            ? Auth::user()->name . ' membalas komentar di forum diskusi.'
-            : Auth::user()->name . ' menambahkan komentar di forum diskusi.';
+            ? Auth::user()->name.' membalas komentar di forum diskusi.'
+            : Auth::user()->name.' menambahkan komentar di forum diskusi.';
         $this->activityLogger->log($meeting, Auth::user(), $activityType, $activityDescription);
 
         return back()->with('success', 'Komentar berhasil ditambahkan.');

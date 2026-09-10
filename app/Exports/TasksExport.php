@@ -10,9 +10,7 @@ use Maatwebsite\Excel\Concerns\WithMapping;
 
 class TasksExport implements FromCollection, WithHeadings, WithMapping
 {
-    public function __construct(private readonly Collection $tasks)
-    {
-    }
+    public function __construct(private readonly Collection $tasks) {}
 
     public function collection(): Collection
     {

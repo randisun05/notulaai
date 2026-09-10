@@ -20,8 +20,7 @@ class TaskController extends Controller
     public function __construct(
         private readonly ActivityLogger $activityLogger,
         private readonly WebhookDispatcher $webhookDispatcher,
-    ) {
-    }
+    ) {}
 
     public function index(Request $request)
     {
@@ -128,7 +127,7 @@ class TaskController extends Controller
         return Inertia::render('Tasks/Create', [
             'units' => $isSuperadmin ? Unit::all(['id', 'name']) : [],
             'users' => User::query()
-                ->when(!$isSuperadmin, fn ($q) => $q->where('unit_id', $user->unit_id))
+                ->when(! $isSuperadmin, fn ($q) => $q->where('unit_id', $user->unit_id))
                 ->get(['id', 'name', 'unit_id']),
             'priorities' => Task::PRIORITIES,
             'isSuperadmin' => $isSuperadmin,
@@ -153,7 +152,7 @@ class TaskController extends Controller
             'deadline' => 'nullable|date',
         ]);
 
-        $assignee = !empty($validated['assignee_id']) ? User::find($validated['assignee_id']) : null;
+        $assignee = ! empty($validated['assignee_id']) ? User::find($validated['assignee_id']) : null;
 
         $task = Task::create([
             'unit_id' => $unitId,
@@ -166,7 +165,7 @@ class TaskController extends Controller
             'deadline' => $validated['deadline'] ?? null,
         ]);
 
-        $this->activityLogger->log(null, $user, 'task.created', $user->name . " membuat Task \"{$task->title}\" secara manual.", $task);
+        $this->activityLogger->log(null, $user, 'task.created', $user->name." membuat Task \"{$task->title}\" secara manual.", $task);
         $this->webhookDispatcher->dispatch('task.created', $task, ['task_id' => $task->id, 'title' => $task->title, 'status' => $task->status]);
 
         return redirect()->route('tasks.show', $task)->with('success', 'Task berhasil dibuat.');
@@ -191,7 +190,7 @@ class TaskController extends Controller
             ],
             'units' => $isSuperadmin ? Unit::all(['id', 'name']) : [],
             'users' => User::query()
-                ->when(!$isSuperadmin, fn ($q) => $q->where('unit_id', $user->unit_id))
+                ->when(! $isSuperadmin, fn ($q) => $q->where('unit_id', $user->unit_id))
                 ->get(['id', 'name', 'unit_id']),
             'priorities' => Task::PRIORITIES,
             'isSuperadmin' => $isSuperadmin,
@@ -215,7 +214,7 @@ class TaskController extends Controller
             'deadline' => 'nullable|date',
         ]);
 
-        $assignee = !empty($validated['assignee_id']) ? User::find($validated['assignee_id']) : null;
+        $assignee = ! empty($validated['assignee_id']) ? User::find($validated['assignee_id']) : null;
 
         $task->update([
             'unit_id' => $unitId,
@@ -227,7 +226,7 @@ class TaskController extends Controller
             'assignee_name' => $assignee?->name,
         ]);
 
-        $this->activityLogger->log($task->meeting, $user, 'task.details_updated', $user->name . " memperbarui detail Task \"{$task->title}\".", $task);
+        $this->activityLogger->log($task->meeting, $user, 'task.details_updated', $user->name." memperbarui detail Task \"{$task->title}\".", $task);
 
         return redirect()->route('tasks.show', $task)->with('success', 'Task berhasil diperbarui.');
     }
@@ -264,7 +263,7 @@ class TaskController extends Controller
 
         $actionItem->update(['converted_to_task' => true]);
 
-        $this->activityLogger->log($meeting, Auth::user(), 'task.created', Auth::user()->name . " membuat Task \"{$task->title}\" dari Action Item.", $task);
+        $this->activityLogger->log($meeting, Auth::user(), 'task.created', Auth::user()->name." membuat Task \"{$task->title}\" dari Action Item.", $task);
         $this->webhookDispatcher->dispatch('task.created', $task, ['task_id' => $task->id, 'title' => $task->title, 'status' => $task->status]);
 
         return back()->with('success', 'Action item berhasil dijadikan Task.');
@@ -288,7 +287,7 @@ class TaskController extends Controller
         $oldStatus = $task->status;
         $task->update($validated);
 
-        $description = Auth::user()->name . " mengubah status Task \"{$task->title}\" dari {$oldStatus} menjadi {$validated['status']}.";
+        $description = Auth::user()->name." mengubah status Task \"{$task->title}\" dari {$oldStatus} menjadi {$validated['status']}.";
 
         $this->activityLogger->log($task->meeting, Auth::user(), 'task.status_changed', $description, $task);
         $this->webhookDispatcher->dispatch('task.status_changed', $task, ['task_id' => $task->id, 'title' => $task->title, 'old_status' => $oldStatus, 'new_status' => $task->status]);
@@ -342,7 +341,7 @@ class TaskController extends Controller
             $task->meeting,
             Auth::user(),
             'task.approval_requested',
-            Auth::user()->name . " mengajukan Task \"{$task->title}\" untuk direview dengan bukti pengerjaan.",
+            Auth::user()->name." mengajukan Task \"{$task->title}\" untuk direview dengan bukti pengerjaan.",
             $task,
         );
         $this->webhookDispatcher->dispatch('task.status_changed', $task, ['task_id' => $task->id, 'title' => $task->title, 'old_status' => $oldStatus, 'new_status' => 'Review']);
@@ -364,7 +363,7 @@ class TaskController extends Controller
             $task->meeting,
             Auth::user(),
             'task.approved',
-            Auth::user()->name . " menyetujui Task \"{$task->title}\" sebagai selesai.",
+            Auth::user()->name." menyetujui Task \"{$task->title}\" sebagai selesai.",
             $task,
         );
         $this->webhookDispatcher->dispatch('task.approved', $task, ['task_id' => $task->id, 'title' => $task->title]);
@@ -386,8 +385,8 @@ class TaskController extends Controller
 
         $task->update(['status' => 'In Progress']);
 
-        $description = Auth::user()->name . " menolak penyelesaian Task \"{$task->title}\", dikembalikan ke In Progress.";
-        if (!empty($validated['reason'])) {
+        $description = Auth::user()->name." menolak penyelesaian Task \"{$task->title}\", dikembalikan ke In Progress.";
+        if (! empty($validated['reason'])) {
             $description .= " Alasan: {$validated['reason']}";
         }
 
@@ -407,8 +406,8 @@ class TaskController extends Controller
         $task->update($validated);
 
         $description = $validated['sla_hours']
-            ? Auth::user()->name . " mengatur SLA Task \"{$task->title}\" menjadi {$validated['sla_hours']} jam."
-            : Auth::user()->name . " menghapus SLA Task \"{$task->title}\".";
+            ? Auth::user()->name." mengatur SLA Task \"{$task->title}\" menjadi {$validated['sla_hours']} jam."
+            : Auth::user()->name." menghapus SLA Task \"{$task->title}\".";
 
         $this->activityLogger->log($task->meeting, Auth::user(), 'task.sla_updated', $description, $task);
 

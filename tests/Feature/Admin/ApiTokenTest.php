@@ -4,7 +4,6 @@ namespace Tests\Feature\Admin;
 
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Laravel\Sanctum\PersonalAccessToken;
 use Tests\TestCase;
 
 class ApiTokenTest extends TestCase
@@ -36,7 +35,7 @@ class ApiTokenTest extends TestCase
         $user = User::factory()->create();
         $token = $user->createToken('CI Test');
 
-        $response = $this->withHeader('Authorization', 'Bearer ' . $token->plainTextToken)
+        $response = $this->withHeader('Authorization', 'Bearer '.$token->plainTextToken)
             ->getJson('/api/user');
 
         $response->assertOk();
@@ -48,7 +47,7 @@ class ApiTokenTest extends TestCase
         $user = User::factory()->create();
         $token = $user->createToken('Untuk dicabut');
 
-        $response = $this->actingAs($user)->delete('/api-tokens/' . $token->accessToken->id);
+        $response = $this->actingAs($user)->delete('/api-tokens/'.$token->accessToken->id);
 
         $response->assertRedirect(route('profile.edit'));
         $this->assertDatabaseMissing('personal_access_tokens', ['id' => $token->accessToken->id]);
@@ -60,7 +59,7 @@ class ApiTokenTest extends TestCase
         $intruder = User::factory()->create();
         $token = $owner->createToken('Milik owner');
 
-        $response = $this->actingAs($intruder)->delete('/api-tokens/' . $token->accessToken->id);
+        $response = $this->actingAs($intruder)->delete('/api-tokens/'.$token->accessToken->id);
 
         $response->assertForbidden();
         $this->assertDatabaseHas('personal_access_tokens', ['id' => $token->accessToken->id]);

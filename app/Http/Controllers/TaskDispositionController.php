@@ -11,9 +11,7 @@ use Illuminate\Validation\Rule;
 
 class TaskDispositionController extends Controller
 {
-    public function __construct(private readonly ActivityLogger $activityLogger)
-    {
-    }
+    public function __construct(private readonly ActivityLogger $activityLogger) {}
 
     public function store(Request $request, Task $task)
     {
@@ -43,7 +41,7 @@ class TaskDispositionController extends Controller
         ]);
 
         $description = "{$fromUser->name} mendisposisikan Task \"{$task->title}\" ke {$toUser->name}.";
-        if (!empty($validated['note'])) {
+        if (! empty($validated['note'])) {
             $description .= " Catatan: {$validated['note']}";
         }
 

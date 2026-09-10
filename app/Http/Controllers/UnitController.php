@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Controllers\Controller;
 use App\Models\Unit;
 use App\Services\Audit\AuditLogger;
 use Illuminate\Http\Request;
@@ -11,9 +10,7 @@ use Inertia\Inertia;
 
 class UnitController extends Controller
 {
-    public function __construct(private readonly AuditLogger $auditLogger)
-    {
-    }
+    public function __construct(private readonly AuditLogger $auditLogger) {}
 
     /**
      * Menampilkan daftar semua unit.
@@ -61,10 +58,10 @@ class UnitController extends Controller
      */
     public function edit(Unit $unit)
     {
-         // Untuk simplicity, kita akan buat edit di halaman Index.
-         // Tapi jika butuh halaman edit terpisah, ini adalah tempatnya.
-         // return Inertia::render('Admin/Units/Edit', ['unit' => $unit]);
-         return redirect()->route('admin.units.index');
+        // Untuk simplicity, kita akan buat edit di halaman Index.
+        // Tapi jika butuh halaman edit terpisah, ini adalah tempatnya.
+        // return Inertia::render('Admin/Units/Edit', ['unit' => $unit]);
+        return redirect()->route('admin.units.index');
     }
 
     /**
@@ -75,7 +72,7 @@ class UnitController extends Controller
         $this->authorize('update', $unit);
 
         $validated = $request->validate([
-            'name' => 'required|string|max:255|unique:units,name,' . $unit->id,
+            'name' => 'required|string|max:255|unique:units,name,'.$unit->id,
         ]);
 
         $unit->update($validated);
@@ -100,6 +97,7 @@ class UnitController extends Controller
         $this->auditLogger->log(Auth::user(), 'unit.deleted', "Menghapus unit \"{$unit->name}\"");
 
         $unit->delete();
+
         return redirect()->back()->with('success', 'Unit berhasil dihapus.');
     }
 }

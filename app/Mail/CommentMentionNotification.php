@@ -8,6 +8,7 @@ use App\Models\User;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Mail\Mailable;
+use Illuminate\Mail\Mailables\Attachment;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
@@ -17,7 +18,9 @@ class CommentMentionNotification extends Mailable implements ShouldQueue
     use Queueable, SerializesModels;
 
     public $comment;
+
     public $mentionedUser;
+
     public $setting;
 
     public function __construct(ForumComment $comment, User $mentionedUser)
@@ -30,7 +33,7 @@ class CommentMentionNotification extends Mailable implements ShouldQueue
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: 'Anda disebut dalam diskusi rapat: ' . $this->comment->meeting->title,
+            subject: 'Anda disebut dalam diskusi rapat: '.$this->comment->meeting->title,
         );
     }
 
@@ -40,7 +43,7 @@ class CommentMentionNotification extends Mailable implements ShouldQueue
     }
 
     /**
-     * @return array<int, \Illuminate\Mail\Mailables\Attachment>
+     * @return array<int, Attachment>
      */
     public function attachments(): array
     {

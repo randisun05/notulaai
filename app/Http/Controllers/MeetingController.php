@@ -2,22 +2,20 @@
 
 namespace App\Http\Controllers;
 
+use App\Jobs\ProcessMeetingNotula;
 use App\Models\Meeting;
 use App\Models\User;
-use Illuminate\Http\Request;
-use Inertia\Inertia;
-use Illuminate\Support\Facades\Auth;
-use App\Jobs\ProcessMeetingNotula;
-use Illuminate\Support\Facades\Storage;
 use App\Services\Meeting\ActivityLogger;
 use App\Services\Meeting\EmailDraftGenerator;
 use App\Services\Meeting\MeetingProcessingService;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
+use Inertia\Inertia;
 
 class MeetingController extends Controller
 {
-    public function __construct(private readonly ActivityLogger $activityLogger)
-    {
-    }
+    public function __construct(private readonly ActivityLogger $activityLogger) {}
 
     /**
      * Terapkan query filter unit.
@@ -37,9 +35,9 @@ class MeetingController extends Controller
         $meetings = $this->getFilteredMeetingsQuery() // Gunakan query yang sudah difilter
             ->when($request->input('search'), function ($q, $search) {
                 $q->where('title', 'like', "%{$search}%")
-                  ->orWhere('agenda', 'like', "%{$search}%")
-                  ->orWhere('transcript', 'like', "%{$search}%")
-                  ->orWhere('summary', 'like', "%{$search}%");
+                    ->orWhere('agenda', 'like', "%{$search}%")
+                    ->orWhere('transcript', 'like', "%{$search}%")
+                    ->orWhere('summary', 'like', "%{$search}%");
             })
             ->with('unit')
             ->orderBy('date', 'desc')
@@ -48,7 +46,7 @@ class MeetingController extends Controller
 
         return Inertia::render('Meetings/Index', [
             'meetings' => $meetings,
-            'filters' => $request->only(['search'])
+            'filters' => $request->only(['search']),
         ]);
     }
 
@@ -123,13 +121,13 @@ class MeetingController extends Controller
     {
         $this->authorize('update', $meeting);
 
-         // Hanya boleh edit jika status masih Dijadwalkan
+        // Hanya boleh edit jika status masih Dijadwalkan
         if ($meeting->status !== 'Dijadwalkan') {
-             return redirect()->route('meetings.show', $meeting->id)->with('error', 'Rapat yang sudah diproses tidak dapat diedit.');
+            return redirect()->route('meetings.show', $meeting->id)->with('error', 'Rapat yang sudah diproses tidak dapat diedit.');
         }
 
         return Inertia::render('Meetings/Edit', [
-            'meeting' => $meeting
+            'meeting' => $meeting,
         ]);
     }
 
@@ -190,9 +188,9 @@ class MeetingController extends Controller
             // $sourceFilePath akan berisi "text_uploads/filename.txt"
             $sourceFilePath = $file->store('text_uploads', 'public');
         } elseif ($inputType === 'text') {
-            $fileName = 'manual_input_' . $meeting->id . '_' . time() . '.txt';
+            $fileName = 'manual_input_'.$meeting->id.'_'.time().'.txt';
             // $path akan berisi "text_uploads/filename.txt"
-            $path = 'text_uploads/' . $fileName;
+            $path = 'text_uploads/'.$fileName;
             // Simpan di storage/app/public/text_uploads/filename.txt
             Storage::disk('public')->put($path, $validated['text_input']);
             $sourceFilePath = $path;
@@ -208,7 +206,7 @@ class MeetingController extends Controller
             'status' => 'Memproses',
         ]);
 
-        $this->activityLogger->log($meeting, Auth::user(), 'meeting.processing_started', Auth::user()->name . ' memulai proses pembuatan notula.');
+        $this->activityLogger->log($meeting, Auth::user(), 'meeting.processing_started', Auth::user()->name.' memulai proses pembuatan notula.');
 
         // Panggil Job untuk diproses di latar belakang
         ProcessMeetingNotula::dispatch($meeting);
@@ -234,7 +232,7 @@ class MeetingController extends Controller
             $meeting,
             Auth::user(),
             'meeting.action_items_regenerated',
-            Auth::user()->name . " men-generate ulang Action Items ({$count} item)."
+            Auth::user()->name." men-generate ulang Action Items ({$count} item)."
         );
 
         return back()->with('success', "Action items berhasil digenerate ulang ({$count} item).");
@@ -257,4 +255,3 @@ class MeetingController extends Controller
         return redirect()->route('meetings.index')->with('success', 'Rapat berhasil dihapus.');
     }
 }
-

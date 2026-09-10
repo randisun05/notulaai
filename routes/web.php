@@ -1,26 +1,27 @@
 <?php
 
-use App\Models\User;
-use Inertia\Inertia;
-use Illuminate\Support\Facades\Route;
-use Illuminate\Foundation\Application;
-use App\Http\Controllers\UnitController;
-use App\Http\Controllers\MeetingController;
-use App\Http\Controllers\ProfileController;
-use App\Http\Controllers\DashboardController;
-use App\Http\Controllers\UserController;
-use App\Http\Controllers\SettingController;
-use App\Http\Controllers\TaskController;
-use App\Http\Controllers\MeetingEmailController;
-use App\Http\Controllers\MeetingChatController;
-use App\Http\Controllers\ForumCommentController;
-use App\Http\Controllers\ForumCommentReactionController;
-use App\Http\Controllers\TaskDispositionController;
 use App\Http\Controllers\AnalyticsController;
-use App\Http\Controllers\TaskExportController;
 use App\Http\Controllers\ApiTokenController;
 use App\Http\Controllers\AuditLogController;
+use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\ForumCommentController;
+use App\Http\Controllers\ForumCommentReactionController;
+use App\Http\Controllers\MeetingChatController;
+use App\Http\Controllers\MeetingController;
+use App\Http\Controllers\MeetingEmailController;
+use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\SettingController;
+use App\Http\Controllers\SpeechController;
+use App\Http\Controllers\TaskController;
+use App\Http\Controllers\TaskDispositionController;
+use App\Http\Controllers\TaskExportController;
+use App\Http\Controllers\UnitController;
+use App\Http\Controllers\UserController;
 use App\Http\Controllers\WebhookController;
+use App\Models\User;
+use Illuminate\Foundation\Application;
+use Illuminate\Support\Facades\Route;
+use Inertia\Inertia;
 
 Route::get('/', function () {
     return Inertia::render('Welcome', [
@@ -56,7 +57,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/meetings/{meeting}/edit', [MeetingController::class, 'edit'])->name('meetings.edit');
     Route::put('/meetings/{meeting}', [MeetingController::class, 'update'])->name('meetings.update');
     // Tambahkan route untuk update, destroy di sini nanti\
-     Route::delete('/meetings/{meeting}', [MeetingController::class, 'destroy'])->name('meetings.destroy'); // <-- TAMBAHKAN INI
+    Route::delete('/meetings/{meeting}', [MeetingController::class, 'destroy'])->name('meetings.destroy'); // <-- TAMBAHKAN INI
 
     Route::post('/meetings/{meeting}/action-items/{actionItem}/convert-to-task', [TaskController::class, 'storeFromActionItem'])->name('meetings.action-items.convert');
     Route::post('/meetings/{meeting}/action-items/regenerate', [MeetingController::class, 'regenerateActionItems'])->name('meetings.action-items.regenerate');
@@ -97,48 +98,44 @@ Route::middleware('auth')->group(function () {
     Route::delete('/comments/{comment}', [ForumCommentController::class, 'destroy'])->name('comments.destroy');
     Route::post('/comments/{comment}/reactions/toggle', [ForumCommentReactionController::class, 'toggle'])->name('comments.reactions.toggle');
 
-
-      // ===============================================
+    // ===============================================
     //      RUTE PANEL ADMIN (TAMBAHKAN INI)
     // ===============================================
     Route::middleware(['can:access-admin-panel'])
-         ->prefix('admin')
-         ->name('admin.')
-         ->group(function () {
+        ->prefix('admin')
+        ->name('admin.')
+        ->group(function () {
 
-        // Rute untuk CRUD Unit
-        Route::get('units', [UnitController::class, 'index'])->name('units.index');
-        Route::post('units', [UnitController::class, 'store'])->name('units.store');
-        Route::put('units/{unit}', [UnitController::class, 'update'])->name('units.update');
-        Route::delete('units/{unit}', [UnitController::class, 'destroy'])->name('units.destroy');
+            // Rute untuk CRUD Unit
+            Route::get('units', [UnitController::class, 'index'])->name('units.index');
+            Route::post('units', [UnitController::class, 'store'])->name('units.store');
+            Route::put('units/{unit}', [UnitController::class, 'update'])->name('units.update');
+            Route::delete('units/{unit}', [UnitController::class, 'destroy'])->name('units.destroy');
 
-        // RUTE MANAJEMEN USER (TAMBAHKAN INI)
-        Route::get('users', [UserController::class, 'index'])->name('users.index');
-        Route::get('users/{user}/edit', [UserController::class, 'edit'])->name('users.edit');
-        Route::put('users/{user}', [UserController::class, 'update'])->name('users.update');
-        Route::post('users', [UserController::class, 'store'])->name('users.store');
-        Route::delete('users/{user}', [UserController::class, 'destroy'])->name('users.destroy');
+            // RUTE MANAJEMEN USER (TAMBAHKAN INI)
+            Route::get('users', [UserController::class, 'index'])->name('users.index');
+            Route::get('users/{user}/edit', [UserController::class, 'edit'])->name('users.edit');
+            Route::put('users/{user}', [UserController::class, 'update'])->name('users.update');
+            Route::post('users', [UserController::class, 'store'])->name('users.store');
+            Route::delete('users/{user}', [UserController::class, 'destroy'])->name('users.destroy');
 
-        // RUTE PENGATURAN APLIKASI
-        Route::get('settings', [SettingController::class, 'edit'])->name('settings.edit');
-        Route::put('settings', [SettingController::class, 'update'])->name('settings.update');
+            // RUTE PENGATURAN APLIKASI
+            Route::get('settings', [SettingController::class, 'edit'])->name('settings.edit');
+            Route::put('settings', [SettingController::class, 'update'])->name('settings.update');
 
-        // AUDIT LOG
-        Route::get('audit-logs', [AuditLogController::class, 'index'])->name('audit-logs.index');
+            // AUDIT LOG
+            Route::get('audit-logs', [AuditLogController::class, 'index'])->name('audit-logs.index');
 
-        // WEBHOOKS
-        Route::get('webhooks', [WebhookController::class, 'index'])->name('webhooks.index');
-        Route::post('webhooks', [WebhookController::class, 'store'])->name('webhooks.store');
-        Route::patch('webhooks/{webhook}', [WebhookController::class, 'update'])->name('webhooks.update');
-        Route::delete('webhooks/{webhook}', [WebhookController::class, 'destroy'])->name('webhooks.destroy');
+            // WEBHOOKS
+            Route::get('webhooks', [WebhookController::class, 'index'])->name('webhooks.index');
+            Route::post('webhooks', [WebhookController::class, 'store'])->name('webhooks.store');
+            Route::patch('webhooks/{webhook}', [WebhookController::class, 'update'])->name('webhooks.update');
+            Route::delete('webhooks/{webhook}', [WebhookController::class, 'destroy'])->name('webhooks.destroy');
 
-    });
-
-
+        });
 
 });
 
-   Route::post('/stt/test', [App\Http\Controllers\SpeechController::class, 'transcribe']);
+Route::post('/stt/test', [SpeechController::class, 'transcribe']);
 
 require __DIR__.'/auth.php';
-

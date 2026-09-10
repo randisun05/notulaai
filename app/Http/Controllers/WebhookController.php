@@ -13,9 +13,7 @@ use Inertia\Inertia;
 
 class WebhookController extends Controller
 {
-    public function __construct(private readonly AuditLogger $auditLogger)
-    {
-    }
+    public function __construct(private readonly AuditLogger $auditLogger) {}
 
     public function index()
     {
@@ -62,7 +60,7 @@ class WebhookController extends Controller
 
         $webhook->update($validated);
 
-        $this->auditLogger->log(Auth::user(), 'webhook.updated', ($validated['is_active'] ? 'Mengaktifkan' : 'Menonaktifkan') . " webhook \"{$webhook->name}\"", $webhook);
+        $this->auditLogger->log(Auth::user(), 'webhook.updated', ($validated['is_active'] ? 'Mengaktifkan' : 'Menonaktifkan')." webhook \"{$webhook->name}\"", $webhook);
 
         return back()->with('success', 'Webhook berhasil diperbarui.');
     }

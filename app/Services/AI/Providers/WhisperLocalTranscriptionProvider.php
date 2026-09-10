@@ -19,8 +19,8 @@ class WhisperLocalTranscriptionProvider implements TranscriptionProvider
             ->attach('file', file_get_contents($absoluteFilePath), $fileName)
             ->post($url, array_filter(['language' => $language]));
 
-        if (!$response->successful()) {
-            throw new \RuntimeException('Server Whisper (STT) gagal: ' . $response->body());
+        if (! $response->successful()) {
+            throw new \RuntimeException('Server Whisper (STT) gagal: '.$response->body());
         }
 
         $text = $response->json('text');
