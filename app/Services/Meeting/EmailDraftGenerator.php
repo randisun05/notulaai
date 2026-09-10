@@ -46,7 +46,7 @@ class EmailDraftGenerator
             throw $e;
         }
 
-        $this->logger->logSuccess('email_draft', $provider, $model, $prompt, $result->content, $result->promptTokens, $result->completionTokens, $result->durationMs, $meeting, $requestedBy);
+        $this->logger->logSuccess('email_draft', $result->provider, $result->model, $prompt, $result->content, $result->promptTokens, $result->completionTokens, $result->durationMs, $meeting, $requestedBy);
 
         return $this->parser->parse($result->content, self::PURPOSES[$purpose].': '.$meeting->title);
     }

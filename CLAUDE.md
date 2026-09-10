@@ -61,8 +61,15 @@ to `config/ai.php` defaults (`AI_TEXT_PROVIDER` etc.). Drivers return DTOs (`AiT
 entry in `config/ai.php` under `providers`. No controller/job changes needed.
 
 Current drivers: `gemini` (default text/OCR, `gemini-2.0-flash`), `openrouter` (fallback text,
-free-tier model), `whisper_local` (the Flask sidecar). There is **no automatic fallback** between
-providers — if the active one fails, the job fails.
+free-tier model), `whisper_local` (the Flask sidecar).
+
+**Fallback chain:** `AiManager::text()/transcription()/ocr()` (called with no argument) return a
+`Fallback*Provider` wrapper that walks `[active provider, ...config('ai.fallbacks.<capability>')]`
+in order, returning the first success. `text` defaults to falling back to `openrouter`
+(`AI_TEXT_FALLBACKS`); STT/OCR have none configured. Only a chain with 2+ providers raises the
+aggregate `AiProviderChainException` — a single-provider chain rethrows the driver's own exception
+untouched. Result DTOs carry `provider`/`model`, so `ai_request_logs` records whichever provider
+actually served the request. Passing an explicit name (`->text('gemini')`) skips the chain.
 
 ### Meeting processing pipeline
 `MeetingController::process()` → dispatches `ProcessMeetingNotula` job → `MeetingProcessingService::process()`:

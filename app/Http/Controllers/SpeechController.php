@@ -38,7 +38,7 @@ class SpeechController extends Controller
             return response()->json(['error' => 'Gagal mentranskripsi audio', 'details' => $e->getMessage()], 500);
         }
 
-        $this->logger->logSuccess('transcription', $provider, null, $fileName, $result->text, durationMs: $result->durationMs, user: $request->user());
+        $this->logger->logSuccess('transcription', $result->provider, null, $fileName, $result->text, durationMs: $result->durationMs, user: $request->user());
 
         return response()->json(['text' => $result->text, 'language' => $result->language]);
     }

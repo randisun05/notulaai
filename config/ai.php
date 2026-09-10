@@ -23,6 +23,26 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Fallback Providers
+    |--------------------------------------------------------------------------
+    |
+    | Kalau provider aktif gagal/timeout, AiManager mencoba provider berikut
+    | dalam daftar ini secara berurutan sebelum menyerah. Comma-separated,
+    | nama harus ada di array "providers". Kosongkan untuk menonaktifkan
+    | (mis. AI_TEXT_FALLBACKS= tanpa nilai).
+    |
+    | Default: text jatuh ke "openrouter" (kalau OPENAI_API_KEY diisi). STT/OCR
+    | belum punya alternatif bawaan.
+    */
+
+    'fallbacks' => [
+        'text' => array_values(array_filter(array_map('trim', explode(',', (string) env('AI_TEXT_FALLBACKS', 'openrouter'))))),
+        'transcription' => array_values(array_filter(array_map('trim', explode(',', (string) env('AI_TRANSCRIPTION_FALLBACKS', ''))))),
+        'ocr' => array_values(array_filter(array_map('trim', explode(',', (string) env('AI_OCR_FALLBACKS', ''))))),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | HTTP Timeout
     |--------------------------------------------------------------------------
     |

@@ -38,8 +38,8 @@ class DashboardInsightGenerator
 
         $this->logger->logSuccess(
             'dashboard_insight',
-            $provider,
-            $model,
+            $result->provider,
+            $result->model,
             $prompt,
             $result->content,
             $result->promptTokens,

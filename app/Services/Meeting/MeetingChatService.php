@@ -44,7 +44,7 @@ class MeetingChatService
             throw $e;
         }
 
-        $this->logger->logSuccess('chat', $provider, $model, $prompt, $result->content, $result->promptTokens, $result->completionTokens, $result->durationMs, $meeting, $user);
+        $this->logger->logSuccess('chat', $result->provider, $result->model, $prompt, $result->content, $result->promptTokens, $result->completionTokens, $result->durationMs, $meeting, $user);
 
         return MeetingChatMessage::create([
             'meeting_id' => $meeting->id,

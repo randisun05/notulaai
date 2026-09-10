@@ -112,7 +112,7 @@ class MeetingProcessingService
                 throw $e;
             }
 
-            $this->logger->logSuccess('transcription', $provider, null, $fileName, $result->text, null, null, $result->durationMs, $meeting, $meeting->creator);
+            $this->logger->logSuccess('transcription', $result->provider, null, $fileName, $result->text, null, null, $result->durationMs, $meeting, $meeting->creator);
 
             return $result->text;
         }
@@ -145,7 +145,7 @@ class MeetingProcessingService
                 throw new RuntimeException('Tidak ada teks yang terbaca dari gambar tersebut.');
             }
 
-            $this->logger->logSuccess('ocr', $provider, $result->model, $fileName, $result->content, null, null, $result->durationMs, $meeting, $meeting->creator);
+            $this->logger->logSuccess('ocr', $result->provider, $result->model, $fileName, $result->content, null, null, $result->durationMs, $meeting, $meeting->creator);
 
             return $result->content;
         }
@@ -169,7 +169,7 @@ class MeetingProcessingService
             throw $e;
         }
 
-        $this->logger->logSuccess('text', $provider, $model, $prompt, $result->content, $result->promptTokens, $result->completionTokens, $result->durationMs, $meeting, $meeting->creator);
+        $this->logger->logSuccess('text', $result->provider, $result->model, $prompt, $result->content, $result->promptTokens, $result->completionTokens, $result->durationMs, $meeting, $meeting->creator);
 
         return $result->content;
     }
@@ -202,7 +202,7 @@ class MeetingProcessingService
             return;
         }
 
-        $this->logger->logSuccess('action_items', $provider, $model, $prompt, $result->content, $result->promptTokens, $result->completionTokens, $result->durationMs, $meeting, $meeting->creator);
+        $this->logger->logSuccess('action_items', $result->provider, $result->model, $prompt, $result->content, $result->promptTokens, $result->completionTokens, $result->durationMs, $meeting, $meeting->creator);
 
         $items = $this->actionItemsParser->parse($result->content);
 
