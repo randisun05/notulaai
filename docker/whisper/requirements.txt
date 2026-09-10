@@ -1,0 +1,6 @@
+# Pinned deps for the STT sidecar. openai-whisper pulls in torch (CPU build,
+# ~800 MB) transitively; we don't pin torch itself so pip can pick the wheel
+# that matches the base image's Python/arch.
+openai-whisper==20240930
+flask==3.0.3
+waitress==3.0.0

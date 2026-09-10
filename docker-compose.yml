@@ -13,6 +13,7 @@ x-app-env: &app-env
     CACHE_DRIVER: redis
     SESSION_DRIVER: redis
     QUEUE_CONNECTION: redis
+    STT_SERVICE_URL: http://whisper:5055/transcribe
 
 services:
   app:
@@ -52,6 +53,11 @@ services:
         condition: service_healthy
       redis:
         condition: service_started
+      whisper:
+        # not service_healthy: the queue worker also runs reminders/webhooks/mail,
+        # so it shouldn't wait on a first-boot Whisper model download. A meeting
+        # job that lands before Whisper is ready fails fast and retries ($backoff).
+        condition: service_started
 
   scheduler:
     build:
@@ -87,7 +93,24 @@ services:
     volumes:
       - redis_data:/data
 
+  whisper:
+    build:
+      context: ./docker/whisper
+    environment:
+      WHISPER_MODEL: ${WHISPER_MODEL:-base}
+      WHISPER_DEVICE: ${WHISPER_DEVICE:-cpu}
+    volumes:
+      # Persist the downloaded model weights across rebuilds/restarts.
+      - whisper_cache:/cache
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:5055/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 180s
+
 volumes:
   mysql_data:
   redis_data:
   storage_data:
+  whisper_cache:

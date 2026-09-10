@@ -14,12 +14,22 @@ docker compose up -d --build
 docker compose exec app php artisan migrate --seed
 ```
 
-Aplikasi bisa diakses di `http://localhost:8080`. Service yang berjalan: `app` (PHP-FPM), `nginx` (web server, port 8080), `mysql`, `redis`, `queue` (worker `queue:work`), `scheduler` (`schedule:work` — menjalankan reminder/eskalasi task terjadwal).
+Aplikasi bisa diakses di `http://localhost:8080`. Service yang berjalan: `app` (PHP-FPM), `nginx` (web server, port 8080), `mysql`, `redis`, `queue` (worker `queue:work`), `scheduler` (`schedule:work` — menjalankan reminder/eskalasi task terjadwal), `whisper` (STT lokal untuk transkrip audio).
 
 Catatan:
-- `docker-compose.yml` otomatis mengarahkan `DB_HOST`/`REDIS_HOST` ke service Docker (`mysql`/`redis`) dan mengaktifkan `CACHE_DRIVER`/`SESSION_DRIVER`/`QUEUE_CONNECTION=redis`, terlepas dari apa pun yang tertulis di `.env` untuk key tersebut — variabel lain di `.env` (API key AI, kredensial SMTP/OAuth, dst.) tetap dipakai apa adanya.
+- `docker-compose.yml` otomatis mengarahkan `DB_HOST`/`REDIS_HOST`/`STT_SERVICE_URL` ke service Docker dan mengaktifkan `CACHE_DRIVER`/`SESSION_DRIVER`/`QUEUE_CONNECTION=redis`, terlepas dari apa pun yang tertulis di `.env` untuk key tersebut — variabel lain di `.env` (API key AI, kredensial SMTP/OAuth, dst.) tetap dipakai apa adanya.
 - File upload (lampiran forum, logo perusahaan) disimpan di named volume `storage_data`, dibagi antara `app` dan `nginx` supaya keduanya melihat isi yang sama.
+- Service `whisper` (`docker/whisper/`) mengunduh bobot model saat boot pertama ke named volume `whisper_cache` (tidak hilang saat rebuild). Ukuran model diatur lewat env `WHISPER_MODEL` (default `base`). Healthcheck: `GET /health`.
 - Setelah ganti kode, `docker compose up -d --build` untuk build ulang image (assets Vite dan `vendor/` di-bake saat build image, bukan lewat bind mount).
+
+### Whisper STT tanpa Docker
+
+Kalau menjalankan app secara lokal (bukan via Compose), jalankan sidecar-nya sendiri:
+
+```bash
+pip install -r docker/whisper/requirements.txt
+python docker/whisper/stt_service.py   # listen di :5055, set STT_SERVICE_URL sesuai
+```
 
 <p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
 
