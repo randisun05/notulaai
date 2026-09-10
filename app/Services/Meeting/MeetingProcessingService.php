@@ -9,6 +9,7 @@ use App\Models\User;
 use App\Services\AI\AiManager;
 use App\Services\AI\AiRequestLogger;
 use App\Services\Webhook\WebhookDispatcher;
+use App\Support\HtmlSanitizer;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
@@ -73,7 +74,9 @@ class MeetingProcessingService
 
         $meeting->update([
             'transcript' => $transcript,
-            'summary' => $summary,
+            // AI diminta membalas HTML dan disimpan mentah untuk dirender (v-html /
+            // {!! !!}); transkrip bisa berisi prompt injection, jadi sanitasi dulu.
+            'summary' => HtmlSanitizer::clean($summary),
             'status' => 'Selesai Diproses',
         ]);
         $meeting->refresh();

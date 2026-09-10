@@ -7,6 +7,7 @@ use App\Models\Meeting;
 use App\Models\User;
 use App\Services\Meeting\ActivityLogger;
 use App\Services\Meeting\EmailDraftGenerator;
+use App\Support\HtmlSanitizer;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Mail;
@@ -52,15 +53,18 @@ class MeetingEmailController extends Controller
             ->whereNotNull('email')
             ->get();
 
+        $subject = strip_tags($validated['subject']);
+        $body = HtmlSanitizer::clean($validated['body']);
+
         foreach ($recipients as $recipient) {
-            Mail::to($recipient->email)->send(new AiGeneratedEmail($validated['subject'], $validated['body']));
+            Mail::to($recipient->email)->send(new AiGeneratedEmail($subject, $body));
         }
 
         $this->activityLogger->log(
             $meeting,
             Auth::user(),
             'email.sent',
-            Auth::user()->name." mengirim email \"{$validated['subject']}\" ke {$recipients->count()} penerima.",
+            Auth::user()->name." mengirim email \"{$subject}\" ke {$recipients->count()} penerima.",
         );
 
         return back()->with('success', "Email berhasil dikirim ke {$recipients->count()} penerima.");

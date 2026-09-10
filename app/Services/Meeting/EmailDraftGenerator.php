@@ -6,6 +6,7 @@ use App\Models\Meeting;
 use App\Models\User;
 use App\Services\AI\AiManager;
 use App\Services\AI\AiRequestLogger;
+use App\Support\HtmlSanitizer;
 use Illuminate\Support\Facades\Config;
 use Throwable;
 
@@ -48,7 +49,14 @@ class EmailDraftGenerator
 
         $this->logger->logSuccess('email_draft', $result->provider, $result->model, $prompt, $result->content, $result->promptTokens, $result->completionTokens, $result->durationMs, $meeting, $requestedBy);
 
-        return $this->parser->parse($result->content, self::PURPOSES[$purpose].': '.$meeting->title);
+        $draft = $this->parser->parse($result->content, self::PURPOSES[$purpose].': '.$meeting->title);
+
+        // Body dirender raw (v-html preview + {!! !!} di email); subject hanya
+        // dipakai sebagai header/atribut teks.
+        $draft['subject'] = strip_tags($draft['subject']);
+        $draft['body'] = HtmlSanitizer::clean($draft['body']);
+
+        return $draft;
     }
 
     private function buildPrompt(Meeting $meeting, string $purpose): string

@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Services\Meeting\ActivityLogger;
 use App\Services\Meeting\EmailDraftGenerator;
 use App\Services\Meeting\MeetingProcessingService;
+use App\Support\HtmlSanitizer;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
@@ -76,7 +77,7 @@ class MeetingController extends Controller
         $meeting = Meeting::create([
             'title' => $validated['title'],
             'date' => $validated['date'],
-            'agenda' => $validated['agenda'],
+            'agenda' => HtmlSanitizer::clean($validated['agenda'] ?? null),
             'attendees' => $validated['attendees'],
             'status' => 'Dijadwalkan',
             'unit_id' => $user->unit_id, // WAJIB
@@ -144,6 +145,10 @@ class MeetingController extends Controller
             'agenda' => 'nullable|string',
             'attendees' => 'nullable|string',
         ]);
+
+        if (array_key_exists('agenda', $validated)) {
+            $validated['agenda'] = HtmlSanitizer::clean($validated['agenda']);
+        }
 
         $meeting->update($validated);
 

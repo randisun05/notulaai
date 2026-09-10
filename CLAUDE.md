@@ -74,7 +74,7 @@ actually served the request. Passing an explicit name (`->text('gemini')`) skips
 ### Meeting processing pipeline
 `MeetingController::process()` → dispatches `ProcessMeetingNotula` job → `MeetingProcessingService::process()`:
 1. `extractTranscript()` branches on file extension: audio → transcription provider, `txt`/`md` → read as-is, image → OCR provider.
-2. `summarize()` — one text-provider call; the prompt asks the model to return **HTML** which is stored verbatim in `meetings.summary` and rendered with `v-html`. (No server-side sanitization yet — prompt-injection is a stored-XSS surface.)
+2. `summarize()` — one text-provider call; the prompt asks the model to return **HTML**. It is passed through `App\Support\HtmlSanitizer::clean()` (HTMLPurifier `ai_html` profile) before being stored in `meetings.summary`, then rendered with `v-html` / `{!! !!}`. Same sanitizer guards the free-text `meetings.agenda` (`MeetingController`), the AI email draft body (`EmailDraftGenerator`), and the user-edited send body (`MeetingEmailController`). Forum comment bodies are safe a different way — `renderBody()` in Vue HTML-escapes then only wraps `@Mention` spans.
 3. `generateActionItems()` — second text call returning a JSON array, parsed by `ActionItemsParser` (unit-tested against code-fence / prose-wrapped / missing-title LLM quirks). **Best-effort**: a failure here never fails the meeting.
 4. Logs an Activity, dispatches the `meeting.processed` webhook, emails everyone in the unit.
 
