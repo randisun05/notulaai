@@ -1,60 +1,67 @@
 <?php
 
-use App\Exceptions\Handler;
-use App\Http\Kernel;
-use Illuminate\Contracts\Debug\ExceptionHandler;
+use App\Http\Middleware\HandleInertiaRequests;
+use App\Jobs\EscalateOverdueTasks;
+use App\Jobs\SendMeetingReminders;
+use App\Jobs\SendTaskDeadlineReminders;
+use App\Models\Setting;
+use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Application;
+use Illuminate\Foundation\Configuration\Exceptions;
+use Illuminate\Foundation\Configuration\Middleware;
+use Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets;
 
-/*
-|--------------------------------------------------------------------------
-| Create The Application
-|--------------------------------------------------------------------------
-|
-| The first thing we will do is create a new Laravel application instance
-| which serves as the "glue" for all the components of Laravel, and is
-| the IoC container for the system binding all of the various parts.
-|
-*/
+return Application::configure(basePath: dirname(__DIR__))
+    ->withRouting(
+        web: __DIR__.'/../routes/web.php',
+        api: __DIR__.'/../routes/api.php',
+        commands: __DIR__.'/../routes/console.php',
+        channels: __DIR__.'/../routes/channels.php',
+        health: '/up',
+    )
+    ->withMiddleware(function (Middleware $middleware) {
+        // Inertia page-props + <link rel=preload> headers ride on top of the
+        // default web group (was appended in the old app/Http/Kernel.php).
+        $middleware->web(append: [
+            HandleInertiaRequests::class,
+            AddLinkHeadersForPreloadedAssets::class,
+        ]);
 
-$app = new Application(
-    $_ENV['APP_BASE_PATH'] ?? dirname(__DIR__)
-);
+        // Keeps the old api group's `throttle:api` (limiter defined in AppServiceProvider).
+        $middleware->throttleApi();
 
-/*
-|--------------------------------------------------------------------------
-| Bind Important Interfaces
-|--------------------------------------------------------------------------
-|
-| Next, we need to bind some important interfaces into the container so
-| we will be able to resolve them when needed. The kernels serve the
-| incoming requests to this application from both the web and CLI.
-|
-*/
+        $middleware->trimStrings(except: [
+            'current_password',
+            'password',
+            'password_confirmation',
+        ]);
+    })
+    ->withExceptions(function (Exceptions $exceptions) {
+        $exceptions->dontFlash([
+            'current_password',
+            'password',
+            'password_confirmation',
+        ]);
+    })
+    ->withSchedule(function (Schedule $schedule) {
+        // withSchedule() runs on every `artisan` invocation (Artisan::starting),
+        // so this must not hard-fail when the DB is unreachable (CI, composer
+        // install, a fresh container before migrate).
+        $timezone = rescue(fn () => Setting::current()->timezone, 'Asia/Jakarta', report: false) ?: 'Asia/Jakarta';
 
-$app->singleton(
-    Illuminate\Contracts\Http\Kernel::class,
-    Kernel::class
-);
+        $schedule->job(new SendMeetingReminders)
+            ->dailyAt('07:00')
+            ->timezone($timezone);
 
-$app->singleton(
-    Illuminate\Contracts\Console\Kernel::class,
-    App\Console\Kernel::class
-);
+        $schedule->job(new SendTaskDeadlineReminders)
+            ->dailyAt('07:30')
+            ->timezone($timezone);
 
-$app->singleton(
-    ExceptionHandler::class,
-    Handler::class
-);
+        $schedule->job(new EscalateOverdueTasks)
+            ->hourly();
 
-/*
-|--------------------------------------------------------------------------
-| Return The Application
-|--------------------------------------------------------------------------
-|
-| This script returns the application instance. The instance is given to
-| the calling script so we can separate the building of the instances
-| from the actual running of the application and sending responses.
-|
-*/
-
-return $app;
+        $schedule->command('meetings:fail-stuck', ['--minutes=10'])
+            ->everyFiveMinutes()
+            ->withoutOverlapping();
+    })
+    ->create();
