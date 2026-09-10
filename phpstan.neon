@@ -1,0 +1,15 @@
+includes:
+    - vendor/larastan/larastan/extension.neon
+    - phpstan-baseline.neon
+
+parameters:
+    level: 5
+
+    paths:
+        - app
+
+    # Legacy skeleton (app bumped 10->12 via composer only): these hold framework
+    # scaffolding, not app logic worth analysing.
+    excludePaths:
+        - app/Http/Kernel.php
+        - app/Console/Kernel.php

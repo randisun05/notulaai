@@ -33,6 +33,15 @@ jobs:
       - name: Check PHP syntax
         run: find app config database routes tests -name "*.php" -print0 | xargs -0 -n1 php -l
 
+      - name: Check code style (Pint)
+        run: vendor/bin/pint --test
+
+      - name: Static analysis (PHPStan)
+        run: vendor/bin/phpstan analyse --no-progress
+
+      - name: Audit dependencies for known vulnerabilities
+        run: composer audit --no-interaction
+
       - name: Prepare environment
         run: |
           cp .env.example .env
