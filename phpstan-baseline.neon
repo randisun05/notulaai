@@ -167,15 +167,3 @@ parameters:
 			identifier: property.notFound
 			count: 2
 			path: app/Services/Meeting/MeetingChatService.php
-
-		-
-			message: '#^Parameter \#10 \$user of method App\\Services\\AI\\AiRequestLogger\:\:logSuccess\(\) expects App\\Models\\User\|null, Illuminate\\Database\\Eloquent\\Model\|null given\.$#'
-			identifier: argument.type
-			count: 4
-			path: app/Services/Meeting/MeetingProcessingService.php
-
-		-
-			message: '#^Parameter \#7 \$user of method App\\Services\\AI\\AiRequestLogger\:\:logFailure\(\) expects App\\Models\\User\|null, Illuminate\\Database\\Eloquent\\Model\|null given\.$#'
-			identifier: argument.type
-			count: 4
-			path: app/Services/Meeting/MeetingProcessingService.php

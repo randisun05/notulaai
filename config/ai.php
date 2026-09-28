@@ -83,6 +83,13 @@ return [
     |
     */
 
+    // Transkrip lebih panjang dari chunk_chars dirangkum bertingkat (catatan per
+    // potongan → satu rangkuman) dan action items-nya diekstrak per potongan.
+    // 40.000 karakter ≈ 50–60 menit bicara.
+    'summary' => [
+        'chunk_chars' => (int) env('AI_SUMMARY_CHUNK_CHARS', 40000),
+    ],
+
     'audio' => [
         'ffmpeg_binary' => env('FFMPEG_BINARY', 'ffmpeg'),
         'segment_seconds' => (int) env('AI_AUDIO_SEGMENT_SECONDS', 600),

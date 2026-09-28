@@ -28,7 +28,7 @@ in the same commit.
 | `routes/web.php` | all app routes (Inertia); `routes/auth.php` Breeze + SSO; `routes/api.php` REST API v1 (Sanctum tokens, documented in `docs/API.md`) |
 | `app/Http/Controllers/` | `Meeting*` (CRUD, process, chat, emails), `Task*` (CRUD, status/approval, disposition, export), `ForumComment*`, `Dashboard`/`Analytics`, admin: `Unit`/`User`/`Setting`/`AuditLog`/`Webhook`/`ApiToken`, `SpeechController` (STT test) |
 | `app/Services/AI/` | provider abstraction — `AiManager`, `Contracts/`, `Providers/`, `DTO/`, `AiRequestLogger` |
-| `app/Services/Meeting/` | `MeetingProcessingService` (pipeline), `ActionItemsParser`, `EmailDraftGenerator`/`Parser`, `MeetingChatService`, `ActivityLogger` |
+| `app/Services/Meeting/` | `MeetingProcessingService` (pipeline), `ActionItemsParser`, `EmailDraftGenerator`/`Parser`, `MeetingChatService` (+ `TranscriptRetriever`: keyword-scored, timestamp-labelled excerpts so chat on a 2-hour meeting sees the relevant part, not just the first minutes), `ActivityLogger` |
 | `app/Http/Controllers/Api/V1/`, `app/Http/Resources/` | REST API v1 (meetings, transcript submission, tasks) — same policies/unit scoping as web |
 | `app/Services/Task/TaskStatusService.php` | status-change rules shared by web + API (selectable statuses, Done-reopen lock, activity + webhook) |
 | `app/Services/{Analytics,Audit,Forum,Webhook}/` | `DashboardInsightGenerator`, `AuditLogger`, `MentionParser`, `WebhookDispatcher` |
@@ -77,7 +77,7 @@ npm run build                          # builds public/build (gitignored, NOT co
                                        # tests and after adding/renaming any Vue page, or Inertia 500s
 
 # Tests (SQLite :memory:, config in phpunit.xml)
-php artisan test                       # full suite (~15 s, ~255 tests)
+php artisan test                       # full suite (~15 s, ~260 tests)
 php artisan test --filter=ProcessMeetingTest
 php artisan test tests/Feature/Task/TaskApprovalTest.php
 
@@ -146,8 +146,8 @@ removes abandoned partial uploads. Older meetings keep `source_disk = public`.
 `MeetingController::process()` / API `POST /api/v1/meetings/{id}/transcript` → `MeetingProcessingService::start()` (only from `Dijadwalkan`/`Gagal`, see `canStart()` — re-processing would duplicate the job, wipe converted action items, and re-email the unit) → dispatches `ProcessMeetingNotula` job → `MeetingProcessingService::process()`:
 1. **Audio/video** (`AUDIO_EXTENSIONS`, incl. Zoom `.mp4`): `AudioSplitter` (ffmpeg, `config('ai.audio')`) cuts the recording into ~10-min mono 16 kHz mp3 segments on the private `local` disk (`meeting_segments/{id}/`), one `meeting_segments` row each, and dispatches one `TranscribeMeetingSegment` job per segment. Each segment job transcribes, deletes its audio, touches `processing_heartbeat_at`, and the one that finishes last atomically claims `processing_stage` `transcribing → summarizing` and dispatches `FinalizeMeetingNotula`, which joins segments as `[HH:MM:SS]`-labelled blocks and calls `finalize()`. A segment failing all tries → `markFailed()` (atomic, one activity). Re-processing after `Gagal` deletes old segments and starts over.
    **Text/image:** `extractTranscript()` → `txt`/`md` read as-is, image → OCR provider, then `finalize()` in the same job.
-2. `summarize()` — one text-provider call; the prompt asks the model to return **HTML**. It is passed through `App\Support\HtmlSanitizer::clean()` (HTMLPurifier `ai_html` profile) before being stored in `meetings.summary`, then rendered with `v-html` / `{!! !!}`. Same sanitizer guards the free-text `meetings.agenda` (`MeetingController`), the AI email draft body (`EmailDraftGenerator`), and the user-edited send body (`MeetingEmailController`). Forum comment bodies are safe a different way — `renderBody()` in Vue HTML-escapes then only wraps `@Mention` spans.
-3. `generateActionItems()` — second text call returning a JSON array, parsed by `ActionItemsParser` (unit-tested against code-fence / prose-wrapped / missing-title LLM quirks). **Best-effort**: a failure here never fails the meeting.
+2. `summarize()` — transcripts ≤ `ai.summary.chunk_chars` (40k chars ≈ 1 h) get one text call; longer ones are **map-reduced**: `transcriptChunks()` splits at paragraph/segment boundaries, each chunk becomes plain-text notes, then one call turns the notes into the summary (heartbeat between calls, so no single AI call sees the whole transcript). All AI calls here go through `callText()` (logging). The final prompt asks the model to return **HTML**. It is passed through `App\Support\HtmlSanitizer::clean()` (HTMLPurifier `ai_html` profile) before being stored in `meetings.summary`, then rendered with `v-html` / `{!! !!}`. Same sanitizer guards the free-text `meetings.agenda` (`MeetingController`), the AI email draft body (`EmailDraftGenerator`), and the user-edited send body (`MeetingEmailController`). Forum comment bodies are safe a different way — `renderBody()` in Vue HTML-escapes then only wraps `@Mention` spans.
+3. `generateActionItems()` — one text call per transcript chunk returning a JSON array, merged and de-duplicated by title, parsed by `ActionItemsParser` (unit-tested against code-fence / prose-wrapped / missing-title LLM quirks). **Best-effort**: a failure here never fails the meeting.
 4. Logs an Activity, dispatches the `meeting.processed` webhook, emails everyone in the unit.
 
 Every AI call is recorded via `AiRequestLogger` into `ai_request_logs` (the `cost` column is always null — no pricing data wired).

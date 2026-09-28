@@ -8,18 +8,18 @@ use App\Models\User;
 use App\Services\AI\AiManager;
 use App\Services\AI\AiRequestLogger;
 use Illuminate\Support\Facades\Config;
-use Illuminate\Support\Str;
 use Throwable;
 
 class MeetingChatService
 {
-    private const MAX_TRANSCRIPT_CHARS = 8000;
+    private const MAX_TRANSCRIPT_CHARS = 16000;
 
     private const MAX_HISTORY_MESSAGES = 10;
 
     public function __construct(
         private readonly AiManager $ai,
         private readonly AiRequestLogger $logger,
+        private readonly TranscriptRetriever $retriever,
     ) {}
 
     public function ask(Meeting $meeting, string $question, ?User $user): MeetingChatMessage
@@ -58,7 +58,9 @@ class MeetingChatService
 
     private function buildPrompt(Meeting $meeting, string $question): string
     {
-        $transcript = Str::limit($meeting->transcript ?? '', self::MAX_TRANSCRIPT_CHARS, '... (transkrip dipotong)');
+        // Rapat panjang: kirim bagian transkrip yang relevan dengan pertanyaan,
+        // bukan hanya beberapa menit pertama.
+        $transcript = $this->retriever->relevantExcerpt($meeting->transcript ?? '', $question, self::MAX_TRANSCRIPT_CHARS);
 
         $actionItemsText = $meeting->actionItems->isEmpty()
             ? 'Tidak ada.'

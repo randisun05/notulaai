@@ -353,58 +353,143 @@ class MeetingProcessingService
         throw new RuntimeException("Tipe file tidak didukung: {$extension}");
     }
 
+    private const SUMMARY_HTML_INSTRUCTIONS = 'Create a summary in well-structured HTML format. '
+        .'Use headings (<h3>), unordered lists (<ul><li>) for key points, and bold tags (<b>) to highlight action items or names. ';
+
+    /**
+     * Transkrip yang muat dalam satu potongan dirangkum sekali jalan. Rapat panjang
+     * dirangkum bertingkat: catatan poin per potongan dulu (map), lalu catatan itu
+     * digabung jadi satu rangkuman HTML (reduce) — model tidak perlu membaca
+     * transkrip berjam-jam sekaligus, dan tiap panggilan tetap di bawah timeout.
+     */
     private function summarize(Meeting $meeting, string $transcript): string
     {
-        $prompt = 'You are a helpful assistant that summarizes meeting transcripts. Create a summary in well-structured HTML format. '
-            .'Use headings (<h3>), unordered lists (<ul><li>) for key points, and bold tags (<b>) to highlight action items or names. '
-            .'Here is the transcript: '.$transcript;
+        $chunks = $this->transcriptChunks($transcript);
 
+        if (count($chunks) === 1) {
+            return $this->callText($meeting, 'text',
+                'You are a helpful assistant that summarizes meeting transcripts. '.self::SUMMARY_HTML_INSTRUCTIONS
+                .'Here is the transcript: '.$transcript,
+            );
+        }
+
+        $total = count($chunks);
+        $notes = [];
+        foreach ($chunks as $i => $chunk) {
+            $part = $i + 1;
+            $notes[] = "Bagian {$part}/{$total}:\n".$this->callText($meeting, 'text', <<<PROMPT
+            Berikut bagian {$part} dari {$total} transkrip sebuah rapat panjang. Label [HH:MM:SS] menandai waktu di rekaman.
+            Buat catatan poin-poin yang padat tapi lengkap dalam teks biasa (tanpa HTML): topik yang dibahas beserta label
+            waktunya, keputusan, angka/data penting, dan tindak lanjut (siapa, apa, tenggat). Jangan menambahkan hal yang
+            tidak ada di transkrip.
+
+            Transkrip bagian {$part}:
+            {$chunk}
+            PROMPT);
+            $this->heartbeat($meeting);
+        }
+
+        return $this->callText($meeting, 'text',
+            'You are a helpful assistant that summarizes long meetings. Below are chronological notes taken from each part '
+            .'of one meeting transcript. Write ONE coherent summary of the whole meeting, grouping related points across '
+            .'parts and keeping the key decisions and action items. '.self::SUMMARY_HTML_INSTRUCTIONS
+            ."Here are the notes:\n\n".implode("\n\n", $notes),
+        );
+    }
+
+    /**
+     * Pecah transkrip jadi potongan ≤ `ai.summary.chunk_chars` di batas paragraf
+     * (untuk rekaman: batas bagian ±10 menit), supaya konteksnya tidak terpotong.
+     *
+     * @return list<string>
+     */
+    private function transcriptChunks(string $transcript): array
+    {
+        $limit = max(1000, (int) Config::get('ai.summary.chunk_chars', 40000));
+
+        if (mb_strlen($transcript) <= $limit) {
+            return [$transcript];
+        }
+
+        $chunks = [];
+        $current = '';
+        foreach (preg_split('/\n{2,}/', $transcript) as $block) {
+            // Paragraf yang sendirian sudah lebih panjang dari batas dipotong paksa.
+            foreach (mb_str_split($block, $limit) ?: [''] as $piece) {
+                if ($current !== '' && mb_strlen($current) + mb_strlen($piece) + 2 > $limit) {
+                    $chunks[] = $current;
+                    $current = '';
+                }
+                $current .= ($current === '' ? '' : "\n\n").$piece;
+            }
+        }
+        if (trim($current) !== '') {
+            $chunks[] = $current;
+        }
+
+        return $chunks;
+    }
+
+    /**
+     * Satu panggilan ke text provider aktif (dengan fallback), dicatat di ai_request_logs.
+     */
+    private function callText(Meeting $meeting, string $type, string $prompt): string
+    {
         $provider = $this->ai->activeTextProvider();
         $model = Config::get("ai.providers.{$provider}.model");
 
         try {
             $result = $this->ai->text()->generate($prompt);
         } catch (Throwable $e) {
-            $this->logger->logFailure('text', $provider, $model, $prompt, $e->getMessage(), $meeting, $meeting->creator);
+            $this->logger->logFailure($type, $provider, $model, $prompt, $e->getMessage(), $meeting, $meeting->creator);
             throw $e;
         }
 
-        $this->logger->logSuccess('text', $result->provider, $result->model, $prompt, $result->content, $result->promptTokens, $result->completionTokens, $result->durationMs, $meeting, $meeting->creator);
+        $this->logger->logSuccess($type, $result->provider, $result->model, $prompt, $result->content, $result->promptTokens, $result->completionTokens, $result->durationMs, $meeting, $meeting->creator);
 
         return $result->content;
     }
 
+    /**
+     * Action items diekstrak per potongan transkrip lalu digabung (judul yang sama
+     * dari potongan berbeda dihitung sekali). Best-effort: kalau AI gagal, action
+     * items lama dibiarkan dan rapat tetap dianggap berhasil diproses.
+     */
     private function generateActionItems(Meeting $meeting, string $transcript): void
     {
-        $prompt = <<<PROMPT
-        Dari transkrip rapat berikut, ekstrak daftar action item (tindak lanjut) yang disebutkan.
-        Balas HANYA dengan JSON array yang valid, tanpa teks lain dan tanpa markdown code fence.
-        Setiap elemen array berbentuk objek dengan field:
-        - "title": deskripsi singkat tindakan yang harus dilakukan (wajib diisi)
-        - "assignee_name": nama orang/tim penanggung jawab jika disebutkan, atau null jika tidak ada
-        - "deadline": tanggal tenggat dalam format YYYY-MM-DD jika disebutkan, atau null jika tidak ada
+        $chunks = $this->transcriptChunks($transcript);
+        $items = [];
 
-        Jika tidak ada action item yang jelas, balas dengan array kosong: []
+        foreach ($chunks as $chunk) {
+            $prompt = <<<PROMPT
+            Dari transkrip rapat berikut, ekstrak daftar action item (tindak lanjut) yang disebutkan.
+            Balas HANYA dengan JSON array yang valid, tanpa teks lain dan tanpa markdown code fence.
+            Setiap elemen array berbentuk objek dengan field:
+            - "title": deskripsi singkat tindakan yang harus dilakukan (wajib diisi)
+            - "assignee_name": nama orang/tim penanggung jawab jika disebutkan, atau null jika tidak ada
+            - "deadline": tanggal tenggat dalam format YYYY-MM-DD jika disebutkan, atau null jika tidak ada
 
-        Transkrip:
-        {$transcript}
-        PROMPT;
+            Jika tidak ada action item yang jelas, balas dengan array kosong: []
 
-        $provider = $this->ai->activeTextProvider();
-        $model = Config::get("ai.providers.{$provider}.model");
+            Transkrip:
+            {$chunk}
+            PROMPT;
 
-        try {
-            $result = $this->ai->text()->generate($prompt);
-        } catch (Throwable $e) {
-            $this->logger->logFailure('action_items', $provider, $model, $prompt, $e->getMessage(), $meeting, $meeting->creator);
-            Log::warning("Gagal membuat action items untuk Rapat ID {$meeting->id}: ".$e->getMessage());
+            try {
+                $content = $this->callText($meeting, 'action_items', $prompt);
+            } catch (Throwable $e) {
+                Log::warning("Gagal membuat action items untuk Rapat ID {$meeting->id}: ".$e->getMessage());
 
-            return;
+                return;
+            }
+
+            $items = [...$items, ...$this->actionItemsParser->parse($content)];
         }
 
-        $this->logger->logSuccess('action_items', $result->provider, $result->model, $prompt, $result->content, $result->promptTokens, $result->completionTokens, $result->durationMs, $meeting, $meeting->creator);
-
-        $items = $this->actionItemsParser->parse($result->content);
+        $items = collect($items)
+            ->unique(fn (array $item) => mb_strtolower(trim($item['title'])))
+            ->values()
+            ->all();
 
         $meeting->actionItems()->delete();
 

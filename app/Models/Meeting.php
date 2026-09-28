@@ -35,6 +35,8 @@ class Meeting extends Model
 
     /**
      * Get the user that owns the meeting.
+     *
+     * @return BelongsTo<User, $this>
      */
     public function creator(): BelongsTo
     {
