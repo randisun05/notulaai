@@ -7,19 +7,19 @@
     },
     "devDependencies": {
         "@inertiajs/vue3": "^1.0.0",
-        "@tailwindcss/forms": "^0.5.3",
+        "@tailwindcss/forms": "^0.5.11",
         "@vitejs/plugin-vue": "^5.0.0",
-        "autoprefixer": "^10.4.12",
-        "axios": "^1.6.4",
+        "autoprefixer": "^10.6.1",
+        "axios": "^1.20.0",
         "laravel-vite-plugin": "^1.0.0",
-        "postcss": "^8.4.31",
+        "postcss": "^8.5.28",
         "tailwindcss": "^3.2.1",
         "vite": "^5.0.0",
-        "vue": "^3.4.0"
+        "vue": "^3.5.43"
     },
     "dependencies": {
         "@heroicons/vue": "^2.2.0",
-        "lodash": "^4.17.21",
+        "lodash": "^4.18.1",
         "lodash.debounce": "^4.0.8"
     }
 }
