@@ -8,6 +8,7 @@ use App\Models\Task;
 use App\Models\Unit;
 use App\Models\User;
 use App\Services\Meeting\ActivityLogger;
+use App\Services\Task\TaskStatusService;
 use App\Services\Webhook\WebhookDispatcher;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -274,34 +275,21 @@ class TaskController extends Controller
         return back()->with('success', 'Action item berhasil dijadikan Task.');
     }
 
-    public function updateStatus(Request $request, Task $task)
+    public function updateStatus(Request $request, Task $task, TaskStatusService $statusService)
     {
         $this->authorize('update', $task);
 
-        // Task Done sudah disetujui; membukanya kembali hanya boleh oleh admin
-        // unit tsb (TaskPolicy::manage), bukan siapa saja yang boleh update.
-        if ($task->status === 'Done' && ! Auth::user()->can('manage', $task)) {
-            return back()->with('error', 'Task yang sudah selesai hanya bisa dibuka kembali oleh admin.');
+        if ($reason = $statusService->denialReason($task, Auth::user())) {
+            return back()->with('error', $reason);
         }
 
-        // "Done" hanya lewat approve() (persetujuan), "Review" hanya lewat
-        // submitForReview() (wajib lampirkan bukti pengerjaan) — dropdown status
-        // biasa cuma untuk transisi antar status kerja yang tidak butuh bukti.
-        $selectableStatuses = array_values(array_diff(Task::STATUSES, ['Done', 'Review']));
-
         $validated = $request->validate([
-            'status' => ['required', Rule::in($selectableStatuses)],
+            'status' => ['required', Rule::in(TaskStatusService::SELECTABLE_STATUSES)],
         ], [
-            'status.in' => 'Status "Done" hanya bisa dicapai lewat persetujuan, dan "Review" hanya bisa diajukan lewat "Ajukan untuk Review" dengan bukti pengerjaan.',
+            'status.in' => TaskStatusService::INVALID_STATUS_MESSAGE,
         ]);
 
-        $oldStatus = $task->status;
-        $task->update($validated);
-
-        $description = Auth::user()->name." mengubah status Task \"{$task->title}\" dari {$oldStatus} menjadi {$validated['status']}.";
-
-        $this->activityLogger->log($task->meeting, Auth::user(), 'task.status_changed', $description, $task);
-        $this->webhookDispatcher->dispatch('task.status_changed', $task, ['task_id' => $task->id, 'title' => $task->title, 'old_status' => $oldStatus, 'new_status' => $task->status]);
+        $statusService->change($task, $validated['status'], Auth::user());
 
         return back()->with('success', 'Status task berhasil diperbarui.');
     }

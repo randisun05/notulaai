@@ -45,6 +45,9 @@ return Application::configure(basePath: dirname(__DIR__))
             'password_confirmation',
         ]);
 
+        // API clients get JSON errors even without an `Accept: application/json` header.
+        $exceptions->shouldRenderJsonWhen(fn (Request $request) => $request->is('api/*') || $request->expectsJson());
+
         // Friendly, localized message when an AI (or any throttled) endpoint is
         // rate-limited, for both the axios calls and the Inertia POSTs.
         $exceptions->render(function (ThrottleRequestsException $e, Request $request) {

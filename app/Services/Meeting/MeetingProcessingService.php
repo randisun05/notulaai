@@ -2,6 +2,7 @@
 
 namespace App\Services\Meeting;
 
+use App\Jobs\ProcessMeetingNotula;
 use App\Mail\MeetingSummary;
 use App\Models\Meeting;
 use App\Models\MeetingActionItem;
@@ -19,6 +20,13 @@ use Throwable;
 
 class MeetingProcessingService
 {
+    /**
+     * Pemrosesan hanya boleh dimulai dari status ini. Memproses ulang rapat yang
+     * sedang/sudah diproses menjalankan job ganda, menghapus action item (termasuk
+     * yang sudah jadi Task), dan mengirim ulang email ke seluruh unit.
+     */
+    public const STARTABLE_STATUSES = ['Dijadwalkan', 'Gagal'];
+
     private const AUDIO_EXTENSIONS = ['mp3', 'wav', 'm4a'];
 
     private const TEXT_EXTENSIONS = ['txt', 'md'];
@@ -58,6 +66,26 @@ class MeetingProcessingService
         $this->generateActionItems($meeting, $meeting->transcript);
 
         return $meeting->actionItems()->count();
+    }
+
+    public static function canStart(Meeting $meeting): bool
+    {
+        return in_array($meeting->status, self::STARTABLE_STATUSES, true);
+    }
+
+    /**
+     * Titik masuk tunggal (web & API): simpan path sumber, tandai Memproses, antrekan job.
+     */
+    public function start(Meeting $meeting, string $sourceFilePath, User $user): void
+    {
+        $meeting->update([
+            'source_file_path' => $sourceFilePath,
+            'status' => 'Memproses',
+        ]);
+
+        $this->activityLogger->log($meeting, $user, 'meeting.processing_started', $user->name.' memulai proses pembuatan notula.');
+
+        ProcessMeetingNotula::dispatch($meeting);
     }
 
     public function process(Meeting $meeting): void

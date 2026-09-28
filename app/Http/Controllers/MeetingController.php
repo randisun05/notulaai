@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Jobs\ProcessMeetingNotula;
 use App\Models\ForumComment;
 use App\Models\ForumCommentAttachment;
 use App\Models\Meeting;
@@ -165,14 +164,11 @@ class MeetingController extends Controller
     /**
      * Memulai proses notula AI (sudah difilter).
      */
-    public function process(Request $request, Meeting $meeting)
+    public function process(Request $request, Meeting $meeting, MeetingProcessingService $processingService)
     {
         $this->authorize('process', $meeting);
 
-        // Sama dengan kondisi form upload di Meetings/Show.vue: memproses ulang
-        // rapat yang sedang/sudah diproses akan menjalankan job ganda, menghapus
-        // action item (termasuk yang sudah jadi Task), dan mengirim ulang email.
-        if (! in_array($meeting->status, ['Dijadwalkan', 'Gagal'], true)) {
+        if (! MeetingProcessingService::canStart($meeting)) {
             return back()->with('error', 'Rapat ini sedang atau sudah diproses.');
         }
 
@@ -219,16 +215,7 @@ class MeetingController extends Controller
             $sourceFilePath = $file->store('image_uploads', 'public');
         }
 
-        // Update meeting dengan path file baru dan ubah status
-        $meeting->update([
-            'source_file_path' => $sourceFilePath,
-            'status' => 'Memproses',
-        ]);
-
-        $this->activityLogger->log($meeting, Auth::user(), 'meeting.processing_started', Auth::user()->name.' memulai proses pembuatan notula.');
-
-        // Panggil Job untuk diproses di latar belakang
-        ProcessMeetingNotula::dispatch($meeting);
+        $processingService->start($meeting, $sourceFilePath, Auth::user());
 
         return redirect()->route('meetings.show', $meeting->id)
             ->with('success', 'Notula sedang diproses. Halaman akan diperbarui setelah selesai.');

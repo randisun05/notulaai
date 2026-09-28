@@ -40,41 +40,49 @@ class Task extends Model
 
     protected $appends = ['is_overdue', 'is_sla_breached'];
 
+    /** @return BelongsTo<Meeting, $this> */
     public function meeting(): BelongsTo
     {
         return $this->belongsTo(Meeting::class);
     }
 
+    /** @return BelongsTo<MeetingActionItem, $this> */
     public function actionItem(): BelongsTo
     {
         return $this->belongsTo(MeetingActionItem::class, 'meeting_action_item_id');
     }
 
+    /** @return BelongsTo<Unit, $this> */
     public function unit(): BelongsTo
     {
         return $this->belongsTo(Unit::class);
     }
 
+    /** @return BelongsTo<User, $this> */
     public function assignee(): BelongsTo
     {
         return $this->belongsTo(User::class, 'assignee_id');
     }
 
+    /** @return BelongsTo<User, $this> */
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
     }
 
+    /** @return HasMany<Activity, $this> */
     public function activities(): HasMany
     {
         return $this->hasMany(Activity::class)->orderBy('created_at', 'desc');
     }
 
+    /** @return HasMany<TaskDisposition, $this> */
     public function dispositions(): HasMany
     {
         return $this->hasMany(TaskDisposition::class)->orderBy('created_at', 'desc');
     }
 
+    /** @return HasMany<TaskEvidence, $this> */
     public function evidences(): HasMany
     {
         return $this->hasMany(TaskEvidence::class)->orderBy('created_at', 'desc');

@@ -1,12 +1,6 @@
 parameters:
 	ignoreErrors:
 		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$name\.$#'
-			identifier: property.notFound
-			count: 2
-			path: app/Exports/TasksExport.php
-
-		-
 			message: '#^Using nullsafe property access "\?\-\>name" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
 			identifier: nullsafe.neverNull
 			count: 1
@@ -31,18 +25,6 @@ parameters:
 			path: app/Http/Controllers/AnalyticsController.php
 
 		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$name\.$#'
-			identifier: property.notFound
-			count: 3
-			path: app/Http/Controllers/AnalyticsController.php
-
-		-
-			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,App\\Models\\Task\>\:\:map\(\) contains unresolvable type\.$#'
-			identifier: argument.unresolvableType
-			count: 1
-			path: app/Http/Controllers/AnalyticsController.php
-
-		-
 			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,App\\Models\\User\>\:\:map\(\) contains unresolvable type\.$#'
 			identifier: argument.unresolvableType
 			count: 1
@@ -51,7 +33,7 @@ parameters:
 		-
 			message: '#^Parameter \#1 \$callback of method Illuminate\\Support\\Collection\<int,array\<string, mixed\>\>\:\:filter\(\) contains unresolvable type\.$#'
 			identifier: argument.unresolvableType
-			count: 2
+			count: 1
 			path: app/Http/Controllers/AnalyticsController.php
 
 		-
@@ -97,46 +79,10 @@ parameters:
 			path: app/Http/Controllers/ForumCommentController.php
 
 		-
-			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:attachments\(\)\.$#'
-			identifier: method.notFound
-			count: 1
-			path: app/Http/Controllers/TaskController.php
-
-		-
-			message: '#^Parameter \#1 \$meeting of method App\\Services\\Meeting\\ActivityLogger\:\:log\(\) expects App\\Models\\Meeting\|null, Illuminate\\Database\\Eloquent\\Model\|null given\.$#'
-			identifier: argument.type
-			count: 6
-			path: app/Http/Controllers/TaskController.php
-
-		-
-			message: '#^Parameter \#1 \$meeting of method App\\Services\\Meeting\\ActivityLogger\:\:log\(\) expects App\\Models\\Meeting\|null, Illuminate\\Database\\Eloquent\\Model\|null given\.$#'
-			identifier: argument.type
-			count: 1
-			path: app/Http/Controllers/TaskDispositionController.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$email\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Jobs/EscalateOverdueTasks.php
-
-		-
-			message: '#^Parameter \#1 \$meeting of method App\\Services\\Meeting\\ActivityLogger\:\:log\(\) expects App\\Models\\Meeting\|null, Illuminate\\Database\\Eloquent\\Model\|null given\.$#'
-			identifier: argument.type
-			count: 1
-			path: app/Jobs/EscalateOverdueTasks.php
-
-		-
 			message: '#^Using nullsafe property access "\?\-\>email" in empty\(\) is unnecessary\. Use \-\> instead\.$#'
 			identifier: nullsafe.neverNull
 			count: 1
 			path: app/Jobs/EscalateOverdueTasks.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$email\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Jobs/SendTaskDeadlineReminders.php
 
 		-
 			message: '#^Using nullsafe property access "\?\-\>email" in empty\(\) is unnecessary\. Use \-\> instead\.$#'

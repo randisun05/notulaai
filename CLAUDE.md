@@ -25,10 +25,12 @@ in the same commit.
 |---|---|
 | `bootstrap/app.php` | L12 `Application::configure()`: routing, middleware (web group + `HandleInertiaRequests`), 429 rendering, **the schedule** |
 | `bootstrap/providers.php` | registers `App`, `Ai`, `Auth` (policies + `access-admin-panel` Gate), `Event` providers (`BroadcastServiceProvider` exists but is not registered) |
-| `routes/web.php` | all app routes (Inertia); `routes/auth.php` Breeze + SSO; `routes/api.php` effectively empty |
+| `routes/web.php` | all app routes (Inertia); `routes/auth.php` Breeze + SSO; `routes/api.php` REST API v1 (Sanctum tokens, documented in `docs/API.md`) |
 | `app/Http/Controllers/` | `Meeting*` (CRUD, process, chat, emails), `Task*` (CRUD, status/approval, disposition, export), `ForumComment*`, `Dashboard`/`Analytics`, admin: `Unit`/`User`/`Setting`/`AuditLog`/`Webhook`/`ApiToken`, `SpeechController` (STT test) |
 | `app/Services/AI/` | provider abstraction — `AiManager`, `Contracts/`, `Providers/`, `DTO/`, `AiRequestLogger` |
 | `app/Services/Meeting/` | `MeetingProcessingService` (pipeline), `ActionItemsParser`, `EmailDraftGenerator`/`Parser`, `MeetingChatService`, `ActivityLogger` |
+| `app/Http/Controllers/Api/V1/`, `app/Http/Resources/` | REST API v1 (meetings, transcript submission, tasks) — same policies/unit scoping as web |
+| `app/Services/Task/TaskStatusService.php` | status-change rules shared by web + API (selectable statuses, Done-reopen lock, activity + webhook) |
 | `app/Services/{Analytics,Audit,Forum,Webhook}/` | `DashboardInsightGenerator`, `AuditLogger`, `MentionParser`, `WebhookDispatcher` |
 | `app/Jobs/` | `ProcessMeetingNotula`, `SendWebhookNotification`, 3 scheduled jobs (reminders, escalation) |
 | `app/Console/Commands/FailStuckMeetings.php` | `meetings:fail-stuck` watchdog |
@@ -125,7 +127,7 @@ untouched. Result DTOs carry `provider`/`model`, so `ai_request_logs` records wh
 actually served the request. Passing an explicit name (`->text('gemini')`) skips the chain.
 
 ### Meeting processing pipeline
-`MeetingController::process()` (only from `Dijadwalkan`/`Gagal` — re-processing would duplicate the job, wipe converted action items, and re-email the unit) → dispatches `ProcessMeetingNotula` job → `MeetingProcessingService::process()`:
+`MeetingController::process()` / API `POST /api/v1/meetings/{id}/transcript` → `MeetingProcessingService::start()` (only from `Dijadwalkan`/`Gagal`, see `canStart()` — re-processing would duplicate the job, wipe converted action items, and re-email the unit) → dispatches `ProcessMeetingNotula` job → `MeetingProcessingService::process()`:
 1. `extractTranscript()` branches on file extension: audio → transcription provider, `txt`/`md` → read as-is, image → OCR provider.
 2. `summarize()` — one text-provider call; the prompt asks the model to return **HTML**. It is passed through `App\Support\HtmlSanitizer::clean()` (HTMLPurifier `ai_html` profile) before being stored in `meetings.summary`, then rendered with `v-html` / `{!! !!}`. Same sanitizer guards the free-text `meetings.agenda` (`MeetingController`), the AI email draft body (`EmailDraftGenerator`), and the user-edited send body (`MeetingEmailController`). Forum comment bodies are safe a different way — `renderBody()` in Vue HTML-escapes then only wraps `@Mention` spans.
 3. `generateActionItems()` — second text call returning a JSON array, parsed by `ActionItemsParser` (unit-tested against code-fence / prose-wrapped / missing-title LLM quirks). **Best-effort**: a failure here never fails the meeting.
@@ -193,7 +195,8 @@ Per-unit outgoing webhooks (`WebhookDispatcher::dispatch()` called from the same
 - **`openai-php/laravel`** is used only to talk to **OpenRouter** (`OPENAI_BASE_URI`), not OpenAI. `OpenRouterTextProvider` has a Guzzle middleware that backfills missing `completion_tokens_details` fields OpenRouter omits, which would otherwise `TypeError` in the client.
 - **Excel export tests:** assert on the collection via `Excel::fake()` + `Excel::assertDownloaded(...)`, not on raw bytes.
 - **Tests run on SQLite**, prod is MySQL — watch for engine differences (`whereJsonContains`, fulltext, etc.).
-- **Dead stubs:** `SourcePath` model/migration/seeder are unused. `whisper-api/` and `venv/` are empty local dirs (gitignored). `routes/api.php` is effectively empty despite API tokens being a feature.
+- **Dead stubs:** `SourcePath` model/migration/seeder are unused. `whisper-api/` and `venv/` are empty local dirs (gitignored).
+- **API:** every `/api/*` request renders errors as JSON (`shouldRenderJsonWhen` in `bootstrap/app.php`). Web and API must share rules via services (`MeetingProcessingService::canStart()/start()`, `TaskStatusService`) — don't reimplement them in `Api\V1` controllers. Update `docs/API.md` with any endpoint change.
 - **Meeting details** are editable only while `Dijadwalkan` (enforced in both `edit()` and `update()`). `meetings.date` has no Eloquent cast — it round-trips as the raw `datetime-local` string.
 - **Last superadmin** can't be demoted (`UserController::update`) or self-deleted (`ProfileController::destroy`) — `User::isLastSuperadmin()`; the admin panel is superadmin-only, so losing the last one locks everyone out.
 - **Forum replies** are one level deep: a reply to a reply is re-parented to the top-level comment.
