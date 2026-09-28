@@ -74,7 +74,7 @@ const submit = () => {
 
                             <div>
                                 <InputLabel for="company_address" value="Alamat (Opsional)" />
-                                <TextInput id="company_address" type="text" class="mt-1 block w-full" v-model="form.company_address" />
+                                <textarea id="company_address" rows="3" class="form-input mt-1 block w-full" v-model="form.company_address" placeholder="Alamat, telepon, laman — tiap baris tampil apa adanya di kop notula"></textarea>
                                 <InputError class="mt-2" :message="form.errors.company_address" />
                             </div>
 

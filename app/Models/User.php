@@ -28,6 +28,7 @@ class User extends Authenticatable
         'phone_number', // Ditambahkan
         'unit_id',      // Ditambahkan
         'role',         // Ditambahkan
+        'nip',
     ];
 
     /**

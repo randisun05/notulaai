@@ -11,7 +11,9 @@ use App\Services\AI\Contracts\TextGenerationProvider;
 use App\Services\AI\DTO\AiTextResult;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Config;
+use Illuminate\Support\Facades\Storage;
 use Inertia\Testing\AssertableInertia;
 use Tests\TestCase;
 use ZipArchive;
@@ -40,6 +42,7 @@ class MeetingMinutesTest extends TestCase
 
         $this->unit = Unit::factory()->create();
         $this->notulis = $this->member('user', 'Rina Notulis');
+        $this->notulis->update(['nip' => '199001012020122001']);
         $this->kabag = $this->member('user', 'Ir. Bambang, M.T.');
         $this->meeting = Meeting::create([
             'title' => 'Rapat Koordinasi Jembatan', 'date' => '2026-10-05 09:00:00', 'status' => 'Selesai Diproses',
@@ -73,14 +76,18 @@ class MeetingMinutesTest extends TestCase
         $minutes = $this->drafted();
 
         $this->assertSame('draf', $minutes->status);
-        $this->assertSame('Rapat dibuka oleh Ir. Bambang pukul 09.00 WIB.', $minutes->opening);
-        $this->assertSame([['topic' => 'Anggaran jembatan', 'notes' => 'Anggaran sebesar Rp4,2 miliar dibahas.']], $minutes->discussion);
+        $this->assertSame([
+            ['speaker' => null, 'text' => 'Pada hari ini dilaksanakan rapat koordinasi jembatan.', 'response' => null],
+            ['speaker' => 'Budi Santoso, Bidang Jalan', 'text' => 'Apakah anggaran 4,2 miliar sudah final?', 'response' => 'Sudah, sesuai perhitungan konsultan.'],
+        ], $minutes->resume);
         $this->assertSame(['Anggaran pembangunan jembatan ditetapkan sebesar Rp4,2 miliar.'], $minutes->decisions);
         // Identitas diisi dari data rapat.
+        $this->assertSame('Rapat Koordinasi Jembatan', $minutes->title);
         $this->assertSame("Budi Santoso\nSiti Aminah", $minutes->attendees);
         $this->assertSame('Pembahasan anggaran jembatan', $minutes->agenda);
         $this->assertSame($this->notulis->id, $minutes->minute_taker_id);
         $this->assertSame('09.00 WIB – selesai', $minutes->time_range);
+        $this->assertSame('Demikian yang dapat disampaikan, terima kasih.', $minutes->closing);
 
         $prompt = MinutesFakeText::$prompts[0];
         $this->assertStringContainsString('Anggaran 4,2 M disepakati', $prompt, 'Rangkuman ikut dikirim.');
@@ -90,14 +97,14 @@ class MeetingMinutesTest extends TestCase
 
     public function test_redrafting_keeps_identity_fields_filled_by_the_minute_taker(): void
     {
-        $this->drafted(['number' => '005/12/PU/2026', 'location' => 'Ruang Rapat Lt. 2', 'opening' => 'lama']);
+        $this->drafted(['title' => 'Judul Sunting', 'location' => 'Ruang Rapat Lt. 2', 'resume' => [['speaker' => null, 'text' => 'lama', 'response' => null]]]);
 
         $this->actingAs($this->notulis)->post(route('meetings.minutes.generate', $this->meeting));
 
         $minutes = $this->meeting->fresh()->minutes;
-        $this->assertSame('005/12/PU/2026', $minutes->number);
+        $this->assertSame('Judul Sunting', $minutes->title);
         $this->assertSame('Ruang Rapat Lt. 2', $minutes->location);
-        $this->assertSame('Rapat dibuka oleh Ir. Bambang pukul 09.00 WIB.', $minutes->opening);
+        $this->assertCount(2, $minutes->resume);
     }
 
     public function test_minutes_need_a_processed_meeting(): void
@@ -118,12 +125,15 @@ class MeetingMinutesTest extends TestCase
             'chairperson_id' => $this->kabag->id,
             'chairperson_title' => 'Kepala Bidang Jalan dan Jembatan',
             'minute_taker_id' => $this->notulis->id,
-            'discussion' => [['topic' => 'Anggaran', 'notes' => 'Dibahas.'], ['topic' => '', 'notes' => '']],
+            'resume' => [
+                ['speaker' => ' Ika, Dit. Bangtarier ', 'text' => 'Mohon konfirmasi Pasal 15.', 'response' => 'Mengikuti kesepakatan.'],
+                ['speaker' => '', 'text' => '', 'response' => ''],
+            ],
             'decisions' => ['Disepakati 4,2 M', ''],
         ])->assertSessionHasNoErrors();
 
         $minutes = $this->meeting->fresh()->minutes;
-        $this->assertSame([['topic' => 'Anggaran', 'notes' => 'Dibahas.']], $minutes->discussion, 'Baris kosong dibuang.');
+        $this->assertSame([['speaker' => 'Ika, Dit. Bangtarier', 'text' => 'Mohon konfirmasi Pasal 15.', 'response' => 'Mengikuti kesepakatan.']], $minutes->resume, 'Poin kosong dibuang.');
         $this->assertSame(['Disepakati 4,2 M'], $minutes->decisions);
 
         $this->actingAs($this->notulis)->post(route('meetings.minutes.submit', $this->meeting))->assertSessionHas('success');
@@ -197,7 +207,7 @@ class MeetingMinutesTest extends TestCase
 
     public function test_pdf_and_word_exports(): void
     {
-        $this->drafted(['number' => '005/12/PU/2026', 'chairperson_id' => $this->kabag->id]);
+        $this->drafted(['title' => 'Rapat Pembahasan Rancangan Peraturan', 'chairperson_id' => $this->kabag->id, 'chairperson_title' => 'Kepala Bidang Jalan', 'location' => 'Zoom Meeting']);
 
         $pdf = $this->actingAs($this->notulis)->get(route('meetings.minutes.pdf', $this->meeting));
         $pdf->assertOk()->assertHeader('content-type', 'application/pdf');
@@ -211,9 +221,42 @@ class MeetingMinutesTest extends TestCase
         $this->assertTrue($zip->open($file) === true, 'File .docx adalah zip yang valid.');
         $xml = $zip->getFromName('word/document.xml');
         $zip->close();
-        foreach (['NOTULEN RAPAT', '005/12/PU/2026', 'DINAS PEKERJAAN UMUM', 'Anggaran pembangunan jembatan ditetapkan', 'Susun RAB final', 'Ir. Bambang, M.T.', 'Rina Notulis'] as $expected) {
+        foreach (['NOTULA', 'RAPAT PEMBAHASAN RANCANGAN PERATURAN', 'DINAS PEKERJAAN UMUM', 'Jl. Merdeka No. 1', 'Pemimpin Rapat', 'Kepala Bidang Jalan',
+            'Senin/5 Oktober 2026', 'Zoom Meeting', 'Resume', 'Budi Santoso, Bidang Jalan', '➔  Sudah, sesuai perhitungan konsultan.',
+            'Kesimpulan rapat:', 'Anggaran pembangunan jembatan ditetapkan', 'Susun RAB final (PIC: Budi Santoso; tenggat 20 Oktober 2026)',
+            'Demikian yang dapat disampaikan, terima kasih.', 'Notulen', 'Rina Notulis', 'NIP. 199001012020122001'] as $expected) {
             $this->assertStringContainsString(htmlspecialchars($expected, ENT_XML1), $xml, "Word berisi: {$expected}");
         }
+    }
+
+    public function test_documentation_photos_are_private_and_printed_on_their_own_page(): void
+    {
+        Storage::fake('local');
+        $this->drafted();
+
+        $this->actingAs($this->notulis)->post(route('meetings.minutes.photos.store', $this->meeting), [
+            'photos' => [UploadedFile::fake()->image('foto-rapat.jpg', 800, 600), UploadedFile::fake()->image('zoom.png', 1200, 700)],
+        ])->assertSessionHas('success');
+
+        $photos = $this->meeting->fresh()->minutes->documentation;
+        $this->assertCount(2, $photos);
+        Storage::disk('local')->assertExists($photos[0]);
+        $this->actingAs($this->notulis)->get(route('meetings.minutes.photos.show', [$this->meeting, 1]))->assertOk();
+
+        $docx = $this->actingAs($this->notulis)->get(route('meetings.minutes.docx', $this->meeting))->assertOk();
+        $zip = new ZipArchive;
+        $zip->open($docx->baseResponse->getFile()->getPathname());
+        $this->assertStringContainsString('DOKUMENTASI', $zip->getFromName('word/document.xml'));
+        $this->assertSame(2, collect(range(0, $zip->numFiles - 1))->filter(fn ($i) => str_starts_with($zip->getNameIndex($i), 'word/media/'))->count());
+        $zip->close();
+
+        $this->actingAs($this->notulis)->delete(route('meetings.minutes.photos.destroy', [$this->meeting, 0]))->assertSessionHas('success');
+        $this->assertCount(1, $this->meeting->fresh()->minutes->documentation);
+        Storage::disk('local')->assertMissing($photos[0]);
+
+        $outsider = User::factory()->create(['unit_id' => Unit::factory()->create()->id]);
+        $outsider->syncRoles(['user']);
+        $this->actingAs($outsider)->get(route('meetings.minutes.photos.show', [$this->meeting, 0]))->assertForbidden();
     }
 
     public function test_users_from_another_unit_cannot_see_the_minutes(): void
@@ -238,11 +281,12 @@ class MinutesFakeText implements TextGenerationProvider
     {
         self::$prompts[] = $prompt;
 
-        return new AiTextResult(content: "Berikut notulennya:\n```json\n".json_encode([
-            'pembukaan' => 'Rapat dibuka oleh Ir. Bambang pukul 09.00 WIB.',
-            'pembahasan' => [['topik' => 'Anggaran jembatan', 'uraian' => 'Anggaran sebesar Rp4,2 miliar dibahas.']],
-            'keputusan' => ['Anggaran pembangunan jembatan ditetapkan sebesar Rp4,2 miliar.'],
-            'penutup' => 'Rapat ditutup pukul 11.30 WIB.',
+        return new AiTextResult(content: "Berikut notulanya:\n```json\n".json_encode([
+            'resume' => [
+                ['pembicara' => null, 'isi' => 'Pada hari ini dilaksanakan rapat koordinasi jembatan.', 'tanggapan' => null],
+                ['pembicara' => 'Budi Santoso, Bidang Jalan', 'isi' => 'Apakah anggaran 4,2 miliar sudah final?', 'tanggapan' => 'Sudah, sesuai perhitungan konsultan.'],
+            ],
+            'kesimpulan' => ['Anggaran pembangunan jembatan ditetapkan sebesar Rp4,2 miliar.'],
         ])."\n```", provider: 'minutes_text', model: 'fake');
     }
 }

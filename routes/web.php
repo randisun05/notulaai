@@ -61,6 +61,9 @@ Route::middleware('auth')->group(function () {
     Route::get('/meetings/{meeting}/minutes', [MeetingMinutesController::class, 'edit'])->name('meetings.minutes.edit');
     Route::post('/meetings/{meeting}/minutes/generate', [MeetingMinutesController::class, 'generate'])->middleware('throttle:ai')->name('meetings.minutes.generate');
     Route::put('/meetings/{meeting}/minutes', [MeetingMinutesController::class, 'update'])->name('meetings.minutes.update');
+    Route::post('/meetings/{meeting}/minutes/photos', [MeetingMinutesController::class, 'uploadPhotos'])->name('meetings.minutes.photos.store');
+    Route::get('/meetings/{meeting}/minutes/photos/{index}', [MeetingMinutesController::class, 'photo'])->whereNumber('index')->name('meetings.minutes.photos.show');
+    Route::delete('/meetings/{meeting}/minutes/photos/{index}', [MeetingMinutesController::class, 'deletePhoto'])->whereNumber('index')->name('meetings.minutes.photos.destroy');
     Route::post('/meetings/{meeting}/minutes/submit', [MeetingMinutesController::class, 'submit'])->name('meetings.minutes.submit');
     Route::post('/meetings/{meeting}/minutes/approve', [MeetingMinutesController::class, 'approve'])->name('meetings.minutes.approve');
     Route::post('/meetings/{meeting}/minutes/return', [MeetingMinutesController::class, 'returnForRevision'])->name('meetings.minutes.return');

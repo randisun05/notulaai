@@ -35,7 +35,7 @@ in the same commit.
 | `app/Jobs/` | `ProcessMeetingNotula` → `TranscribeMeetingSegment` (×N) → `FinalizeMeetingNotula`; `SendWebhookNotification`, 3 scheduled jobs (reminders, escalation) |
 | `RecordingUploadController` + `Meetings/Partials/RecordingUploader.vue` | resumable chunked recording upload (see pipeline) |
 | `app/Services/Audio/AudioSplitter.php` | ffmpeg wrapper: `split()` recording → fixed-length mono mp3 segments; `findSilence()` / `extract()` / `concat()` for live recording |
-| `MinutesService` + `MeetingMinutesController` + `Meetings/Minutes.vue` | official minutes (notulen dinas): AI draft → edit → submit → approve/return; PDF (`exports/minutes-pdf.blade.php`) + Word (`MinutesWordExporter`, phpoffice/phpword) |
+| `MinutesService` + `MeetingMinutesController` + `Meetings/Minutes.vue` | official minutes in the agency's NOTULA format: AI draft → edit → submit → approve/return; documentation photos; PDF (`exports/minutes-pdf.blade.php`) + Word (`MinutesWordExporter`, phpoffice/phpword) |
 | `LiveRecordingService` + `LiveRecordingController` + `Meetings/Partials/LiveRecorder.vue` | live recording of in-person meetings with a running transcript (see "Live recording") |
 | `app/Console/Commands/FailStuckMeetings.php` | `meetings:fail-stuck` watchdog |
 | `app/Models/` | `Meeting`, `MeetingActionItem`, `MeetingChatMessage`, `Task` (+`TaskEvidence*`, `TaskDisposition`), `ForumComment*`, `Activity`, `AuditLog`, `AiRequestLog`, `Setting` (singleton via `Setting::current()`), `Unit`, `User`, `Webhook`; `Concerns/ScopedToUnit` |
@@ -209,17 +209,24 @@ admin/superadmin **in the same unit** approves (`approved`; `TaskPolicy::approve
 back to `In Progress` with a reason. Reopening a `Done` task (status dropdown / Kanban drag) is allowed only for `TaskPolicy::manage` — admin/superadmin of that unit. `is_overdue` / `is_sla_breached` are Eloquent accessors
 (`$appends`), not columns — never true for Done/Cancelled.
 
-### Official minutes (notulen resmi)
-`meeting_minutes` (1:1 with a meeting, only once it is `Selesai Diproses`): identity fields (nomor, waktu, tempat,
-pimpinan = unit user `chairperson_id` **or** free-text `chairperson_name` for an external chair, jabatan, notulis,
-peserta, acara) + content (pembukaan, pembahasan `[{topic, notes}]`, keputusan `[string]`, penutup). **Tindak lanjut
-is not stored here** — it is the meeting's action items, so minutes and Tasks never diverge. `MinutesService::draft()`
-asks the text AI for a JSON object (formal Indonesian, from summary + decision markers + action items + transcript if
-≤ 30k chars; parsed by `MinutesDraftParser`); redrafting replaces content only, never identity fields. Status
-`draf` → `diajukan` (needs pimpinan + notulis; locked) → `disahkan` (locked for good) or `dikembalikan` (with note,
-editable again). `MeetingPolicy::approveMinutes`: the chair user if set, else a unit admin (external chair); superadmin
-always; never the submitter. Exports show a DRAF watermark/header until approved, and "Disahkan secara elektronik oleh
-… pada …" after — this is an approval record, **not** a certified e-signature (BSrE).
+### Official minutes (notula resmi)
+Format follows the agency's own NOTULA template (a real sample was provided; it is **not** in the repo — it contains
+names and NIPs): centered letterhead (Settings logo + name + multi-line address, thick rule), "NOTULA" + the minutes
+title in caps, optional Nomor, identity rows **Hari/Tanggal** ("Senin/28 September 2026"), **Pukul**, **Tempat**,
+**Pemimpin Rapat** (prints the chair's *jabatan* when set — `MeetingMinutes::chairpersonLine()`), **Peserta Rapat**,
+optional Acara, then **Resume**: ordered bullet points `resume = [{speaker, text, response}]` (speaker line, their
+input, `➔` answer), optional "Kesimpulan rapat" (`decisions`) and "Tindak lanjut" (the meeting's **action items** — not
+stored in the minutes, so they never diverge from Tasks), the closing sentence ("Demikian yang dapat disampaikan, terima
+kasih."), a right-aligned **Notulen** signature with name + `users.nip`, and a **DOKUMENTASI** page with the uploaded
+photos (`documentation`, private `local` disk under `minutes/{meeting}/`, max 12). Sans font (DejaVu Sans in PDF, Arial
+in Word). `MinutesService::draft()` asks the text AI for `{"resume": [{pembicara, isi, tanggapan}], "kesimpulan": [...]}`
+(parsed by `MinutesDraftParser`; empty resume = error) from summary + decision markers + action items + transcript if
+≤ 30k chars; redrafting replaces resume/decisions only, never identity fields; Pukul is prefilled from the recording
+length when known. Workflow: `draf` → `diajukan` (locked) → `disahkan` (UI says "Disetujui"; locked for good) or
+`dikembalikan` (with note). `MeetingPolicy::approveMinutes`: the chair user if set, else a unit admin (external chair);
+superadmin always; never the submitter. The template has only the minute-taker's signature, so approval prints as a
+small "disetujui melalui aplikasi oleh … pada …" line — an approval record, **not** a certified e-signature (BSrE).
+Unapproved exports carry a DRAF watermark/header.
 
 ### Collaboration
 Forum (`ForumComment`, one level of nesting) lives on `Meetings/Show.vue` **outside** the

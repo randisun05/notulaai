@@ -292,6 +292,7 @@ class MeetingController extends Controller
         // Rekaman privat, potongan audio & sisa upload bertahap (semua di disk local).
         Storage::disk('local')->deleteDirectory("recordings/{$meeting->id}");
         Storage::disk('local')->deleteDirectory("meeting_segments/{$meeting->id}");
+        Storage::disk('local')->deleteDirectory("minutes/{$meeting->id}");
 
         return redirect()->route('meetings.index')->with('success', 'Rapat berhasil dihapus.');
     }

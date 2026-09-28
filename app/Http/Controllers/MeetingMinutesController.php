@@ -12,6 +12,7 @@ use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
@@ -22,6 +23,8 @@ use RuntimeException;
  */
 class MeetingMinutesController extends Controller
 {
+    private const MAX_PHOTOS = 12;
+
     public function __construct(private readonly MinutesService $service) {}
 
     public function edit(Meeting $meeting)
@@ -55,6 +58,7 @@ class MeetingMinutesController extends Controller
 
         $validated = $request->validate([
             'number' => 'nullable|string|max:255',
+            'title' => 'nullable|string|max:500',
             'location' => 'nullable|string|max:255',
             'time_range' => 'nullable|string|max:255',
             'chairperson_id' => ['nullable', 'integer', Rule::exists('users', 'id')->where('unit_id', $meeting->unit_id)],
@@ -63,18 +67,22 @@ class MeetingMinutesController extends Controller
             'minute_taker_id' => ['nullable', 'integer', Rule::exists('users', 'id')->where('unit_id', $meeting->unit_id)],
             'attendees' => 'nullable|string|max:10000',
             'agenda' => 'nullable|string|max:5000',
-            'opening' => 'nullable|string|max:5000',
-            'discussion' => 'nullable|array|max:50',
-            'discussion.*.topic' => 'nullable|string|max:500',
-            'discussion.*.notes' => 'nullable|string|max:10000',
+            'resume' => 'nullable|array|max:200',
+            'resume.*.speaker' => 'nullable|string|max:255',
+            'resume.*.text' => 'nullable|string|max:10000',
+            'resume.*.response' => 'nullable|string|max:10000',
             'decisions' => 'nullable|array|max:50',
             'decisions.*' => 'nullable|string|max:2000',
             'closing' => 'nullable|string|max:5000',
         ]);
 
-        $validated['discussion'] = collect($validated['discussion'] ?? [])
-            ->map(fn ($item) => ['topic' => trim($item['topic'] ?? ''), 'notes' => trim($item['notes'] ?? '')])
-            ->filter(fn ($item) => $item['topic'] !== '' || $item['notes'] !== '')
+        $validated['resume'] = collect($validated['resume'] ?? [])
+            ->map(fn ($item) => [
+                'speaker' => trim($item['speaker'] ?? '') ?: null,
+                'text' => trim($item['text'] ?? ''),
+                'response' => trim($item['response'] ?? '') ?: null,
+            ])
+            ->filter(fn ($item) => $item['text'] !== '')
             ->values()->all();
         $validated['decisions'] = collect($validated['decisions'] ?? [])->map(fn ($d) => trim((string) $d))->filter()->values()->all();
         // Pimpinan dipilih dari pengguna → nama bebas dikosongkan (dan sebaliknya).
@@ -85,6 +93,52 @@ class MeetingMinutesController extends Controller
         $minutes->update($validated);
 
         return back()->with('success', 'Notulen disimpan.');
+    }
+
+    /**
+     * Foto/tangkapan layar untuk halaman DOKUMENTASI (disk privat `local`).
+     */
+    public function uploadPhotos(Request $request, Meeting $meeting)
+    {
+        $this->authorize('update', $meeting);
+        $minutes = $meeting->minutes ?? abort(404);
+        abort_unless($minutes->isEditable(), 409, 'Notulen yang sudah diajukan atau disahkan tidak bisa diubah.');
+
+        $existing = $minutes->documentation ?? [];
+        $request->validate([
+            'photos' => 'required|array|min:1|max:'.max(1, self::MAX_PHOTOS - count($existing)),
+            'photos.*' => 'image|mimes:jpg,jpeg,png,webp|max:10240',
+        ], ['photos.max' => 'Maksimal '.self::MAX_PHOTOS.' foto dokumentasi.']);
+
+        foreach ($request->file('photos') as $photo) {
+            $existing[] = $photo->store("minutes/{$meeting->id}", 'local');
+        }
+        $minutes->update(['documentation' => $existing]);
+
+        return back()->with('success', 'Foto dokumentasi ditambahkan.');
+    }
+
+    public function photo(Meeting $meeting, int $index)
+    {
+        $this->authorize('view', $meeting);
+        $path = $meeting->minutes?->documentation[$index] ?? abort(404);
+
+        return response()->file(Storage::disk('local')->path($path));
+    }
+
+    public function deletePhoto(Meeting $meeting, int $index)
+    {
+        $this->authorize('update', $meeting);
+        $minutes = $meeting->minutes ?? abort(404);
+        abort_unless($minutes->isEditable(), 409, 'Notulen yang sudah diajukan atau disahkan tidak bisa diubah.');
+
+        $photos = $minutes->documentation ?? [];
+        $path = $photos[$index] ?? abort(404);
+        Storage::disk('local')->delete($path);
+        array_splice($photos, $index, 1);
+        $minutes->update(['documentation' => $photos]);
+
+        return back()->with('success', 'Foto dokumentasi dihapus.');
     }
 
     public function submit(Meeting $meeting)
@@ -145,6 +199,10 @@ class MeetingMinutesController extends Controller
             'logoPath' => $logo && is_file($logo) ? $logo : null,
             'date' => Carbon::parse($meeting->date)->locale('id'),
             'isDraft' => $minutes->status !== MeetingMinutes::STATUS_APPROVED,
+            'photos' => collect($minutes->documentation ?? [])
+                ->map(fn (string $path) => Storage::disk('local')->path($path))
+                ->filter(fn (string $path) => is_file($path))
+                ->values(),
         ];
     }
 

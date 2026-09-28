@@ -29,7 +29,7 @@ class MinutesService
     ) {}
 
     /**
-     * Susun (atau susun ulang) isi notulen dengan AI. Identitas rapat yang sudah
+     * Susun (atau susun ulang) resume notula dengan AI. Identitas rapat yang sudah
      * diisi notulis (nomor, tempat, pimpinan, ...) tidak ditimpa.
      */
     public function draft(Meeting $meeting, User $user): MeetingMinutes
@@ -46,12 +46,13 @@ class MinutesService
         $content = $this->parser->parse($this->callAi($meeting, $user));
 
         if (! $minutes->exists) {
-            $date = Carbon::parse($meeting->date);
             $minutes->fill([
-                'time_range' => $date->format('H.i').' WIB – selesai',
+                'title' => $meeting->title,
+                'time_range' => $this->timeRange($meeting),
                 'minute_taker_id' => $user->id,
                 'attendees' => $meeting->attendees,
-                'agenda' => $this->plainText($meeting->agenda) ?: $meeting->title,
+                'agenda' => $this->plainText($meeting->agenda) ?: null,
+                'closing' => MeetingMinutes::DEFAULT_CLOSING,
             ]);
         }
 
@@ -120,15 +121,23 @@ class MinutesService
             .($item->deadline ? ' (tenggat '.$item->deadline->toDateString().')' : ''))->implode("\n");
 
         $prompt = <<<PROMPT
-        Susun isi NOTULEN RAPAT resmi instansi pemerintah dalam Bahasa Indonesia baku (ragam dinas: kalimat efektif,
-        lugas, cenderung pasif, tanpa singkatan tidak baku, tanpa emoji). Hanya berdasarkan data di bawah; jangan
-        mengarang nama, angka, atau keputusan yang tidak ada.
+        Susun bagian RESUME dari NOTULA RAPAT resmi instansi pemerintah dalam Bahasa Indonesia baku ragam dinas
+        (kalimat efektif, lugas, tanpa emoji). Hanya berdasarkan data di bawah; jangan mengarang nama, jabatan,
+        angka, atau keputusan yang tidak ada.
 
-        Balas HANYA dengan satu objek JSON valid (tanpa markdown) dengan field:
-        - "pembukaan": 1–3 kalimat tentang pembukaan rapat (siapa membuka, tujuan rapat) bila tersedia.
-        - "pembahasan": array objek {"topik": judul singkat, "uraian": paragraf ringkas hasil pembahasan}, urut sesuai jalannya rapat.
-        - "keputusan": array kalimat keputusan/kesimpulan rapat (tanpa penomoran).
-        - "penutup": 1 kalimat penutup rapat bila tersedia.
+        Resume ditulis sebagai poin-poin berurutan sesuai jalannya rapat, seperti notula dinas pada umumnya:
+        1. Poin pembuka: "Pada hari ini dilaksanakan rapat ..." beserta pihak yang hadir bila disebut; siapa yang
+           membuka rapat dan tujuan rapat; siapa yang memimpin pembahasan bila berbeda.
+        2. Poin pembahasan: satu poin per masukan/pertanyaan/tanggapan peserta. Isi "pembicara" dengan nama dan
+           unit/jabatannya sebagaimana disebut (mis. "Ika Meidyawati, Dit. Bangtarier" atau "Ibu Sesdep"), lalu
+           "isi" dengan substansi masukan/pertanyaannya, dan "tanggapan" dengan jawaban/penjelasan yang diberikan
+           (kosongkan bila tidak ada). Poin peralihan topik (mis. "Masuk ke pembahasan Pasal 15") boleh tanpa pembicara.
+        Tulis nama persis seperti di data; bila nama tidak diketahui gunakan label pembicara yang ada.
+
+        Balas HANYA dengan satu objek JSON valid (tanpa markdown):
+        {"resume": [{"pembicara": string|null, "isi": string, "tanggapan": string|null}, ...],
+         "kesimpulan": [string, ...]}
+        "kesimpulan" berisi keputusan/kesimpulan rapat yang jelas disepakati (boleh array kosong).
 
         Judul rapat: {$meeting->title}
         Tanggal: {$meeting->date}
@@ -136,10 +145,10 @@ class MinutesService
         Rangkuman rapat:
         {$this->plainText($meeting->summary)}
 
-        Keputusan yang ditandai notulis saat rapat (wajib ada di "keputusan"):
+        Keputusan yang ditandai notulis saat rapat (wajib ada di "kesimpulan"):
         {$decisionMarkers}
 
-        Tindak lanjut yang sudah tercatat (jangan diulang di "keputusan" kecuali memang keputusan):
+        Tindak lanjut yang sudah tercatat (dicantumkan terpisah; jangan diulang di "kesimpulan" kecuali memang keputusan):
         {$actionItems}
         PROMPT;
 
@@ -160,6 +169,19 @@ class MinutesService
         $this->logger->logSuccess('minutes', $result->provider, $result->model, $prompt, $result->content, $result->promptTokens, $result->completionTokens, $result->durationMs, $meeting, $user);
 
         return $result->content;
+    }
+
+    /**
+     * "09.00 – 11.40 WIB" kalau durasi rekaman diketahui, selain itu "09.00 WIB – selesai".
+     */
+    private function timeRange(Meeting $meeting): string
+    {
+        $start = Carbon::parse($meeting->date);
+        $seconds = (float) $meeting->segments()->max('end_seconds');
+
+        return $seconds > 0
+            ? $start->format('H.i').' – '.$start->copy()->addSeconds((int) round($seconds))->format('H.i').' WIB'
+            : $start->format('H.i').' WIB – selesai';
     }
 
     private function plainText(?string $html): string

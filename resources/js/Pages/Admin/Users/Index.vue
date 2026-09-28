@@ -39,6 +39,7 @@ const form = useForm({
     role: 'user',
     unit_id: null,
     phone_number: '',
+    nip: '',
 });
 
 const openModal = () => {
@@ -196,6 +197,11 @@ watch(search, debounce((value) => {
                         <InputLabel for="phone_number" value="No. HP (Opsional)" />
                         <TextInput id="phone_number" type="text" class="mt-1 block w-full" v-model="form.phone_number" placeholder="0812..." />
                         <InputError class="mt-2" :message="form.errors.phone_number" />
+                    </div>
+                    <div class="mt-4">
+                        <InputLabel for="nip" value="NIP (Opsional)" />
+                        <TextInput id="nip" type="text" class="mt-1 block w-full" v-model="form.nip" placeholder="Dicantumkan di tanda tangan notula" />
+                        <InputError class="mt-2" :message="form.errors.nip" />
                     </div>
 
                     <div class="flex justify-end mt-6">

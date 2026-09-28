@@ -2,143 +2,169 @@
 
 namespace App\Services\Meeting;
 
+use App\Models\MeetingMinutes;
 use PhpOffice\PhpWord\Element\AbstractContainer;
+use PhpOffice\PhpWord\Element\Section;
 use PhpOffice\PhpWord\IOFactory;
 use PhpOffice\PhpWord\PhpWord;
 use PhpOffice\PhpWord\SimpleType\Jc;
 use PhpOffice\PhpWord\Style\Font;
+use PhpOffice\PhpWord\Style\ListItem;
 
 /**
- * Notulen resmi sebagai .docx (bisa disunting lagi di Word sebelum diarsipkan).
- * Susunannya sama dengan resources/views/exports/minutes-pdf.blade.php.
+ * Notula sebagai .docx (bisa disunting lagi di Word sebelum ditandatangani dan
+ * diarsipkan). Susunannya sama dengan resources/views/exports/minutes-pdf.blade.php.
  */
 class MinutesWordExporter
 {
+    private const BODY = ['alignment' => Jc::BOTH, 'lineHeight' => 1.5, 'spaceAfter' => 0];
+
     /**
      * @param  array<string, mixed>  $data  sama dengan data view PDF
      * @return string path file sementara (dihapus setelah diunduh)
      */
     public function export(array $data): string
     {
-        ['meeting' => $meeting, 'minutes' => $minutes, 'actionItems' => $actionItems, 'setting' => $setting, 'logoPath' => $logoPath, 'date' => $date, 'isDraft' => $isDraft] = $data;
+        ['meeting' => $meeting, 'minutes' => $minutes, 'actionItems' => $actionItems, 'setting' => $setting,
+            'logoPath' => $logoPath, 'date' => $date, 'isDraft' => $isDraft, 'photos' => $photos] = $data;
 
         $word = new PhpWord;
-        $word->setDefaultFontName('Times New Roman');
-        $word->setDefaultFontSize(12);
-        $section = $word->addSection(['marginTop' => 1134, 'marginBottom' => 1134, 'marginLeft' => 1701, 'marginRight' => 1418]);
+        $word->setDefaultFontName('Arial');
+        $word->setDefaultFontSize(11);
+        $section = $word->addSection(['marginTop' => 1134, 'marginBottom' => 1134, 'marginLeft' => 1418, 'marginRight' => 1247]);
 
         if ($isDraft) {
-            $section->addHeader()->addText('DRAF — belum disahkan', ['color' => 'C00000', 'bold' => true, 'size' => 9], ['alignment' => Jc::END]);
+            $section->addHeader()->addText('DRAF — belum disetujui', ['color' => 'C00000', 'bold' => true, 'size' => 9], ['alignment' => Jc::END]);
         }
 
-        // Kop
-        $kop = $section->addTable(['borderBottomSize' => 18, 'borderBottomColor' => '000000', 'width' => 100 * 50, 'unit' => 'pct']);
-        $kop->addRow();
+        // Kop: logo di tengah, nama instansi, alamat, garis bawah tebal.
+        $center = ['alignment' => Jc::CENTER, 'spaceAfter' => 0];
         if ($logoPath) {
-            $kop->addCell(1300)->addImage($logoPath, ['width' => 55, 'height' => 55]);
+            $section->addImage($logoPath, ['height' => 55, 'alignment' => Jc::CENTER]);
         }
-        $cell = $kop->addCell(8000);
-        $cell->addText(mb_strtoupper((string) $setting->company_name), ['bold' => true, 'size' => 15], ['alignment' => Jc::CENTER]);
-        if ($setting->company_address) {
-            $cell->addText($setting->company_address, ['size' => 10], ['alignment' => Jc::CENTER]);
+        $kop = array_merge([mb_strtoupper((string) $setting->company_name)], array_filter(preg_split('/\R/', (string) $setting->company_address)));
+        foreach ($kop as $i => $line) {
+            $section->addText($line, ['bold' => $i === 0, 'size' => $i === 0 ? 12 : 11], $i === array_key_last($kop)
+                ? $center + ['borderBottomSize' => 18, 'borderBottomColor' => '000000', 'spaceAfter' => 240]
+                : $center);
+        }
+
+        $section->addText('NOTULA', ['bold' => true], $center);
+        $section->addText(mb_strtoupper((string) ($minutes->title ?: $meeting->title)), ['bold' => true], $center);
+        if ($minutes->number) {
+            $section->addText('Nomor: '.$minutes->number, [], $center);
         }
         $section->addTextBreak();
 
-        $section->addText('NOTULEN RAPAT', ['bold' => true, 'size' => 13, 'underline' => Font::UNDERLINE_SINGLE], ['alignment' => Jc::CENTER, 'spaceAfter' => 0]);
-        $section->addText('Nomor: '.($minutes->number ?: '.................................'), [], ['alignment' => Jc::CENTER, 'spaceAfter' => 240]);
-
-        $identity = $section->addTable();
-        foreach ([
-            'Hari/Tanggal' => $date->isoFormat('dddd, D MMMM Y'),
-            'Waktu' => $minutes->time_range ?: '-',
+        $rows = [
+            'Hari/Tanggal' => $date->isoFormat('dddd').'/'.$date->isoFormat('D MMMM Y'),
+            'Pukul' => $minutes->time_range ?: '-',
             'Tempat' => $minutes->location ?: '-',
-            'Pimpinan Rapat' => ($minutes->chairpersonDisplayName() ?: '-').($minutes->chairperson_title ? ', '.$minutes->chairperson_title : ''),
-            'Notulis' => $minutes->minuteTaker->name ?? '-',
-            'Peserta' => $minutes->attendees ?: '-',
-            'Acara' => $minutes->agenda ?: $meeting->title,
-        ] as $label => $value) {
+            'Pemimpin Rapat' => $minutes->chairpersonLine() ?: '-',
+            'Peserta Rapat' => $minutes->attendees ?: '-',
+        ];
+        if ($minutes->agenda) {
+            $rows['Acara'] = $minutes->agenda;
+        }
+        $rows['Resume'] = '';
+        $identity = $section->addTable();
+        $cell = ['lineHeight' => 1.5, 'spaceAfter' => 0];
+        foreach ($rows as $label => $value) {
             $identity->addRow();
-            $identity->addCell(2700)->addText($label);
-            $identity->addCell(300)->addText(':');
-            $this->multiline($identity->addCell(6000), (string) $value);
+            $identity->addCell(2300)->addText($label, [], $cell);
+            $identity->addCell(300)->addText(':', [], $cell);
+            $this->lines($identity->addCell(6200), (string) $value, $cell);
         }
-
-        $this->heading($section, 'I. Pembukaan');
-        $this->multiline($section, $minutes->opening ?: '-');
-
-        $this->heading($section, 'II. Pembahasan');
-        foreach ($minutes->discussion ?: [['topic' => '', 'notes' => 'Tidak ada.']] as $i => $item) {
-            if ($item['topic']) {
-                $section->addText(($i + 1).'. '.$item['topic'], ['bold' => true], ['spaceAfter' => 0]);
-            }
-            $this->multiline($section, $item['notes'], ['indentation' => ['left' => 360]]);
-        }
-
-        $this->heading($section, 'III. Keputusan/Kesimpulan');
-        foreach ($minutes->decisions ?: ['Tidak ada.'] as $i => $decision) {
-            $section->addText(($minutes->decisions ? ($i + 1).'. ' : '').$decision, [], ['indentation' => ['left' => 360, 'hanging' => 360]]);
-        }
-
-        $this->heading($section, 'IV. Tindak Lanjut');
-        if ($actionItems->isEmpty()) {
-            $section->addText('Tidak ada.');
-        } else {
-            $table = $section->addTable(['borderSize' => 6, 'borderColor' => '000000', 'cellMargin' => 60]);
-            $table->addRow();
-            foreach (['No' => 600, 'Uraian' => 4600, 'Penanggung Jawab' => 2200, 'Tenggat' => 1600] as $header => $width) {
-                $table->addCell($width, ['bgColor' => 'EEEEEE'])->addText($header, ['bold' => true, 'size' => 11]);
-            }
-            foreach ($actionItems as $i => $item) {
-                $table->addRow();
-                $table->addCell(600)->addText((string) ($i + 1), ['size' => 11]);
-                $table->addCell(4600)->addText($item->title, ['size' => 11]);
-                $table->addCell(2200)->addText($item->assignee_name ?: '-', ['size' => 11]);
-                $table->addCell(1600)->addText($item->deadline ? $item->deadline->locale('id')->isoFormat('D MMMM Y') : '-', ['size' => 11]);
-            }
-        }
-
-        $this->heading($section, 'V. Penutup');
-        $this->multiline($section, $minutes->closing ?: '-');
-
-        // Tanda tangan
         $section->addTextBreak();
-        $signatures = $section->addTable();
-        $signatures->addRow();
-        $chair = $signatures->addCell(4500);
-        $chair->addText('Mengesahkan,', [], ['alignment' => Jc::CENTER, 'spaceAfter' => 0]);
-        $chair->addText('Pimpinan Rapat', [], ['alignment' => Jc::CENTER, 'spaceAfter' => 1100]);
-        $chair->addText($minutes->chairpersonDisplayName() ?: '.................................', ['bold' => true, 'underline' => Font::UNDERLINE_SINGLE], ['alignment' => Jc::CENTER, 'spaceAfter' => 0]);
-        if ($minutes->chairperson_title) {
-            $chair->addText($minutes->chairperson_title, [], ['alignment' => Jc::CENTER, 'spaceAfter' => 0]);
-        }
-        if ($minutes->status === 'disahkan') {
-            $chair->addText('Disahkan secara elektronik oleh '.$minutes->approver?->name.' pada '
-                .$minutes->approved_at->locale('id')->isoFormat('D MMMM Y, HH.mm').' WIB', ['size' => 8, 'italic' => true], ['alignment' => Jc::CENTER]);
-        }
-        $taker = $signatures->addCell(4500);
-        $taker->addText(' ', [], ['spaceAfter' => 0]);
-        $taker->addText('Notulis', [], ['alignment' => Jc::CENTER, 'spaceAfter' => 1100]);
-        $taker->addText($minutes->minuteTaker->name ?? '.................................', ['bold' => true, 'underline' => Font::UNDERLINE_SINGLE], ['alignment' => Jc::CENTER]);
 
-        $path = tempnam(sys_get_temp_dir(), 'notulen').'.docx';
+        // Resume: poin berurutan — pembicara, isi, ➔ tanggapan.
+        $indented = self::BODY + ['indentation' => ['left' => 360]];
+        foreach ($minutes->resume ?? [] as $point) {
+            [$firstLine, $rest] = $point['speaker'] ? [$point['speaker'], $point['text']] : $this->splitFirstLine($point['text']);
+            $section->addListItem($firstLine, 0, [], ListItem::TYPE_BULLET_FILLED, self::BODY);
+            $this->lines($section, $rest, $indented);
+            if ($point['response']) {
+                $this->lines($section, '➔  '.$point['response'], self::BODY + ['indentation' => ['left' => 720, 'hanging' => 360]]);
+            }
+        }
+
+        $this->dashList($section, 'Kesimpulan rapat:', $minutes->decisions ?? []);
+        $this->dashList($section, 'Tindak lanjut:', $actionItems->map(fn ($item) => $item->title
+            .(($item->assignee_name || $item->deadline) ? ' ('.collect([
+                $item->assignee_name ? 'PIC: '.$item->assignee_name : null,
+                $item->deadline ? 'tenggat '.$item->deadline->locale('id')->isoFormat('D MMMM Y') : null,
+            ])->filter()->implode('; ').')' : ''))->all());
+
+        $section->addTextBreak();
+        $section->addText($minutes->closing ?: MeetingMinutes::DEFAULT_CLOSING, [], self::BODY);
+        $section->addTextBreak(2);
+
+        // Tanda tangan notulen (kanan).
+        $right = ['alignment' => Jc::CENTER, 'spaceAfter' => 0, 'indentation' => ['left' => 4800]];
+        $section->addText('Notulen', [], $right + ['spaceAfter' => 1100]);
+        $section->addText($minutes->minuteTaker->name ?? '.................................', ['underline' => Font::UNDERLINE_SINGLE], $right);
+        if ($minutes->minuteTaker?->nip) {
+            $section->addText('NIP. '.$minutes->minuteTaker->nip, [], $right);
+        }
+
+        if ($minutes->status === MeetingMinutes::STATUS_APPROVED) {
+            $section->addTextBreak();
+            $section->addText('Notula ini telah disetujui melalui aplikasi oleh '.$minutes->approver->name.' pada '
+                .$minutes->approved_at->locale('id')->isoFormat('D MMMM Y, HH.mm').' WIB.', ['size' => 8, 'color' => '444444']);
+        }
+
+        if ($photos->isNotEmpty()) {
+            $section->addPageBreak();
+            $section->addText('DOKUMENTASI', ['bold' => true], ['alignment' => Jc::CENTER, 'spaceAfter' => 240]);
+            foreach ($photos as $photo) {
+                [$width, $height] = getimagesize($photo) ?: [800, 600];
+                $scale = min(430 / $width, 300 / $height, 1);
+                $section->addImage($photo, ['width' => (int) ($width * $scale), 'height' => (int) ($height * $scale), 'alignment' => Jc::CENTER]);
+                $section->addTextBreak();
+            }
+        }
+
+        $path = tempnam(sys_get_temp_dir(), 'notula').'.docx';
         IOFactory::createWriter($word, 'Word2007')->save($path);
 
         return $path;
     }
 
-    private function heading($section, string $text): void
+    /**
+     * @param  list<string>  $items
+     */
+    private function dashList(Section $section, string $title, array $items): void
     {
-        $section->addText($text, ['bold' => true], ['spaceBefore' => 200, 'spaceAfter' => 60]);
+        if ($items === []) {
+            return;
+        }
+
+        $section->addListItem($title, 0, [], ListItem::TYPE_BULLET_FILLED, self::BODY);
+        foreach ($items as $item) {
+            $section->addText('-  '.$item, [], self::BODY + ['indentation' => ['left' => 720, 'hanging' => 240]]);
+        }
     }
 
     /**
-     * @param  AbstractContainer  $container
+     * @return array{0: string, 1: string} baris pertama (jadi teks bullet) dan sisanya
+     */
+    private function splitFirstLine(string $text): array
+    {
+        $parts = preg_split('/\R/', $text, 2);
+
+        return [$parts[0], $parts[1] ?? ''];
+    }
+
+    /**
      * @param  array<string, mixed>  $paragraph
      */
-    private function multiline($container, string $text, array $paragraph = []): void
+    private function lines(AbstractContainer $container, string $text, array $paragraph): void
     {
+        if ($text === '') {
+            return;
+        }
         foreach (preg_split('/\R/', $text) as $line) {
-            $container->addText($line, [], $paragraph + ['alignment' => Jc::BOTH, 'spaceAfter' => 60]);
+            $container->addText($line, [], $paragraph);
         }
     }
 }

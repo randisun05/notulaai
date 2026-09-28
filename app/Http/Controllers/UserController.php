@@ -52,6 +52,7 @@ class UserController extends Controller
             'role' => ['required', Rule::in(['user', 'admin', 'superadmin'])],
             'unit_id' => 'nullable|exists:units,id',
             'phone_number' => 'nullable|string|max:20',
+            'nip' => 'nullable|string|max:30',
         ]);
 
         $user = User::create([
@@ -61,6 +62,7 @@ class UserController extends Controller
             'role' => $request->role,
             'unit_id' => $request->unit_id,
             'phone_number' => $request->phone_number,
+            'nip' => $request->nip,
         ]);
 
         $user->syncRoles([$request->role]);
@@ -96,6 +98,7 @@ class UserController extends Controller
             'role' => ['required', Rule::in(['user', 'admin', 'superadmin'])],
             'unit_id' => 'nullable|exists:units,id',
             'phone_number' => 'nullable|string|max:20',
+            'nip' => 'nullable|string|max:30',
             'password' => ['nullable', 'confirmed', Rules\Password::defaults()],
         ]);
 
@@ -105,7 +108,7 @@ class UserController extends Controller
 
         $previousRole = $user->role;
 
-        $user->fill($request->only(['name', 'email', 'role', 'unit_id', 'phone_number']));
+        $user->fill($request->only(['name', 'email', 'role', 'unit_id', 'phone_number', 'nip']));
 
         if ($request->filled('password')) {
             $user->password = Hash::make($request->password);
