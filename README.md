@@ -1,6 +1,6 @@
 # AI Notula App
 
-AI Meeting Workspace: transkrip & rangkuman notula otomatis (Whisper/Gemini), action items, task management dengan approval workflow, forum diskusi per rapat, dashboard & analytics, dan fitur enterprise (multi-tenant per unit, API token, audit log, webhook, SSO Google/Microsoft). Dibangun di atas Laravel 10 + Inertia.js + Vue 3.
+AI Meeting Workspace: transkrip & rangkuman notula otomatis (Whisper/Gemini), action items, task management dengan approval workflow, forum diskusi per rapat, dashboard & analytics, dan fitur enterprise (multi-tenant per unit, API token, audit log, webhook, SSO Google/Microsoft). Dibangun di atas Laravel 12 + Inertia.js + Vue 3.
 
 ## Menjalankan dengan Docker Compose
 

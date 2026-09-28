@@ -13,6 +13,50 @@ Plus a per-meeting discussion forum, activity timeline, dashboard/analytics, and
 
 Stack: Laravel 12 · Inertia.js 1 + Vue 3 (`resources/js/Pages/*`) · Tailwind 3 · MySQL (prod) ·
 Redis (optional) · Sanctum · `spatie/laravel-permission` v6 · Socialite (Google/Microsoft).
+UI text, flash messages, and meeting status values are in **Indonesian**.
+
+**This file is the onboarding doc — read it instead of re-surveying the repo.** The codebase map
+and architecture below are kept current; if you change something they describe, update this file
+in the same commit.
+
+## Codebase map
+
+| Where | What |
+|---|---|
+| `bootstrap/app.php` | L12 `Application::configure()`: routing, middleware (web group + `HandleInertiaRequests`), 429 rendering, **the schedule** |
+| `bootstrap/providers.php` | registers `App`, `Ai`, `Auth` (policies + `access-admin-panel` Gate), `Event` providers (`BroadcastServiceProvider` exists but is not registered) |
+| `routes/web.php` | all app routes (Inertia); `routes/auth.php` Breeze + SSO; `routes/api.php` effectively empty |
+| `app/Http/Controllers/` | `Meeting*` (CRUD, process, chat, emails), `Task*` (CRUD, status/approval, disposition, export), `ForumComment*`, `Dashboard`/`Analytics`, admin: `Unit`/`User`/`Setting`/`AuditLog`/`Webhook`/`ApiToken`, `SpeechController` (STT test) |
+| `app/Services/AI/` | provider abstraction — `AiManager`, `Contracts/`, `Providers/`, `DTO/`, `AiRequestLogger` |
+| `app/Services/Meeting/` | `MeetingProcessingService` (pipeline), `ActionItemsParser`, `EmailDraftGenerator`/`Parser`, `MeetingChatService`, `ActivityLogger` |
+| `app/Services/{Analytics,Audit,Forum,Webhook}/` | `DashboardInsightGenerator`, `AuditLogger`, `MentionParser`, `WebhookDispatcher` |
+| `app/Jobs/` | `ProcessMeetingNotula`, `SendWebhookNotification`, 3 scheduled jobs (reminders, escalation) |
+| `app/Console/Commands/FailStuckMeetings.php` | `meetings:fail-stuck` watchdog |
+| `app/Models/` | `Meeting`, `MeetingActionItem`, `MeetingChatMessage`, `Task` (+`TaskEvidence*`, `TaskDisposition`), `ForumComment*`, `Activity`, `AuditLog`, `AiRequestLog`, `Setting` (singleton via `Setting::current()`), `Unit`, `User`, `Webhook`; `Concerns/ScopedToUnit` |
+| `app/Policies/` | `Meeting`, `Task`, `ForumComment`, `Unit`, `User` |
+| `app/Support/HtmlSanitizer.php` | HTMLPurifier wrapper for every raw-rendered HTML field |
+| `config/ai.php` | providers, fallbacks, rate limits; `config/gemini.php` must exist |
+| `resources/js/Pages/` | `Meetings/`, `Tasks/` (Index, Kanban, Calendar, Show, Create/Edit), `Analytics/` (Heatmap, Overdue, Productivity), `Admin/` (Units, Users, Settings, AuditLogs, Webhooks), `Dashboard.vue`, `Auth/`, `Profile/` |
+| `tests/Feature/` | grouped by area: `Admin`, `Analytics`, `Auth`, `Forum`, `Meeting`, `MultiTenant`, `Task`, `Webhook`, plus AI fallback / rate-limit / dashboard tests. `tests/Unit/` covers parsers + sanitizer |
+| `database/seeders/` | `RolePermissionSeeder`, `MeetingSeeder`, `DatabaseSeeder` (`SourcePathSeeder` is dead) |
+| `docker/`, `docker-compose.yml`, `Dockerfile` | nginx config + Whisper sidecar (`docker/whisper/`) |
+
+## Setup from a fresh clone
+
+```bash
+composer install
+cp .env.example .env && php artisan key:generate
+npm ci && npm run build        # REQUIRED before tests: public/build is gitignored, and every
+                               # Inertia page test 500s ("Vite manifest not found") without it
+php artisan test               # should be all green
+```
+
+**Claude Code cloud sandbox:** the egress proxy returns 403 for GitHub dist zips (`api.github.com/.../zipball`),
+but `git clone` works. Use `COMPOSER_ALLOW_SUPERUSER=1 composer install --prefer-source`. The one
+package that only ships as a dist, `phpstan/phpstan`, still fails; work around it by cloning
+`https://github.com/phpstan/phpstan.git` at the locked tag into the scratchpad, zipping it, temporarily
+pointing its `dist.url` in `composer.lock` at `file://<zip>` (empty `shasum`), installing, then
+`git checkout composer.lock`. Never commit the modified lock.
 
 ## Commands
 
@@ -25,28 +69,30 @@ php artisan migrate --seed             # DatabaseSeeder seeds roles, a superadmi
 
 # Frontend
 npm run dev                            # Vite dev server
-npm run build                          # MUST run after adding/renaming any Vue page — the committed
-                                       # public/build/manifest.json will 500 pages missing from it,
-                                       # and there is no CI step that rebuilds it
+npm run build                          # builds public/build (gitignored, NOT committed). Needed before
+                                       # tests and after adding/renaming any Vue page, or Inertia 500s
 
 # Tests (SQLite :memory:, config in phpunit.xml)
-php artisan test                       # full suite (~2 min, ~177 tests)
+php artisan test                       # full suite (~10 s, ~199 tests)
 php artisan test --filter=ProcessMeetingTest
 php artisan test tests/Feature/Task/TaskApprovalTest.php
 
 # Local Speech-to-Text sidecar (separate process, needed only for audio uploads)
-python stt_service.py                  # Flask app on :5055, loads openai-whisper "base" model
+pip install -r docker/whisper/requirements.txt
+python docker/whisper/stt_service.py   # Flask app on :5055 (GET /health, POST /transcribe),
+                                       # model from WHISPER_MODEL (default "base");
                                        # STT_SERVICE_URL in .env must point at it
 
-# Quality gates (all run in CI, backend job)
+# Quality gates — there is NO CI (the GitHub Actions workflow was removed), so run
+# `composer test:ci` yourself before every push
 vendor/bin/pint                        # format (Laravel preset, pint.json)
-vendor/bin/pint --test                 # CI check — fails on unformatted code
-vendor/bin/phpstan analyse             # level 5; 57 pre-existing errors are in phpstan-baseline.neon
+vendor/bin/pint --test                 # fails on unformatted code
+vendor/bin/phpstan analyse             # level 5; pre-existing errors are in phpstan-baseline.neon
 composer audit                         # fails on dependencies with known CVEs
 composer test:ci                       # runs all four gates in sequence
 ```
 
-The Docker Compose path (`docker compose up -d --build`, then `docker compose exec app php artisan migrate --seed`) runs app/nginx/mysql/redis/queue/scheduler together on port 8080. It has **not** been verified with a real build — treat it as unproven. It does **not** include the Whisper STT sidecar.
+The Docker Compose path (`docker compose up -d --build`, then `docker compose exec app php artisan migrate --seed`) runs app/nginx/mysql/redis/queue/scheduler/whisper together on port 8080 (Vite assets and `vendor/` are baked into the image). It has **not** been verified with a real build — treat it as unproven.
 
 ## Architecture
 
@@ -127,10 +173,11 @@ the user-facing `activities` feed. Separate from `AuditLogger` (`app/Services/Au
 admin-only security `audit_logs` (CRUD on User/Unit/Setting/ApiToken/Webhook; login/logout via an
 `AuditAuthEvents` listener so SSO is covered for free).
 
-### Scheduled work (`app/Console/Kernel.php`)
+### Scheduled work (`bootstrap/app.php` → `withSchedule()`)
 `SendMeetingReminders` (daily 07:00), `SendTaskDeadlineReminders` (daily 07:30), `EscalateOverdueTasks`
-(hourly — emails the task *creator*, there is no manager role), `meetings:fail-stuck` (every 5 min).
-Timezone comes from `Setting::current()->timezone`.
+(hourly — emails the task *creator*, there is no manager role), `meetings:fail-stuck --minutes=10` (every 5 min).
+Timezone comes from `Setting::current()->timezone`, wrapped in `rescue()` (falls back to `Asia/Jakarta`)
+because `withSchedule()` runs on every artisan call, including ones with no DB.
 
 ### Webhooks
 Per-unit outgoing webhooks (`WebhookDispatcher::dispatch()` called from the same sites as
@@ -142,7 +189,7 @@ Per-unit outgoing webhooks (`WebhookDispatcher::dispatch()` called from the same
 
 - **Route ordering:** literal task routes (`/tasks/kanban`, `/tasks/calendar`, `/tasks/export/*`, `/tasks/create`) must stay registered before `/tasks/{task}` or the wildcard swallows them. Same for meetings.
 - **Inertia flash:** `HandleInertiaRequests` shares a `flash` prop; use `redirect()->...->with('success'|'error', ...)` and read `$page.props.flash` in Vue.
-- **Legacy skeleton:** this app was bumped 10→11→12 via `composer.json` only. It still uses `app/Http/Kernel.php`, `app/Console/Kernel.php`, the old `bootstrap/app.php`, the legacy `AuthServiceProvider` `$policies` array, and old `.env` keys (`CACHE_DRIVER`, `BROADCAST_DRIVER`, `QUEUE_CONNECTION`). Works via backcompat; new L11/12 skeleton features are not available.
+- **Skeleton:** migrated to the L11/12 structure — there is no `app/Http/Kernel.php`, `app/Console/Kernel.php`, `app/Exceptions/Handler.php`, or `RouteServiceProvider`. Middleware, exception rendering, and the schedule live in `bootstrap/app.php`; the `api` RateLimiter is in `AppServiceProvider::boot()`; post-login redirect is the literal `'/dashboard'`. Still legacy: the `AuthServiceProvider` `$policies` array and old `.env` keys (`CACHE_DRIVER`, `BROADCAST_DRIVER`).
 - **`openai-php/laravel`** is used only to talk to **OpenRouter** (`OPENAI_BASE_URI`), not OpenAI. `OpenRouterTextProvider` has a Guzzle middleware that backfills missing `completion_tokens_details` fields OpenRouter omits, which would otherwise `TypeError` in the client.
 - **Excel export tests:** assert on the collection via `Excel::fake()` + `Excel::assertDownloaded(...)`, not on raw bytes.
 - **Tests run on SQLite**, prod is MySQL — watch for engine differences (`whereJsonContains`, fulltext, etc.).

@@ -7,9 +7,3 @@ parameters:
 
     paths:
         - app
-
-    # Legacy skeleton (app bumped 10->12 via composer only): these hold framework
-    # scaffolding, not app logic worth analysing.
-    excludePaths:
-        - app/Http/Kernel.php
-        - app/Console/Kernel.php
