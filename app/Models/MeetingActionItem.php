@@ -18,7 +18,7 @@ class MeetingActionItem extends Model
     ];
 
     protected $casts = [
-        'deadline' => 'date',
+        'deadline' => 'date:Y-m-d',
         'converted_to_task' => 'boolean',
     ];
 

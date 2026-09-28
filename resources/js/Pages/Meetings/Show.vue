@@ -269,6 +269,9 @@ const deleteMeeting = () => {
                 <h2 class="page-heading">{{ meeting.title }}</h2>
 
                 <div class="flex items-center gap-2">
+                    <Link v-if="meeting.status === 'Selesai Diproses'" :href="route('meetings.minutes.edit', meeting.id)" class="btn-primary">
+                        Notulen Resmi
+                    </Link>
                      <!-- Tombol Edit -->
                     <Link v-if="meeting.status === 'Dijadwalkan'" :href="route('meetings.edit', meeting.id)" as="button" class="btn-secondary">
                         Edit Rapat

@@ -109,43 +109,13 @@ parameters:
 			path: app/Providers/EventServiceProvider.php
 
 		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$assignee_name\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Services/Meeting/EmailDraftGenerator.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$deadline\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Services/Meeting/EmailDraftGenerator.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$title\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Services/Meeting/EmailDraftGenerator.php
-
-		-
 			message: '#^Match expression does not handle remaining value\: string$#'
 			identifier: match.unhandled
 			count: 1
 			path: app/Services/Meeting/EmailDraftGenerator.php
 
 		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$assignee_name\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Services/Meeting/MeetingChatService.php
-
-		-
 			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$content\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Services/Meeting/MeetingChatService.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$deadline\.$#'
 			identifier: property.notFound
 			count: 1
 			path: app/Services/Meeting/MeetingChatService.php
@@ -165,5 +135,5 @@ parameters:
 		-
 			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$title\.$#'
 			identifier: property.notFound
-			count: 2
+			count: 1
 			path: app/Services/Meeting/MeetingChatService.php

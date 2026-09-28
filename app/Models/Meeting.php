@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Meeting extends Model
 {
@@ -67,6 +68,7 @@ class Meeting extends Model
         return $this->belongsTo(Unit::class);
     }
 
+    /** @return HasMany<MeetingActionItem, $this> */
     public function actionItems(): HasMany
     {
         return $this->hasMany(MeetingActionItem::class)->orderBy('order');
@@ -146,6 +148,12 @@ class Meeting extends Model
             // Label mentah dari AI (mis. "Pembicara 1") + nama yang sudah ditetapkan.
             'speakers' => $speakers->map(fn (string $label) => ['label' => $label, 'name' => $this->speaker_names[$label] ?? null]),
         ];
+    }
+
+    /** @return HasOne<MeetingMinutes, $this> */
+    public function minutes(): HasOne
+    {
+        return $this->hasOne(MeetingMinutes::class);
     }
 
     /** @return HasMany<MeetingMarker, $this> */

@@ -34,7 +34,7 @@ class Task extends Model
     ];
 
     protected $casts = [
-        'deadline' => 'date',
+        'deadline' => 'date:Y-m-d',
         'escalated_at' => 'datetime',
     ];
 

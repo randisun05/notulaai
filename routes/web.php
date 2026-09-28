@@ -10,6 +10,7 @@ use App\Http\Controllers\LiveRecordingController;
 use App\Http\Controllers\MeetingChatController;
 use App\Http\Controllers\MeetingController;
 use App\Http\Controllers\MeetingEmailController;
+use App\Http\Controllers\MeetingMinutesController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\RecordingUploadController;
 use App\Http\Controllers\SettingController;
@@ -55,6 +56,16 @@ Route::middleware('auth')->group(function () {
     Route::get('/meetings/{meeting}', [MeetingController::class, 'show'])->name('meetings.show');
     Route::get('/meetings/{meeting}/recording', [MeetingController::class, 'recording'])->name('meetings.recording');
     Route::post('/meetings/{meeting}/process', [MeetingController::class, 'process'])->middleware('throttle:ai')->name('meetings.process'); // Rute baru untuk memproses notula
+
+    // Notulen resmi (format dinas)
+    Route::get('/meetings/{meeting}/minutes', [MeetingMinutesController::class, 'edit'])->name('meetings.minutes.edit');
+    Route::post('/meetings/{meeting}/minutes/generate', [MeetingMinutesController::class, 'generate'])->middleware('throttle:ai')->name('meetings.minutes.generate');
+    Route::put('/meetings/{meeting}/minutes', [MeetingMinutesController::class, 'update'])->name('meetings.minutes.update');
+    Route::post('/meetings/{meeting}/minutes/submit', [MeetingMinutesController::class, 'submit'])->name('meetings.minutes.submit');
+    Route::post('/meetings/{meeting}/minutes/approve', [MeetingMinutesController::class, 'approve'])->name('meetings.minutes.approve');
+    Route::post('/meetings/{meeting}/minutes/return', [MeetingMinutesController::class, 'returnForRevision'])->name('meetings.minutes.return');
+    Route::get('/meetings/{meeting}/minutes/pdf', [MeetingMinutesController::class, 'pdf'])->name('meetings.minutes.pdf');
+    Route::get('/meetings/{meeting}/minutes/docx', [MeetingMinutesController::class, 'docx'])->name('meetings.minutes.docx');
 
     // Rekaman live rapat tatap muka (transkrip berjalan).
     Route::post('/meetings/{meeting}/live/start', [LiveRecordingController::class, 'start'])->middleware('throttle:ai')->name('meetings.live.start');

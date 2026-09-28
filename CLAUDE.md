@@ -35,6 +35,7 @@ in the same commit.
 | `app/Jobs/` | `ProcessMeetingNotula` → `TranscribeMeetingSegment` (×N) → `FinalizeMeetingNotula`; `SendWebhookNotification`, 3 scheduled jobs (reminders, escalation) |
 | `RecordingUploadController` + `Meetings/Partials/RecordingUploader.vue` | resumable chunked recording upload (see pipeline) |
 | `app/Services/Audio/AudioSplitter.php` | ffmpeg wrapper: `split()` recording → fixed-length mono mp3 segments; `findSilence()` / `extract()` / `concat()` for live recording |
+| `MinutesService` + `MeetingMinutesController` + `Meetings/Minutes.vue` | official minutes (notulen dinas): AI draft → edit → submit → approve/return; PDF (`exports/minutes-pdf.blade.php`) + Word (`MinutesWordExporter`, phpoffice/phpword) |
 | `LiveRecordingService` + `LiveRecordingController` + `Meetings/Partials/LiveRecorder.vue` | live recording of in-person meetings with a running transcript (see "Live recording") |
 | `app/Console/Commands/FailStuckMeetings.php` | `meetings:fail-stuck` watchdog |
 | `app/Models/` | `Meeting`, `MeetingActionItem`, `MeetingChatMessage`, `Task` (+`TaskEvidence*`, `TaskDisposition`), `ForumComment*`, `Activity`, `AuditLog`, `AiRequestLog`, `Setting` (singleton via `Setting::current()`), `Unit`, `User`, `Webhook`; `Concerns/ScopedToUnit` |
@@ -78,7 +79,7 @@ npm run build                          # builds public/build (gitignored, NOT co
                                        # tests and after adding/renaming any Vue page, or Inertia 500s
 
 # Tests (SQLite :memory:, config in phpunit.xml)
-php artisan test                       # full suite (~20 s, ~270 tests)
+php artisan test                       # full suite (~20 s, ~290 tests)
 php artisan test --filter=ProcessMeetingTest
 php artisan test tests/Feature/Task/TaskApprovalTest.php
 
@@ -208,6 +209,18 @@ admin/superadmin **in the same unit** approves (`approved`; `TaskPolicy::approve
 back to `In Progress` with a reason. Reopening a `Done` task (status dropdown / Kanban drag) is allowed only for `TaskPolicy::manage` — admin/superadmin of that unit. `is_overdue` / `is_sla_breached` are Eloquent accessors
 (`$appends`), not columns — never true for Done/Cancelled.
 
+### Official minutes (notulen resmi)
+`meeting_minutes` (1:1 with a meeting, only once it is `Selesai Diproses`): identity fields (nomor, waktu, tempat,
+pimpinan = unit user `chairperson_id` **or** free-text `chairperson_name` for an external chair, jabatan, notulis,
+peserta, acara) + content (pembukaan, pembahasan `[{topic, notes}]`, keputusan `[string]`, penutup). **Tindak lanjut
+is not stored here** — it is the meeting's action items, so minutes and Tasks never diverge. `MinutesService::draft()`
+asks the text AI for a JSON object (formal Indonesian, from summary + decision markers + action items + transcript if
+≤ 30k chars; parsed by `MinutesDraftParser`); redrafting replaces content only, never identity fields. Status
+`draf` → `diajukan` (needs pimpinan + notulis; locked) → `disahkan` (locked for good) or `dikembalikan` (with note,
+editable again). `MeetingPolicy::approveMinutes`: the chair user if set, else a unit admin (external chair); superadmin
+always; never the submitter. Exports show a DRAF watermark/header until approved, and "Disahkan secara elektronik oleh
+… pada …" after — this is an approval record, **not** a certified e-signature (BSrE).
+
 ### Collaboration
 Forum (`ForumComment`, one level of nesting) lives on `Meetings/Show.vue` **outside** the
 "processing done" conditional — discussion is allowed on scheduled/failed meetings too. Comment
@@ -251,6 +264,8 @@ Per-unit outgoing webhooks (`WebhookDispatcher::dispatch()` called from the same
 - **API:** every `/api/*` request renders errors as JSON (`shouldRenderJsonWhen` in `bootstrap/app.php`). Web and API must share rules via services (`MeetingProcessingService::canStart()/start()`, `TaskStatusService`) — don't reimplement them in `Api\V1` controllers. Update `docs/API.md` with any endpoint change.
 - **Meeting details** are editable only while `Dijadwalkan` (enforced in both `edit()` and `update()`). `meetings.date` has no Eloquent cast — it round-trips as the raw `datetime-local` string.
 - **Last superadmin** can't be demoted (`UserController::update`) or self-deleted (`ProfileController::destroy`) — `User::isLastSuperadmin()`; the admin panel is superadmin-only, so losing the last one locks everyone out.
+- **Date-only columns** (`deadline` on Task / MeetingActionItem) are cast `date:Y-m-d`. A bare `date` cast serializes as
+  midnight-WIB-in-UTC (`2026-10-19T17:00:00Z`), which shows the previous day in browsers outside WIB.
 - **Forum replies** are one level deep: a reply to a reply is re-parented to the top-level comment.
 - Meeting search (`MeetingController::index`) uses `LIKE %...%` on `transcript`/`summary` TEXT columns — won't scale.
 
