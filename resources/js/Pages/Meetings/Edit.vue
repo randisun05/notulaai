@@ -10,8 +10,9 @@ const props = defineProps({
     meeting: Object,
 });
 
-// Format tanggal dari 'YYYY-MM-DD HH:MM:SS' menjadi 'YYYY-MM-DD' agar sesuai dengan input type="date"
-const formattedDate = props.meeting.date ? props.meeting.date.split(' ')[0] : '';
+// 'YYYY-MM-DD HH:MM:SS' -> 'YYYY-MM-DDTHH:MM' untuk input datetime-local (sama dengan Create.vue),
+// supaya jam rapat tidak hilang (jadi 00:00) setiap kali rapat diedit.
+const formattedDate = props.meeting.date ? props.meeting.date.replace(' ', 'T').slice(0, 16) : '';
 
 const form = useForm({
     title: props.meeting.title,
@@ -45,7 +46,7 @@ const submitUpdate = () => {
 
                         <div>
                             <InputLabel for="date" value="Tanggal Rapat" />
-                            <TextInput id="date" type="date" class="mt-1 block w-full" v-model="form.date" required />
+                            <TextInput id="date" type="datetime-local" class="mt-1 block w-full" v-model="form.date" required />
                             <InputError class="mt-2" :message="form.errors.date" />
                         </div>
 

@@ -8,6 +8,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Redirect;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -51,6 +52,12 @@ class ProfileController extends Controller
         ]);
 
         $user = $request->user();
+
+        if ($user->isLastSuperadmin()) {
+            throw ValidationException::withMessages([
+                'password' => 'Akun superadmin terakhir tidak bisa dihapus. Jadikan user lain superadmin terlebih dahulu.',
+            ]);
+        }
 
         Auth::logout();
 

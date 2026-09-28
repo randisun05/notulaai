@@ -136,6 +136,6 @@ Route::middleware('auth')->group(function () {
 
 });
 
-Route::post('/stt/test', [SpeechController::class, 'transcribe'])->middleware('throttle:ai');
+Route::post('/stt/test', [SpeechController::class, 'transcribe'])->middleware(['auth', 'can:access-admin-panel', 'throttle:ai']);
 
 require __DIR__.'/auth.php';

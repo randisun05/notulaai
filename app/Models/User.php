@@ -57,6 +57,15 @@ class User extends Authenticatable
     }
 
     /**
+     * Panel admin hanya bisa diakses superadmin — kehilangan yang terakhir
+     * mengunci semua orang dari manajemen user/unit/pengaturan.
+     */
+    public function isLastSuperadmin(): bool
+    {
+        return $this->hasRole('superadmin') && User::role('superadmin')->count() === 1;
+    }
+
+    /**
      * Mendapatkan semua rapat yang dibuat oleh user ini.
      */
     public function createdMeetings(): HasMany

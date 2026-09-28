@@ -33,17 +33,21 @@ class ForumCommentController extends Controller
             'attachments.*' => 'file|max:5120|mimes:jpg,jpeg,png,webp,pdf,doc,docx,xls,xlsx,ppt,pptx,txt',
         ]);
 
+        $parentId = null;
         if (! empty($validated['parent_id'])) {
             $parent = ForumComment::findOrFail($validated['parent_id']);
             if ($parent->meeting_id !== $meeting->id) {
                 abort(404);
             }
+            // Forum hanya menampilkan satu tingkat balasan: balasan atas balasan
+            // digantung ke komentar utamanya supaya tetap terlihat.
+            $parentId = $parent->parent_id ?? $parent->id;
         }
 
         $comment = ForumComment::create([
             'meeting_id' => $meeting->id,
             'user_id' => Auth::id(),
-            'parent_id' => $validated['parent_id'] ?? null,
+            'parent_id' => $parentId,
             'body' => $validated['body'],
         ]);
 

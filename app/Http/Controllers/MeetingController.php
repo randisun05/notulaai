@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Jobs\ProcessMeetingNotula;
+use App\Models\ForumComment;
+use App\Models\ForumCommentAttachment;
 use App\Models\Meeting;
 use App\Models\User;
 use App\Services\Meeting\ActivityLogger;
@@ -35,10 +37,11 @@ class MeetingController extends Controller
     {
         $meetings = $this->getFilteredMeetingsQuery() // Gunakan query yang sudah difilter
             ->when($request->input('search'), function ($q, $search) {
-                $q->where('title', 'like', "%{$search}%")
+                // Dikelompokkan supaya OR tidak lolos dari filter unit visibleTo().
+                $q->where(fn ($q) => $q->where('title', 'like', "%{$search}%")
                     ->orWhere('agenda', 'like', "%{$search}%")
                     ->orWhere('transcript', 'like', "%{$search}%")
-                    ->orWhere('summary', 'like', "%{$search}%");
+                    ->orWhere('summary', 'like', "%{$search}%"));
             })
             ->with('unit')
             ->orderBy('date', 'desc')
@@ -139,6 +142,10 @@ class MeetingController extends Controller
     {
         $this->authorize('update', $meeting);
 
+        if ($meeting->status !== 'Dijadwalkan') {
+            return redirect()->route('meetings.show', $meeting->id)->with('error', 'Rapat yang sudah diproses tidak dapat diedit.');
+        }
+
         $validated = $request->validate([
             'title' => 'required|string|max:255',
             'date' => 'required|date',
@@ -161,6 +168,13 @@ class MeetingController extends Controller
     public function process(Request $request, Meeting $meeting)
     {
         $this->authorize('process', $meeting);
+
+        // Sama dengan kondisi form upload di Meetings/Show.vue: memproses ulang
+        // rapat yang sedang/sudah diproses akan menjalankan job ganda, menghapus
+        // action item (termasuk yang sudah jadi Task), dan mengirim ulang email.
+        if (! in_array($meeting->status, ['Dijadwalkan', 'Gagal'], true)) {
+            return back()->with('error', 'Rapat ini sedang atau sudah diproses.');
+        }
 
         $inputType = $request->input('type');
         $validated = [];
@@ -250,12 +264,18 @@ class MeetingController extends Controller
     {
         $this->authorize('delete', $meeting);
 
-        // Hapus file fisik jika ada
-        if ($meeting->source_file_path) {
-            Storage::delete($meeting->source_file_path);
-        }
+        // Baris komentar forum & lampirannya ikut terhapus lewat cascade DB,
+        // tapi file fisiknya (semua di disk public) harus dibersihkan manual.
+        $paths = ForumCommentAttachment::query()
+            ->whereIn('forum_comment_id', ForumComment::where('meeting_id', $meeting->id)->select('id'))
+            ->pluck('file_path')
+            ->push($meeting->source_file_path)
+            ->filter()
+            ->all();
 
         $meeting->delete();
+
+        Storage::disk('public')->delete($paths);
 
         return redirect()->route('meetings.index')->with('success', 'Rapat berhasil dihapus.');
     }

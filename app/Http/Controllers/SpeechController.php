@@ -36,6 +36,9 @@ class SpeechController extends Controller
             $this->logger->logFailure('transcription', $provider, null, $fileName, $e->getMessage(), user: $request->user());
 
             return response()->json(['error' => 'Gagal mentranskripsi audio', 'details' => $e->getMessage()], 500);
+        } finally {
+            // Endpoint uji coba: audionya tidak dipakai lagi, jangan menumpuk di disk public.
+            Storage::disk('public')->delete($path);
         }
 
         $this->logger->logSuccess('transcription', $result->provider, null, $fileName, $result->text, durationMs: $result->durationMs, user: $request->user());

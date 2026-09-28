@@ -54,7 +54,9 @@ class TaskPolicy
      */
     public function approve(User $user, Task $task): bool
     {
-        return ($user->hasRole('admin') || $user->hasRole('superadmin')) && $this->inScope($user, $task);
+        return ($user->hasRole('admin') || $user->hasRole('superadmin'))
+            && $user->id !== $task->assignee_id
+            && $this->inScope($user, $task);
     }
 
     private function inScope(User $user, Task $task): bool

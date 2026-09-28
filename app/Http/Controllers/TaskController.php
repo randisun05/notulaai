@@ -239,7 +239,13 @@ class TaskController extends Controller
             abort(404);
         }
 
-        if ($actionItem->converted_to_task) {
+        // Klaim atomik: dua klik cepat sama-sama lolos cek `converted_to_task`
+        // kalau dibaca dulu lalu di-update, dan menghasilkan dua Task.
+        $claimed = MeetingActionItem::whereKey($actionItem->id)
+            ->where('converted_to_task', false)
+            ->update(['converted_to_task' => true]);
+
+        if (! $claimed) {
             return back()->with('error', 'Action item ini sudah pernah dijadikan Task.');
         }
 
@@ -260,8 +266,6 @@ class TaskController extends Controller
             'assignee_name' => $actionItem->assignee_name,
             'deadline' => $actionItem->deadline,
         ]);
-
-        $actionItem->update(['converted_to_task' => true]);
 
         $this->activityLogger->log($meeting, Auth::user(), 'task.created', Auth::user()->name." membuat Task \"{$task->title}\" dari Action Item.", $task);
         $this->webhookDispatcher->dispatch('task.created', $task, ['task_id' => $task->id, 'title' => $task->title, 'status' => $task->status]);
@@ -403,10 +407,11 @@ class TaskController extends Controller
             'sla_hours' => 'nullable|integer|min:1|max:8760',
         ]);
 
-        $task->update($validated);
+        $slaHours = $validated['sla_hours'] ?? null;
+        $task->update(['sla_hours' => $slaHours]);
 
-        $description = $validated['sla_hours']
-            ? Auth::user()->name." mengatur SLA Task \"{$task->title}\" menjadi {$validated['sla_hours']} jam."
+        $description = $slaHours
+            ? Auth::user()->name." mengatur SLA Task \"{$task->title}\" menjadi {$slaHours} jam."
             : Auth::user()->name." menghapus SLA Task \"{$task->title}\".";
 
         $this->activityLogger->log($task->meeting, Auth::user(), 'task.sla_updated', $description, $task);

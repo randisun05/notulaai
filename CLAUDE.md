@@ -73,7 +73,7 @@ npm run build                          # builds public/build (gitignored, NOT co
                                        # tests and after adding/renaming any Vue page, or Inertia 500s
 
 # Tests (SQLite :memory:, config in phpunit.xml)
-php artisan test                       # full suite (~10 s, ~199 tests)
+php artisan test                       # full suite (~10 s, ~216 tests)
 php artisan test --filter=ProcessMeetingTest
 php artisan test tests/Feature/Task/TaskApprovalTest.php
 
@@ -111,7 +111,7 @@ free-tier model), `whisper_local` (the Flask sidecar).
 
 **Rate limiting:** every LLM-calling route (`meetings.chat.store`, `meetings.emails.generate|send`,
 `meetings.action-items.regenerate`, `meetings.process`, `dashboard.insight`, `/stt/test`) carries
-`throttle:ai`. The `ai` limiter (`AppServiceProvider::boot`, tunable via `config('ai.rate_limits')` /
+`throttle:ai`. `/stt/test` (STT smoke test, not used by the UI) is superadmin-only and deletes its upload afterwards. The `ai` limiter (`AppServiceProvider::boot`, tunable via `config('ai.rate_limits')` /
 `AI_RATE_*`) stacks per-minute + per-day-per-user + per-day-per-unit limits. A 429 is rendered
 (`bootstrap/app.php` `withExceptions`) as a localized `{error: ...}` JSON for XHR or `back()->with('error')`
 for Inertia POSTs.
@@ -125,7 +125,7 @@ untouched. Result DTOs carry `provider`/`model`, so `ai_request_logs` records wh
 actually served the request. Passing an explicit name (`->text('gemini')`) skips the chain.
 
 ### Meeting processing pipeline
-`MeetingController::process()` → dispatches `ProcessMeetingNotula` job → `MeetingProcessingService::process()`:
+`MeetingController::process()` (only from `Dijadwalkan`/`Gagal` — re-processing would duplicate the job, wipe converted action items, and re-email the unit) → dispatches `ProcessMeetingNotula` job → `MeetingProcessingService::process()`:
 1. `extractTranscript()` branches on file extension: audio → transcription provider, `txt`/`md` → read as-is, image → OCR provider.
 2. `summarize()` — one text-provider call; the prompt asks the model to return **HTML**. It is passed through `App\Support\HtmlSanitizer::clean()` (HTMLPurifier `ai_html` profile) before being stored in `meetings.summary`, then rendered with `v-html` / `{!! !!}`. Same sanitizer guards the free-text `meetings.agenda` (`MeetingController`), the AI email draft body (`EmailDraftGenerator`), and the user-edited send body (`MeetingEmailController`). Forum comment bodies are safe a different way — `renderBody()` in Vue HTML-escapes then only wraps `@Mention` spans.
 3. `generateActionItems()` — second text call returning a JSON array, parsed by `ActionItemsParser` (unit-tested against code-fence / prose-wrapped / missing-title LLM quirks). **Best-effort**: a failure here never fails the meeting.
@@ -157,7 +157,7 @@ access into a 404 before the Policy's 403 runs. Single-record authorization goes
 ### Task approval workflow
 `Done` status is unreachable through the normal status dropdown — `TaskController::updateStatus()`
 rejects it. Path: assignee submits for review (requires evidence) → `approval_requested` → an
-admin/superadmin **in the same unit** approves (`approved`, self-approval blocked by policy) or rejects
+admin/superadmin **in the same unit** approves (`approved`; `TaskPolicy::approve` refuses the task's own assignee, so an admin can't approve their own work) or rejects
 back to `In Progress` with a reason. `is_overdue` / `is_sla_breached` are Eloquent accessors
 (`$appends`), not columns — never true for Done/Cancelled.
 
@@ -194,6 +194,9 @@ Per-unit outgoing webhooks (`WebhookDispatcher::dispatch()` called from the same
 - **Excel export tests:** assert on the collection via `Excel::fake()` + `Excel::assertDownloaded(...)`, not on raw bytes.
 - **Tests run on SQLite**, prod is MySQL — watch for engine differences (`whereJsonContains`, fulltext, etc.).
 - **Dead stubs:** `SourcePath` model/migration/seeder are unused. `whisper-api/` and `venv/` are empty local dirs (gitignored). `routes/api.php` is effectively empty despite API tokens being a feature.
+- **Meeting details** are editable only while `Dijadwalkan` (enforced in both `edit()` and `update()`). `meetings.date` has no Eloquent cast — it round-trips as the raw `datetime-local` string.
+- **Last superadmin** can't be demoted (`UserController::update`) or self-deleted (`ProfileController::destroy`) — `User::isLastSuperadmin()`; the admin panel is superadmin-only, so losing the last one locks everyone out.
+- **Forum replies** are one level deep: a reply to a reply is re-parented to the top-level comment.
 - Meeting search (`MeetingController::index`) uses `LIKE %...%` on `transcript`/`summary` TEXT columns — won't scale.
 
 ## Following the project's task workflow

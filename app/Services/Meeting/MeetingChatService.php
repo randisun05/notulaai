@@ -24,14 +24,16 @@ class MeetingChatService
 
     public function ask(Meeting $meeting, string $question, ?User $user): MeetingChatMessage
     {
+        // Prompt dibangun sebelum pertanyaan disimpan, supaya pertanyaan baru
+        // tidak ikut muncul dua kali (di riwayat dan sebagai pertanyaan baru).
+        $prompt = $this->buildPrompt($meeting, $question);
+
         MeetingChatMessage::create([
             'meeting_id' => $meeting->id,
             'user_id' => $user?->id,
             'role' => 'user',
             'content' => $question,
         ]);
-
-        $prompt = $this->buildPrompt($meeting, $question);
 
         $provider = $this->ai->activeTextProvider();
         $model = Config::get("ai.providers.{$provider}.model");

@@ -99,6 +99,10 @@ class UserController extends Controller
             'password' => ['nullable', 'confirmed', Rules\Password::defaults()],
         ]);
 
+        if ($request->role !== 'superadmin' && $user->isLastSuperadmin()) {
+            return back()->with('error', 'Tidak bisa menurunkan role superadmin terakhir. Jadikan user lain superadmin terlebih dahulu.');
+        }
+
         $previousRole = $user->role;
 
         $user->fill($request->only(['name', 'email', 'role', 'unit_id', 'phone_number']));
