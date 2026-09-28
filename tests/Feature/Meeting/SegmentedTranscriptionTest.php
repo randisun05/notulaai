@@ -15,7 +15,6 @@ use App\Services\AI\DTO\AiTranscriptionResult;
 use App\Services\Audio\AudioSplitter;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Storage;
@@ -111,19 +110,6 @@ class SegmentedTranscriptionTest extends TestCase
         ProcessMeetingNotula::dispatch($meeting);
 
         $this->assertSame(3, $meeting->segments()->count());
-        $this->assertSame('Selesai Diproses', $meeting->fresh()->status);
-    }
-
-    public function test_video_recordings_are_accepted_for_processing(): void
-    {
-        $meeting = $this->meetingWithRecording();
-        $meeting->update(['status' => 'Dijadwalkan']);
-
-        $this->actingAs($this->user)->post(route('meetings.process', $meeting), [
-            'type' => 'audio',
-            'audio_file' => UploadedFile::fake()->create('zoom.mp4', 100, 'video/mp4'),
-        ])->assertSessionHasNoErrors();
-
         $this->assertSame('Selesai Diproses', $meeting->fresh()->status);
     }
 

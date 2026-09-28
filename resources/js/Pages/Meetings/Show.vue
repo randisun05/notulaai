@@ -7,6 +7,7 @@ import PrimaryButton from '@/Components/PrimaryButton.vue';
 import DangerButton from '@/Components/DangerButton.vue'; // <-- Import Tombol Merah
 import ForumSection from '@/Pages/Meetings/Partials/ForumSection.vue';
 import ActivityTimeline from '@/Pages/Meetings/Partials/ActivityTimeline.vue';
+import RecordingUploader from '@/Pages/Meetings/Partials/RecordingUploader.vue';
 import { Head, useForm, usePage, Link, router } from '@inertiajs/vue3';
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
 import axios from 'axios';
@@ -178,41 +179,31 @@ const inputType = ref('text'); // 'text', 'audio', 'file', 'image'
 const form = useForm({
     type: 'text',
     text_input: '',
-    audio_file: null,
     text_file: null,
     image_file: null,
 });
 
+// Rekaman audio/video tidak lewat form ini, tapi lewat RecordingUploader (upload bertahap).
 const onFileChange = (event, fileType) => {
-    // ... (fungsi ini tidak berubah)
     const file = event.target.files[0];
     if (!file) return;
 
-    if (fileType === 'audio') {
-        form.audio_file = file;
-        form.text_file = null; // Reset file lain
-        form.image_file = null;
-    } else if (fileType === 'text') {
+    if (fileType === 'text') {
         form.text_file = file;
-        form.audio_file = null; // Reset file lain
-        form.image_file = null;
+        form.image_file = null; // Reset file lain
     } else if (fileType === 'image') {
         form.image_file = file;
-        form.audio_file = null; // Reset file lain
-        form.text_file = null;
+        form.text_file = null; // Reset file lain
     }
 };
 
 const submitProcess = () => {
-    // ... (fungsi ini tidak berubah)
     form.type = inputType.value;
     form.post(route('meetings.process', props.meeting.id), {
         forceFormData: true,
         preserveState: true,
         preserveScroll: true,
         onSuccess: () => {
-            const audioInput = document.getElementById('audio_input');
-            if (audioInput) audioInput.value = '';
             const textFileInput = document.getElementById('text_file_input');
             if (textFileInput) textFileInput.value = '';
             const imageInput = document.getElementById('image_input');
@@ -232,15 +223,15 @@ const formattedDate = computed(() => {
 });
 
 const sourceFileUrl = computed(() => {
-    // ... (fungsi ini tidak berubah)
-    return props.meeting.source_file_path ? `/storage/${props.meeting.source_file_path}` : null;
+    // Lewat route yang dicek hak aksesnya: rekaman disimpan di disk privat.
+    return props.meeting.source_file_path ? route('meetings.recording', props.meeting.id) : null;
 });
 
 const isAudioFile = computed(() => {
     // ... (fungsi ini tidak berubah)
     if (!props.meeting.source_file_path) return false;
     const extension = props.meeting.source_file_path.split('.').pop().toLowerCase();
-    return ['mp3', 'wav', 'm4a'].includes(extension);
+    return ['mp3', 'mpga', 'wav', 'm4a', 'm4b', 'mp4', 'mov', 'webm', 'weba', 'ogg', 'oga', 'opus', 'aac', 'flac', 'mkv', 'mka'].includes(extension);
 });
 
 // Fungsi untuk menghapus rapat
@@ -311,7 +302,7 @@ const deleteMeeting = () => {
                             <div v-if="isAudioFile" class="mb-6">
                                 <h3 class="text-lg font-semibold mb-2">Rekaman Audio</h3>
                                 <audio controls class="w-full">
-                                    <source :src="sourceFileUrl" type="audio/mpeg">
+                                    <source :src="sourceFileUrl">
                                     Browser Anda tidak mendukung elemen audio.
                                 </audio>
                             </div>
@@ -457,11 +448,8 @@ const deleteMeeting = () => {
                                     <InputError class="mt-2" :message="form.errors.text_input" />
                                 </div>
 
-                                <div v-show="inputType === 'audio'">
-                                    <label for="audio_input" class="block text-sm font-medium text-gray-700">File Rekaman Audio/Video (.mp3, .wav, .m4a, .mp4, .webm, .ogg, .aac, .flac, .mov)</label>
-                                    <p class="text-xs text-gray-500 mb-1">Rekaman berjam-jam didukung: rekaman dipecah per 10 menit dan ditranskrip bertahap. Untuk video (mis. rekaman Zoom) hanya audionya yang dipakai.</p>
-                                    <input @change="onFileChange($event, 'audio')" id="audio_input" type="file" accept=".mp3,.wav,.m4a,.mp4,.webm,.ogg,.oga,.opus,.aac,.flac,.mov,.mkv,audio/*,video/*" class="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"/>
-                                    <InputError class="mt-2" :message="form.errors.audio_file" />
+                                <div v-if="inputType === 'audio'">
+                                    <RecordingUploader :meeting-id="meeting.id" @done="router.reload()" />
                                 </div>
 
                                 <div v-show="inputType === 'file'">
@@ -477,12 +465,12 @@ const deleteMeeting = () => {
                                     <InputError class="mt-2" :message="form.errors.image_file" />
                                 </div>
 
-                                <div v-if="form.progress" class="mt-4">
+                                <div v-if="form.progress && inputType !== 'audio'" class="mt-4">
                                     <div class="flex justify-between text-xs text-gray-600 mb-1"><span>Mengunggah...</span><span>{{ form.progress.percentage }}%</span></div>
                                     <div class="w-full bg-gray-100 rounded-full h-2"><div class="bg-brand-600 h-2 rounded-full transition-all" :style="{ width: form.progress.percentage + '%' }"></div></div>
                                 </div>
 
-                                <div class="flex items-center mt-6">
+                                <div v-if="inputType !== 'audio'" class="flex items-center mt-6">
                                     <PrimaryButton :class="{ 'opacity-25': form.processing }" :disabled="form.processing">
                                         Proses Notula
                                     </PrimaryButton>

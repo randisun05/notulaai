@@ -88,6 +88,12 @@ return [
         'segment_seconds' => (int) env('AI_AUDIO_SEGMENT_SECONDS', 600),
         'min_segment_seconds' => 1,
         'split_timeout' => (int) env('AI_AUDIO_SPLIT_TIMEOUT', 1800),
+
+        // Upload bertahap: browser mengirim potongan `chunk_bytes`; post_max_size
+        // PHP (default 8M) harus lebih besar dari itu.
+        'max_upload_mb' => (int) env('AI_RECORDING_MAX_UPLOAD_MB', 2048),
+        'chunk_bytes' => 5 * 1024 * 1024,
+        'max_chunk_bytes' => 8 * 1024 * 1024,
     ],
 
     /*

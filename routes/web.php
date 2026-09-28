@@ -10,6 +10,7 @@ use App\Http\Controllers\MeetingChatController;
 use App\Http\Controllers\MeetingController;
 use App\Http\Controllers\MeetingEmailController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\RecordingUploadController;
 use App\Http\Controllers\SettingController;
 use App\Http\Controllers\SpeechController;
 use App\Http\Controllers\TaskController;
@@ -51,7 +52,14 @@ Route::middleware('auth')->group(function () {
     Route::get('/meetings/create', [MeetingController::class, 'create'])->name('meetings.create'); // Rute untuk menampilkan form
     Route::post('/meetings', [MeetingController::class, 'store'])->name('meetings.store'); // Rute untuk menyimpan data
     Route::get('/meetings/{meeting}', [MeetingController::class, 'show'])->name('meetings.show');
+    Route::get('/meetings/{meeting}/recording', [MeetingController::class, 'recording'])->name('meetings.recording');
     Route::post('/meetings/{meeting}/process', [MeetingController::class, 'process'])->middleware('throttle:ai')->name('meetings.process'); // Rute baru untuk memproses notula
+
+    // Upload rekaman bertahap (bisa dilanjutkan) — satu-satunya jalur upload audio/video.
+    Route::post('/meetings/{meeting}/recording-uploads', [RecordingUploadController::class, 'store'])->name('meetings.recording-uploads.store');
+    Route::put('/recording-uploads/{upload}', [RecordingUploadController::class, 'append'])->name('recording-uploads.append');
+    Route::post('/recording-uploads/{upload}/complete', [RecordingUploadController::class, 'complete'])->middleware('throttle:ai')->name('recording-uploads.complete');
+    Route::delete('/recording-uploads/{upload}', [RecordingUploadController::class, 'destroy'])->name('recording-uploads.destroy');
 
     // --- TAMBAHKAN DUA ROUTE INI ---
     Route::get('/meetings/{meeting}/edit', [MeetingController::class, 'edit'])->name('meetings.edit');

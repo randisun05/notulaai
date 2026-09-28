@@ -82,10 +82,11 @@ class MeetingProcessingService
     /**
      * Titik masuk tunggal (web & API): simpan path sumber, tandai Memproses, antrekan job.
      */
-    public function start(Meeting $meeting, string $sourceFilePath, User $user): void
+    public function start(Meeting $meeting, string $sourceFilePath, User $user, string $disk = 'public'): void
     {
         $meeting->update([
             'source_file_path' => $sourceFilePath,
+            'source_disk' => $disk,
             'status' => 'Memproses',
             'processing_stage' => null,
             'processing_total_segments' => null,
@@ -198,7 +199,8 @@ class MeetingProcessingService
     private function startSegmentedTranscription(Meeting $meeting): void
     {
         $filePath = $meeting->source_file_path;
-        if (! $filePath || ! Storage::disk('public')->exists($filePath)) {
+        $source = Storage::disk($meeting->source_disk ?: 'public');
+        if (! $filePath || ! $source->exists($filePath)) {
             throw new RuntimeException("File sumber tidak ditemukan di path: {$filePath}");
         }
 
@@ -208,7 +210,7 @@ class MeetingProcessingService
 
         $directory = $this->segmentDirectory($meeting);
         $parts = $this->audioSplitter->split(
-            Storage::disk('public')->path($filePath),
+            $source->path($filePath),
             Storage::disk('local')->path($directory),
         );
 
@@ -308,14 +310,15 @@ class MeetingProcessingService
     private function extractTranscript(Meeting $meeting): string
     {
         $filePath = $meeting->source_file_path;
-        if (! $filePath || ! Storage::disk('public')->exists($filePath)) {
+        $source = Storage::disk($meeting->source_disk ?: 'public');
+        if (! $filePath || ! $source->exists($filePath)) {
             throw new RuntimeException("File sumber tidak ditemukan di path: {$filePath}");
         }
 
         $extension = strtolower(pathinfo($filePath, PATHINFO_EXTENSION));
 
         if (in_array($extension, self::TEXT_EXTENSIONS)) {
-            $transcript = Storage::disk('public')->get($filePath);
+            $transcript = $source->get($filePath);
 
             if (empty(trim($transcript))) {
                 throw new RuntimeException('Transkrip kosong, tidak bisa membuat rangkuman.');
@@ -330,7 +333,7 @@ class MeetingProcessingService
 
             try {
                 $result = $this->ai->ocr()->extractText(
-                    absoluteFilePath: Storage::disk('public')->path($filePath),
+                    absoluteFilePath: $source->path($filePath),
                     fileName: $fileName,
                 );
             } catch (Throwable $e) {

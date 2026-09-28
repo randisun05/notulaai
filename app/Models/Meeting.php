@@ -23,6 +23,7 @@ class Meeting extends Model
         'transcript',
         'summary',
         'source_file_path', // Ditambahkan di sini
+        'source_disk',
         'processing_stage',
         'processing_total_segments',
         'processing_heartbeat_at',

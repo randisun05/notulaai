@@ -33,6 +33,7 @@ in the same commit.
 | `app/Services/Task/TaskStatusService.php` | status-change rules shared by web + API (selectable statuses, Done-reopen lock, activity + webhook) |
 | `app/Services/{Analytics,Audit,Forum,Webhook}/` | `DashboardInsightGenerator`, `AuditLogger`, `MentionParser`, `WebhookDispatcher` |
 | `app/Jobs/` | `ProcessMeetingNotula` → `TranscribeMeetingSegment` (×N) → `FinalizeMeetingNotula`; `SendWebhookNotification`, 3 scheduled jobs (reminders, escalation) |
+| `RecordingUploadController` + `Meetings/Partials/RecordingUploader.vue` | resumable chunked recording upload (see pipeline) |
 | `app/Services/Audio/AudioSplitter.php` | ffmpeg wrapper: recording → fixed-length mono mp3 segments with exact start/end |
 | `app/Console/Commands/FailStuckMeetings.php` | `meetings:fail-stuck` watchdog |
 | `app/Models/` | `Meeting`, `MeetingActionItem`, `MeetingChatMessage`, `Task` (+`TaskEvidence*`, `TaskDisposition`), `ForumComment*`, `Activity`, `AuditLog`, `AiRequestLog`, `Setting` (singleton via `Setting::current()`), `Unit`, `User`, `Webhook`; `Concerns/ScopedToUnit` |
@@ -76,7 +77,7 @@ npm run build                          # builds public/build (gitignored, NOT co
                                        # tests and after adding/renaming any Vue page, or Inertia 500s
 
 # Tests (SQLite :memory:, config in phpunit.xml)
-php artisan test                       # full suite (~15 s, ~245 tests)
+php artisan test                       # full suite (~15 s, ~255 tests)
 php artisan test --filter=ProcessMeetingTest
 php artisan test tests/Feature/Task/TaskApprovalTest.php
 
@@ -130,6 +131,18 @@ untouched. Result DTOs carry `provider`/`model`, so `ai_request_logs` records wh
 actually served the request. Passing an explicit name (`->text('gemini')`) skips the chain.
 
 ### Meeting processing pipeline
+**Recordings arrive via resumable chunked upload**, not the `process` form: `RecordingUploader.vue` →
+`POST /meetings/{id}/recording-uploads` (init; same meeting+user+name+size returns the existing
+upload, so re-picking the file resumes) → `PUT /recording-uploads/{uuid}` with a raw 5 MB body and
+`X-Upload-Offset` (a wrong offset gets 409 + the server position; bytes past `received_bytes` are
+truncated first, so a half-written chunk never corrupts the file; serialized with a cache lock) →
+`POST .../complete` (size check, finfo must say `audio/*`/`video/*`) → moved to
+`recordings/{meeting}/{uuid}.ext` on the **private `local` disk** (`meetings.source_disk = local`) →
+`MeetingProcessingService::start()`. Raw bodies dodge `upload_max_filesize`; PHP `post_max_size`
+must stay above the chunk size (8 MB default is fine). The player streams via the authorized
+`meetings.recording` route (Range-capable), never `/storage`. `recordings:prune-uploads` (daily)
+removes abandoned partial uploads. Older meetings keep `source_disk = public`.
+
 `MeetingController::process()` / API `POST /api/v1/meetings/{id}/transcript` → `MeetingProcessingService::start()` (only from `Dijadwalkan`/`Gagal`, see `canStart()` — re-processing would duplicate the job, wipe converted action items, and re-email the unit) → dispatches `ProcessMeetingNotula` job → `MeetingProcessingService::process()`:
 1. **Audio/video** (`AUDIO_EXTENSIONS`, incl. Zoom `.mp4`): `AudioSplitter` (ffmpeg, `config('ai.audio')`) cuts the recording into ~10-min mono 16 kHz mp3 segments on the private `local` disk (`meeting_segments/{id}/`), one `meeting_segments` row each, and dispatches one `TranscribeMeetingSegment` job per segment. Each segment job transcribes, deletes its audio, touches `processing_heartbeat_at`, and the one that finishes last atomically claims `processing_stage` `transcribing → summarizing` and dispatches `FinalizeMeetingNotula`, which joins segments as `[HH:MM:SS]`-labelled blocks and calls `finalize()`. A segment failing all tries → `markFailed()` (atomic, one activity). Re-processing after `Gagal` deletes old segments and starts over.
    **Text/image:** `extractTranscript()` → `txt`/`md` read as-is, image → OCR provider, then `finalize()` in the same job.

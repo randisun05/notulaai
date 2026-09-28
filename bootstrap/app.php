@@ -83,6 +83,10 @@ return Application::configure(basePath: dirname(__DIR__))
         $schedule->job(new EscalateOverdueTasks)
             ->hourly();
 
+        $schedule->command('recordings:prune-uploads')
+            ->dailyAt('02:00')
+            ->timezone($timezone);
+
         $schedule->command('meetings:fail-stuck', ['--minutes=20'])
             ->everyFiveMinutes()
             ->withoutOverlapping();

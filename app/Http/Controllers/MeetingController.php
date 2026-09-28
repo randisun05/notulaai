@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\ForumComment;
 use App\Models\ForumCommentAttachment;
 use App\Models\Meeting;
+use App\Models\RecordingUpload;
 use App\Models\User;
 use App\Services\Meeting\ActivityLogger;
 use App\Services\Meeting\EmailDraftGenerator;
@@ -17,13 +18,6 @@ use Inertia\Inertia;
 
 class MeetingController extends Controller
 {
-    /** Rekaman audio, plus video (rekaman Zoom/Meet) yang audionya diambil ffmpeg. */
-    public const RECORDING_MIME_TYPES = [
-        'audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/x-wav', 'audio/wave', 'audio/x-m4a', 'audio/mp4', 'audio/aac', 'audio/x-aac',
-        'audio/ogg', 'audio/opus', 'audio/webm', 'audio/flac', 'audio/x-flac', 'audio/x-matroska',
-        'video/mp4', 'video/webm', 'video/quicktime', 'video/x-matroska', 'video/ogg',
-    ];
-
     public function __construct(private readonly ActivityLogger $activityLogger) {}
 
     /**
@@ -185,10 +179,9 @@ class MeetingController extends Controller
         $validated = [];
         $sourceFilePath = null;
 
-        // Validasi berdasarkan tipe input
-        if ($inputType === 'audio') {
-            $validated = $request->validate(['audio_file' => 'required|file|mimetypes:'.implode(',', self::RECORDING_MIME_TYPES)]);
-        } elseif ($inputType === 'file') {
+        // Validasi berdasarkan tipe input. Rekaman audio/video tidak lewat sini,
+        // tapi lewat upload bertahap (RecordingUploadController).
+        if ($inputType === 'file') {
             $validated = $request->validate(['text_file' => 'required|file|mimetypes:text/plain,text/markdown']);
         } elseif ($inputType === 'text') {
             $validated = $request->validate(['text_input' => 'required|string']);
@@ -201,12 +194,7 @@ class MeetingController extends Controller
         // =================================================================
         // PERBAIKAN LOGIKA PENYIMPANAN FILE (INI BAGIAN YANG BENAR)
         // =================================================================
-        if ($inputType === 'audio') {
-            $file = $validated['audio_file'];
-            // Simpan di storage/app/public/audio_uploads
-            // $sourceFilePath akan berisi "audio_uploads/filename.mp3"
-            $sourceFilePath = $file->store('audio_uploads', 'public');
-        } elseif ($inputType === 'file') {
+        if ($inputType === 'file') {
             $file = $validated['text_file'];
             // Simpan di storage/app/public/text_uploads
             // $sourceFilePath akan berisi "text_uploads/filename.txt"
@@ -228,6 +216,28 @@ class MeetingController extends Controller
 
         return redirect()->route('meetings.show', $meeting->id)
             ->with('success', 'Notula sedang diproses. Halaman akan diperbarui setelah selesai.');
+    }
+
+    /**
+     * Putar rekaman rapat. Rekaman baru ada di disk privat, jadi tidak bisa
+     * diakses lewat /storage — hanya lewat sini, setelah cek hak akses.
+     * BinaryFileResponse mendukung Range request, jadi pemutar bisa di-seek.
+     */
+    public function recording(Meeting $meeting)
+    {
+        $this->authorize('view', $meeting);
+
+        $disk = Storage::disk($meeting->source_disk ?: 'public');
+        $extension = strtolower(pathinfo((string) $meeting->source_file_path, PATHINFO_EXTENSION));
+
+        abort_unless(
+            $meeting->source_file_path
+                && in_array($extension, MeetingProcessingService::AUDIO_EXTENSIONS, true)
+                && $disk->exists($meeting->source_file_path),
+            404,
+        );
+
+        return response()->file($disk->path($meeting->source_file_path));
     }
 
     /**
@@ -265,13 +275,20 @@ class MeetingController extends Controller
         $paths = ForumCommentAttachment::query()
             ->whereIn('forum_comment_id', ForumComment::where('meeting_id', $meeting->id)->select('id'))
             ->pluck('file_path')
-            ->push($meeting->source_file_path)
-            ->filter()
             ->all();
+
+        $partialUploads = RecordingUpload::where('meeting_id', $meeting->id)->get()->map->partialPath()->all();
 
         $meeting->delete();
 
         Storage::disk('public')->delete($paths);
+        Storage::disk('local')->delete($partialUploads);
+        if ($meeting->source_file_path) {
+            Storage::disk($meeting->source_disk ?: 'public')->delete($meeting->source_file_path);
+        }
+        // Rekaman privat, potongan audio & sisa upload bertahap (semua di disk local).
+        Storage::disk('local')->deleteDirectory("recordings/{$meeting->id}");
+        Storage::disk('local')->deleteDirectory("meeting_segments/{$meeting->id}");
 
         return redirect()->route('meetings.index')->with('success', 'Rapat berhasil dihapus.');
     }
