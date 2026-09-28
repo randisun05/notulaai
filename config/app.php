@@ -69,7 +69,9 @@ return [
     |
     */
 
-    'timezone' => 'UTC',
+    // WIB. Sampai 2026-09 app berjalan di UTC — data lama digeser lewat
+    // docs/ops/shift-timestamps-utc-to-wib.sql (lihat runbook di folder yang sama).
+    'timezone' => env('APP_TIMEZONE', 'Asia/Jakarta'),
 
     /*
     |--------------------------------------------------------------------------

@@ -199,9 +199,16 @@ admin-only security `audit_logs` (CRUD on User/Unit/Setting/ApiToken/Webhook; lo
 
 ### Scheduled work (`bootstrap/app.php` → `withSchedule()`)
 `SendMeetingReminders` (daily 07:00), `SendTaskDeadlineReminders` (daily 07:30), `EscalateOverdueTasks`
-(hourly — emails the task *creator*, there is no manager role), `meetings:fail-stuck --minutes=10` (every 5 min).
+(hourly — emails the task *creator*, there is no manager role), `meetings:fail-stuck --minutes=20` (every 5 min),
+`recordings:prune-uploads` (daily 02:00).
 Timezone comes from `Setting::current()->timezone`, wrapped in `rescue()` (falls back to `Asia/Jakarta`)
 because `withSchedule()` runs on every artisan call, including ones with no DB.
+
+**App timezone is WIB** (`APP_TIMEZONE`, default `Asia/Jakarta`, `config/app.php`) — timestamps are
+stored as WIB wall-clock strings. Until 2026-09 it was UTC; existing installs shift old data once with
+`docs/ops/shift-timestamps-utc-to-wib.sql` following `docs/ops/MIGRASI-ZONA-WAKTU-WIB.md` (run by the
+server team, never automatically — a mass rewrite of production data). If you add a datetime/timestamp
+column before that script has run everywhere, add it to the script too.
 
 ### Webhooks
 Per-unit outgoing webhooks (`WebhookDispatcher::dispatch()` called from the same sites as
