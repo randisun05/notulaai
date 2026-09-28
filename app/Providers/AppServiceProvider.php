@@ -26,6 +26,10 @@ class AppServiceProvider extends ServiceProvider
             return Limit::perMinute(60)->by($request->user()?->id ?: $request->ip());
         });
 
+        // Public QR check-in page (no login): a meeting room's worth of phones share one
+        // Wi-Fi IP, so this is generous per IP but still stops scripted flooding.
+        RateLimiter::for('attendance', fn (Request $request) => Limit::perMinute(120)->by('attendance:'.$request->ip()));
+
         // Shared budget for every endpoint that calls an LLM (see config/ai.php).
         RateLimiter::for('ai', function (Request $request) {
             $config = config('ai.rate_limits');

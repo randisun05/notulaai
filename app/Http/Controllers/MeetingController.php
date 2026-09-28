@@ -120,6 +120,11 @@ class MeetingController extends Controller
             'progress' => fn () => $meeting->fresh()->processingProgress(),
             'live' => fn () => $meeting->fresh()->liveState(Auth::user()),
             'markerTypes' => MeetingMarker::TYPES,
+            'attendance' => fn () => [
+                'url' => route('attendance.check-in', $meeting->attendanceToken()),
+                'open' => $meeting->fresh()->isAttendanceOpen(),
+                'list' => $meeting->attendances()->get(['id', 'user_id', 'name', 'position', 'organization', 'method', 'checked_in_at']),
+            ],
         ]);
     }
 

@@ -50,7 +50,7 @@ class MinutesService
                 'title' => $meeting->title,
                 'time_range' => $this->timeRange($meeting),
                 'minute_taker_id' => $user->id,
-                'attendees' => $meeting->attendees,
+                'attendees' => $meeting->attendees ?: ($meeting->attendances()->exists() ? 'Sebagaimana daftar hadir terlampir' : null),
                 'agenda' => $this->plainText($meeting->agenda) ?: null,
                 'closing' => MeetingMinutes::DEFAULT_CLOSING,
             ]);
@@ -93,6 +93,9 @@ class MinutesService
             'approved_at' => now(),
         ]);
 
+        // Notula final: daftar hadir yang tercetak di dalamnya tidak boleh bertambah lagi.
+        $minutes->meeting->update(['attendance_closed_at' => $minutes->meeting->attendance_closed_at ?? now()]);
+
         $this->activityLogger->log($minutes->meeting, $user, 'minutes.approved', "{$user->name} mengesahkan notulen resmi rapat ini.");
     }
 
@@ -119,6 +122,8 @@ class MinutesService
         $actionItems = $meeting->actionItems->map(fn ($item) => '- '.$item->title
             .($item->assignee_name ? " (PIC: {$item->assignee_name})" : '')
             .($item->deadline ? ' (tenggat '.$item->deadline->toDateString().')' : ''))->implode("\n");
+
+        $attendance = $meeting->attendances()->get()->map(fn ($a) => '- '.$a->describe())->implode("\n");
 
         $prompt = <<<PROMPT
         Susun bagian RESUME dari NOTULA RAPAT resmi instansi pemerintah dalam Bahasa Indonesia baku ragam dinas
@@ -150,6 +155,9 @@ class MinutesService
 
         Tindak lanjut yang sudah tercatat (dicantumkan terpisah; jangan diulang di "kesimpulan" kecuali memang keputusan):
         {$actionItems}
+
+        Daftar hadir (pakai nama & jabatan ini untuk menyebut pembicara bila cocok):
+        {$attendance}
         PROMPT;
 
         if ($transcript !== '' && mb_strlen($transcript) <= self::TRANSCRIPT_CHARS) {

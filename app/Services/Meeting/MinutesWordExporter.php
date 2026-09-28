@@ -26,7 +26,7 @@ class MinutesWordExporter
     public function export(array $data): string
     {
         ['meeting' => $meeting, 'minutes' => $minutes, 'actionItems' => $actionItems, 'setting' => $setting,
-            'logoPath' => $logoPath, 'date' => $date, 'isDraft' => $isDraft, 'photos' => $photos] = $data;
+            'logoPath' => $logoPath, 'date' => $date, 'isDraft' => $isDraft, 'photos' => $photos, 'attendances' => $attendances] = $data;
 
         $word = new PhpWord;
         $word->setDefaultFontName('Arial');
@@ -111,6 +111,24 @@ class MinutesWordExporter
             $section->addTextBreak();
             $section->addText('Notula ini telah disetujui melalui aplikasi oleh '.$minutes->approver->name.' pada '
                 .$minutes->approved_at->locale('id')->isoFormat('D MMMM Y, HH.mm').' WIB.', ['size' => 8, 'color' => '444444']);
+        }
+
+        if ($attendances->isNotEmpty()) {
+            $section->addPageBreak();
+            $section->addText('DAFTAR HADIR', ['bold' => true], ['alignment' => Jc::CENTER, 'spaceAfter' => 0]);
+            $section->addText((string) ($minutes->title ?: $meeting->title), ['size' => 10], ['alignment' => Jc::CENTER, 'spaceAfter' => 0]);
+            $section->addText($date->isoFormat('dddd').'/'.$date->isoFormat('D MMMM Y'), ['size' => 10], ['alignment' => Jc::CENTER, 'spaceAfter' => 200]);
+            $table = $section->addTable(['borderSize' => 6, 'borderColor' => '000000', 'cellMargin' => 60]);
+            $table->addRow();
+            foreach (['No' => 600, 'Nama' => 2700, 'Jabatan' => 2500, 'Unit/Instansi' => 2300, 'Pukul' => 900] as $header => $width) {
+                $table->addCell($width, ['bgColor' => 'EEEEEE'])->addText($header, ['bold' => true, 'size' => 10]);
+            }
+            foreach ($attendances as $i => $person) {
+                $table->addRow();
+                foreach ([(string) ($i + 1), $person->name, $person->position ?: '-', $person->organization ?: '-', $person->checked_in_at->format('H.i')] as $j => $value) {
+                    $table->addCell([600, 2700, 2500, 2300, 900][$j])->addText($value, ['size' => 10]);
+                }
+            }
         }
 
         if ($photos->isNotEmpty()) {

@@ -33,6 +33,12 @@
         .signature .name { text-decoration: underline; }
         .approval { margin-top: 18px; font-size: 8pt; color: #444; }
         .watermark { position: fixed; top: 38%; left: 10%; font-size: 110pt; color: rgba(200, 0, 0, 0.12); transform: rotate(-35deg); font-weight: bold; z-index: -1; }
+        .attendance { page-break-before: always; }
+        .attendance h2 { font-size: 11pt; margin: 0; text-align: center; }
+        .attendance .subtitle { text-align: center; font-size: 9.5pt; margin: 2px 0 12px; }
+        .attendance table { width: 100%; border-collapse: collapse; font-size: 9.5pt; line-height: 1.35; }
+        .attendance th, .attendance td { border: 1px solid #000; padding: 4px 5px; vertical-align: top; }
+        .attendance th { background: #eee; }
         .documentation { page-break-before: always; text-align: center; }
         .documentation h2 { font-size: 11pt; margin: 0 0 14px; }
         .documentation img { max-width: 100%; max-height: 9.5cm; margin-bottom: 14px; }
@@ -119,6 +125,27 @@
     @if ($minutes->status === 'disahkan')
         <div class="approval">Notula ini telah disetujui melalui aplikasi oleh {{ $minutes->approver?->name }}
             pada {{ $minutes->approved_at->locale('id')->isoFormat('D MMMM Y, HH.mm') }} WIB.</div>
+    @endif
+
+    @if ($attendances->isNotEmpty())
+        <div class="attendance">
+            <h2>DAFTAR HADIR</h2>
+            <div class="subtitle">{{ $minutes->title ?: $meeting->title }}<br>{{ $date->isoFormat('dddd') }}/{{ $date->isoFormat('D MMMM Y') }}</div>
+            <table>
+                <thead><tr><th style="width:6%">No</th><th style="width:30%">Nama</th><th>Jabatan</th><th style="width:26%">Unit/Instansi</th><th style="width:10%">Pukul</th></tr></thead>
+                <tbody>
+                    @foreach ($attendances as $i => $person)
+                        <tr>
+                            <td style="text-align:center">{{ $i + 1 }}</td>
+                            <td>{{ $person->name }}</td>
+                            <td>{{ $person->position ?: '-' }}</td>
+                            <td>{{ $person->organization ?: '-' }}</td>
+                            <td style="text-align:center">{{ $person->checked_in_at->format('H.i') }}</td>
+                        </tr>
+                    @endforeach
+                </tbody>
+            </table>
+        </div>
     @endif
 
     @if ($photos->isNotEmpty())

@@ -290,6 +290,12 @@ class MeetingProcessingService
             $context[] = 'Peserta rapat: '.trim((string) $meeting->attendees);
         }
 
+        // Daftar hadir (QR) memberi nama & jabatan yang sebenarnya.
+        $present = $meeting->attendances()->get()->map->describe();
+        if ($present->isNotEmpty()) {
+            $context[] = 'Hadir menurut daftar hadir: '.$present->implode('; ');
+        }
+
         $previous = MeetingSegment::where('meeting_id', $meeting->id)
             ->where('index', $segment->index - 1)
             ->where('status', MeetingSegment::STATUS_DONE)

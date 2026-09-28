@@ -68,6 +68,14 @@ UPDATE `meetings` SET
     `processing_heartbeat_at` = `processing_heartbeat_at` + INTERVAL 7 HOUR,
     `live_started_at` = `live_started_at` + INTERVAL 7 HOUR;
 
+UPDATE `meeting_attendances` SET
+    `checked_in_at` = `checked_in_at` + INTERVAL 7 HOUR,
+    `created_at` = `created_at` + INTERVAL 7 HOUR,
+    `updated_at` = `updated_at` + INTERVAL 7 HOUR;
+
+UPDATE `meetings` SET
+    `attendance_closed_at` = `attendance_closed_at` + INTERVAL 7 HOUR;
+
 UPDATE `meeting_minutes` SET
     `submitted_at` = `submitted_at` + INTERVAL 7 HOUR,
     `approved_at` = `approved_at` + INTERVAL 7 HOUR,

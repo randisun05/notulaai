@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Support\Str;
 
 class Meeting extends Model
 {
@@ -37,6 +38,8 @@ class Meeting extends Model
         'live_recorded_seconds',
         'live_cursor_seconds',
         'speaker_names',
+        'attendance_token',
+        'attendance_closed_at',
     ];
 
     protected $casts = [
@@ -48,6 +51,7 @@ class Meeting extends Model
         'live_recorded_seconds' => 'float',
         'live_cursor_seconds' => 'float',
         'speaker_names' => 'array',
+        'attendance_closed_at' => 'datetime',
     ];
 
     /**
@@ -62,6 +66,8 @@ class Meeting extends Model
 
     /**
      * Mendapatkan unit yang memiliki rapat ini.
+     *
+     * @return BelongsTo<Unit, $this>
      */
     public function unit(): BelongsTo
     {
@@ -148,6 +154,27 @@ class Meeting extends Model
             // Label mentah dari AI (mis. "Pembicara 1") + nama yang sudah ditetapkan.
             'speakers' => $speakers->map(fn (string $label) => ['label' => $label, 'name' => $this->speaker_names[$label] ?? null]),
         ];
+    }
+
+    /** @return HasMany<MeetingAttendance, $this> */
+    public function attendances(): HasMany
+    {
+        return $this->hasMany(MeetingAttendance::class)->orderBy('checked_in_at');
+    }
+
+    /** Token QR daftar hadir, dibuat saat pertama kali dibutuhkan. */
+    public function attendanceToken(): string
+    {
+        if (! $this->attendance_token) {
+            $this->forceFill(['attendance_token' => Str::random(40)])->save();
+        }
+
+        return $this->attendance_token;
+    }
+
+    public function isAttendanceOpen(): bool
+    {
+        return $this->attendance_closed_at === null;
     }
 
     /** @return HasOne<MeetingMinutes, $this> */

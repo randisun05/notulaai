@@ -36,6 +36,7 @@ in the same commit.
 | `RecordingUploadController` + `Meetings/Partials/RecordingUploader.vue` | resumable chunked recording upload (see pipeline) |
 | `app/Services/Audio/AudioSplitter.php` | ffmpeg wrapper: `split()` recording → fixed-length mono mp3 segments; `findSilence()` / `extract()` / `concat()` for live recording |
 | `MinutesService` + `MeetingMinutesController` + `Meetings/Minutes.vue` | official minutes in the agency's NOTULA format: AI draft → edit → submit → approve/return; documentation photos; PDF (`exports/minutes-pdf.blade.php`) + Word (`MinutesWordExporter`, phpoffice/phpword) |
+| `AttendanceService` + `AttendanceController` + `Meetings/Partials/AttendancePanel.vue` + `Attendance/CheckIn.vue` | QR attendance (daftar hadir), public check-in at `/hadir/{token}` |
 | `LiveRecordingService` + `LiveRecordingController` + `Meetings/Partials/LiveRecorder.vue` | live recording of in-person meetings with a running transcript (see "Live recording") |
 | `app/Console/Commands/FailStuckMeetings.php` | `meetings:fail-stuck` watchdog |
 | `app/Models/` | `Meeting`, `MeetingActionItem`, `MeetingChatMessage`, `Task` (+`TaskEvidence*`, `TaskDisposition`), `ForumComment*`, `Activity`, `AuditLog`, `AiRequestLog`, `Setting` (singleton via `Setting::current()`), `Unit`, `User`, `Webhook`; `Concerns/ScopedToUnit` |
@@ -79,7 +80,7 @@ npm run build                          # builds public/build (gitignored, NOT co
                                        # tests and after adding/renaming any Vue page, or Inertia 500s
 
 # Tests (SQLite :memory:, config in phpunit.xml)
-php artisan test                       # full suite (~20 s, ~290 tests)
+php artisan test                       # full suite (~20 s, ~300 tests)
 php artisan test --filter=ProcessMeetingTest
 php artisan test tests/Feature/Task/TaskApprovalTest.php
 
@@ -227,6 +228,19 @@ length when known. Workflow: `draf` → `diajukan` (locked) → `disahkan` (UI s
 superadmin always; never the submitter. The template has only the minute-taker's signature, so approval prints as a
 small "disetujui melalui aplikasi oleh … pada …" line — an approval record, **not** a certified e-signature (BSrE).
 Unapproved exports carry a DRAF watermark/header.
+
+### Attendance (daftar hadir)
+`meeting_attendances` (name, position/jabatan, organization/unit-instansi, `method` qr|manual, `checked_in_at`; unique per
+user). The meeting page shows a QR (client-side `qrcode` npm, fullscreen for the room's projector, count refreshes every
+10 s) encoding `/hadir/{meetings.attendance_token}` — a **public, login-free** route (`throttle:attendance`, 120/min/IP)
+because invited guests from other agencies have no account: logged-in employees are recorded once with their unit (even
+from another unit — attending grants no access to the meeting), guests type name/jabatan/instansi (same name,
+case-insensitive, updates instead of duplicating; the form remembers last input in localStorage). A guest who taps
+"Masuk dulu" is sent back to the check-in page after login (`url.intended`). Unit members add/remove entries manually,
+close/reopen check-in (manual additions still work when closed), and regenerate the token (old QR → 404). Approving the
+minutes closes check-in. Attendees feed the STT speaker `context` and the minutes prompt; the minutes prefill "Peserta
+Rapat" with "Sebagaimana daftar hadir terlampir" and PDF/Word append a **DAFTAR HADIR** table page (before DOKUMENTASI).
+No signature capture (physical signatures stay on paper if required).
 
 ### Collaboration
 Forum (`ForumComment`, one level of nesting) lives on `Meetings/Show.vue` **outside** the

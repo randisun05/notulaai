@@ -199,6 +199,7 @@ class MeetingMinutesController extends Controller
             'logoPath' => $logo && is_file($logo) ? $logo : null,
             'date' => Carbon::parse($meeting->date)->locale('id'),
             'isDraft' => $minutes->status !== MeetingMinutes::STATUS_APPROVED,
+            'attendances' => $meeting->attendances()->get(),
             'photos' => collect($minutes->documentation ?? [])
                 ->map(fn (string $path) => Storage::disk('local')->path($path))
                 ->filter(fn (string $path) => is_file($path))

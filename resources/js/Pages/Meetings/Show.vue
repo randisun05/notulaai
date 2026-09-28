@@ -9,6 +9,7 @@ import ForumSection from '@/Pages/Meetings/Partials/ForumSection.vue';
 import ActivityTimeline from '@/Pages/Meetings/Partials/ActivityTimeline.vue';
 import RecordingUploader from '@/Pages/Meetings/Partials/RecordingUploader.vue';
 import LiveRecorder from '@/Pages/Meetings/Partials/LiveRecorder.vue';
+import AttendancePanel from '@/Pages/Meetings/Partials/AttendancePanel.vue';
 import { Head, useForm, usePage, Link, router } from '@inertiajs/vue3';
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
 import axios from 'axios';
@@ -37,6 +38,10 @@ const props = defineProps({
     markerTypes: {
         type: Object,
         default: () => ({}),
+    },
+    attendance: {
+        type: Object,
+        default: null,
     },
 });
 
@@ -535,6 +540,10 @@ const deleteMeeting = () => {
                                 <h4 class="font-medium text-gray-700">Peserta</h4>
                                 <div class="mt-2 text-sm text-gray-600 prose max-w-none whitespace-pre-wrap" v-text="meeting.attendees || 'Tidak ada daftar peserta.'"></div>
                             </div>
+                        </div>
+
+                        <div v-if="attendance" class="mt-8">
+                            <AttendancePanel :meeting="meeting" :attendance="attendance" :unit-users="unitUsers" />
                         </div>
 
                         <div class="mt-8">

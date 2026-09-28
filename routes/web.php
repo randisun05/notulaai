@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AnalyticsController;
 use App\Http\Controllers\ApiTokenController;
+use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\AuditLogController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ForumCommentController;
@@ -56,6 +57,12 @@ Route::middleware('auth')->group(function () {
     Route::get('/meetings/{meeting}', [MeetingController::class, 'show'])->name('meetings.show');
     Route::get('/meetings/{meeting}/recording', [MeetingController::class, 'recording'])->name('meetings.recording');
     Route::post('/meetings/{meeting}/process', [MeetingController::class, 'process'])->middleware('throttle:ai')->name('meetings.process'); // Rute baru untuk memproses notula
+
+    // Daftar hadir (pengelolaan oleh anggota unit; check-in publik ada di luar grup auth)
+    Route::post('/meetings/{meeting}/attendance', [AttendanceController::class, 'store'])->name('meetings.attendance.store');
+    Route::delete('/meetings/{meeting}/attendance/{attendance}', [AttendanceController::class, 'destroy'])->name('meetings.attendance.destroy');
+    Route::post('/meetings/{meeting}/attendance/toggle', [AttendanceController::class, 'toggle'])->name('meetings.attendance.toggle');
+    Route::post('/meetings/{meeting}/attendance/regenerate', [AttendanceController::class, 'regenerate'])->name('meetings.attendance.regenerate');
 
     // Notulen resmi (format dinas)
     Route::get('/meetings/{meeting}/minutes', [MeetingMinutesController::class, 'edit'])->name('meetings.minutes.edit');
@@ -166,6 +173,10 @@ Route::middleware('auth')->group(function () {
         });
 
 });
+
+// Check-in daftar hadir lewat QR — tanpa login (tamu undangan dari instansi lain).
+Route::get('/hadir/{token}', [AttendanceController::class, 'checkInForm'])->middleware('throttle:attendance')->name('attendance.check-in');
+Route::post('/hadir/{token}', [AttendanceController::class, 'checkIn'])->middleware('throttle:attendance')->name('attendance.check-in.store');
 
 Route::post('/stt/test', [SpeechController::class, 'transcribe'])->middleware(['auth', 'can:access-admin-panel', 'throttle:ai']);
 
