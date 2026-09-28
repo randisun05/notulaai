@@ -19,7 +19,7 @@ class MeetingController extends Controller
     {
         $validated = $request->validate([
             'search' => 'nullable|string|max:255',
-            'status' => 'nullable|string|in:Dijadwalkan,Memproses,Selesai Diproses,Gagal',
+            'status' => 'nullable|string|in:Dijadwalkan,Berlangsung,Memproses,Selesai Diproses,Gagal',
             'per_page' => 'nullable|integer|min:1|max:100',
         ]);
 

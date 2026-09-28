@@ -62,6 +62,57 @@ class AudioSplitterTest extends TestCase
         (new AudioSplitter)->split($this->dir.'/in.mp3', $this->dir.'/out');
     }
 
+    private function requireFfmpeg(): string
+    {
+        $ffmpeg = Config::get('ai.audio.ffmpeg_binary');
+        if (! Process::run([$ffmpeg, '-version'])->successful()) {
+            $this->markTestSkipped('ffmpeg tidak tersedia.');
+        }
+
+        return $ffmpeg;
+    }
+
+    /** Rekaman webm/opus (seperti keluaran MediaRecorder): nada 70 dtk, hening 1,5 dtk, nada 30 dtk. */
+    private function webmWithPauseAt70(string $ffmpeg): string
+    {
+        $path = $this->dir.'/live.webm';
+        Process::run([$ffmpeg, '-hide_banner', '-loglevel', 'error',
+            '-f', 'lavfi', '-i', 'sine=f=300:d=70', '-f', 'lavfi', '-i', 'anullsrc=r=44100:cl=mono', '-f', 'lavfi', '-i', 'sine=f=300:d=30',
+            '-filter_complex', '[1]atrim=0:1.5[s];[0][s][2]concat=n=3:v=0:a=1',
+            '-c:a', 'libopus', '-b:a', '32k', '-y', $path])->throw();
+
+        return $path;
+    }
+
+    public function test_real_ffmpeg_finds_the_pause_to_cut_at(): void
+    {
+        $path = $this->webmWithPauseAt70($this->requireFfmpeg());
+        $splitter = new AudioSplitter;
+
+        $cut = $splitter->findSilence($path, 60, 30);
+
+        $this->assertNotNull($cut);
+        $this->assertEqualsWithDelta(70.75, $cut, 0.3, 'Titik tengah jeda 70–71,5 dtk.');
+        $this->assertNull($splitter->findSilence($path, 10, 30), 'Tidak ada jeda di 10–40 dtk.');
+    }
+
+    public function test_real_ffmpeg_extracts_ranges_and_concatenates_parts(): void
+    {
+        $ffmpeg = $this->requireFfmpeg();
+        $path = $this->webmWithPauseAt70($ffmpeg);
+        $splitter = new AudioSplitter;
+        $duration = fn (string $file) => (float) preg_replace('/.*Duration: (\d+):(\d+):([\d.]+).*/s', '$3', Process::run([$ffmpeg, '-hide_banner', '-i', $file])->errorOutput())
+            + 60 * (int) preg_replace('/.*Duration: \d+:(\d+):.*/s', '$1', Process::run([$ffmpeg, '-hide_banner', '-i', $file])->errorOutput());
+
+        $splitter->extract($path, 0, 70.75, $this->dir.'/a.mp3');
+        $splitter->extract($path, 70.75, null, $this->dir.'/b.mp3');
+        $this->assertEqualsWithDelta(70.75, $duration($this->dir.'/a.mp3'), 0.3);
+        $this->assertEqualsWithDelta(30.75, $duration($this->dir.'/b.mp3'), 0.3);
+
+        $splitter->concat([$this->dir.'/a.mp3', $this->dir.'/b.mp3'], $this->dir.'/all.mp3');
+        $this->assertEqualsWithDelta(101.5, $duration($this->dir.'/all.mp3'), 0.5);
+    }
+
     /**
      * Integrasi dengan ffmpeg sungguhan — dilewati kalau ffmpeg (FFMPEG_BINARY) tidak terpasang.
      */

@@ -90,6 +90,20 @@ return [
         'chunk_chars' => (int) env('AI_SUMMARY_CHUNK_CHARS', 40000),
     ],
 
+    // Rekaman live (rapat tatap muka): browser mengirim audio per 5 detik; tiap
+    // window_seconds rekaman baru dipotong di jeda hening pertama sampai
+    // max_window_seconds (supaya kalimat tidak terpenggal), lalu ditranskrip.
+    'live' => [
+        'window_seconds' => (int) env('AI_LIVE_WINDOW_SECONDS', 60),
+        'max_window_seconds' => (int) env('AI_LIVE_MAX_WINDOW_SECONDS', 90),
+        'silence_seconds' => 0.4,
+        'silence_noise' => '-35dB',
+        // Baris terakhir potongan sebelumnya yang dikirim sebagai konteks pembicara.
+        'context_lines' => 6,
+        // Tanpa audio masuk selama ini, rekaman dianggap terputus dan diproses apa adanya.
+        'stale_minutes' => (int) env('AI_LIVE_STALE_MINUTES', 15),
+    ],
+
     'audio' => [
         'ffmpeg_binary' => env('FFMPEG_BINARY', 'ffmpeg'),
         'segment_seconds' => (int) env('AI_AUDIO_SEGMENT_SECONDS', 600),

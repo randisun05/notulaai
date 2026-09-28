@@ -49,6 +49,84 @@ class AudioSplitter
     }
 
     /**
+     * Cari jeda hening pertama (≥ `ai.live.silence_seconds`) dalam rentang
+     * [$from, $from + $length] detik. Mengembalikan titik tengah jeda (detik absolut)
+     * — tempat memotong tanpa memenggal kalimat — atau null kalau tidak ada.
+     */
+    public function findSilence(string $sourcePath, float $from, float $length): ?float
+    {
+        $result = Process::timeout(120)->run([
+            Config::get('ai.audio.ffmpeg_binary', 'ffmpeg'),
+            '-hide_banner', '-nostdin',
+            '-ss', $this->seconds($from), '-i', $sourcePath, '-t', $this->seconds($length),
+            '-af', 'silencedetect=noise='.Config::get('ai.live.silence_noise', '-35dB').':d='.Config::get('ai.live.silence_seconds', 0.4),
+            '-f', 'null', '-',
+        ]);
+
+        if ($result->failed()) {
+            throw new RuntimeException('Gagal membaca rekaman untuk mencari jeda: '.mb_substr(trim($result->errorOutput()), -300));
+        }
+
+        // Waktu yang dilaporkan relatif terhadap -ss.
+        preg_match_all('/silence_start: (-?[\d.]+)[\s\S]*?silence_end: ([\d.]+)/', $result->errorOutput(), $matches, PREG_SET_ORDER);
+
+        foreach ($matches as [, $start, $end]) {
+            return $from + (max(0.0, (float) $start) + (float) $end) / 2;
+        }
+
+        return null;
+    }
+
+    /**
+     * Ambil rentang [$start, $start + $duration] (atau sampai akhir file bila null)
+     * sebagai mp3 mono 16 kHz.
+     */
+    public function extract(string $sourcePath, float $start, ?float $duration, string $outputPath): void
+    {
+        File::ensureDirectoryExists(dirname($outputPath));
+
+        $result = Process::timeout(300)->run(array_merge(
+            [Config::get('ai.audio.ffmpeg_binary', 'ffmpeg'), '-hide_banner', '-nostdin', '-y', '-ss', $this->seconds($start), '-i', $sourcePath],
+            $duration !== null ? ['-t', $this->seconds($duration)] : [],
+            ['-vn', '-ac', '1', '-ar', '16000', '-c:a', 'libmp3lame', '-b:a', '32k', $outputPath],
+        ));
+
+        if ($result->failed() || ! is_file($outputPath)) {
+            throw new RuntimeException('Gagal memotong rekaman: '.mb_substr(trim($result->errorOutput()), -300));
+        }
+    }
+
+    /**
+     * Gabungkan beberapa rekaman (bagian rekaman live yang terputus) jadi satu mp3.
+     *
+     * @param  list<string>  $sourcePaths
+     */
+    public function concat(array $sourcePaths, string $outputPath): void
+    {
+        $inputs = [];
+        foreach ($sourcePaths as $path) {
+            array_push($inputs, '-i', $path);
+        }
+        $streams = implode('', array_map(fn (int $i) => "[{$i}:a]", array_keys($sourcePaths)));
+
+        $result = Process::timeout((int) Config::get('ai.audio.split_timeout', 1800))->run(array_merge(
+            [Config::get('ai.audio.ffmpeg_binary', 'ffmpeg'), '-hide_banner', '-nostdin', '-y'],
+            $inputs,
+            ['-filter_complex', $streams.'concat=n='.count($sourcePaths).':v=0:a=1[a]', '-map', '[a]',
+                '-ac', '1', '-ar', '16000', '-c:a', 'libmp3lame', '-b:a', '32k', $outputPath],
+        ));
+
+        if ($result->failed()) {
+            throw new RuntimeException('Gagal menggabungkan bagian rekaman: '.mb_substr(trim($result->errorOutput()), -300));
+        }
+    }
+
+    private function seconds(float $value): string
+    {
+        return number_format(max(0.0, $value), 3, '.', '');
+    }
+
+    /**
      * @return list<array{path: string, start: float, end: float}>
      */
     private function parseSegmentList(string $listFile, string $outputDir): array

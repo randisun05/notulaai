@@ -34,7 +34,8 @@ in the same commit.
 | `app/Services/{Analytics,Audit,Forum,Webhook}/` | `DashboardInsightGenerator`, `AuditLogger`, `MentionParser`, `WebhookDispatcher` |
 | `app/Jobs/` | `ProcessMeetingNotula` → `TranscribeMeetingSegment` (×N) → `FinalizeMeetingNotula`; `SendWebhookNotification`, 3 scheduled jobs (reminders, escalation) |
 | `RecordingUploadController` + `Meetings/Partials/RecordingUploader.vue` | resumable chunked recording upload (see pipeline) |
-| `app/Services/Audio/AudioSplitter.php` | ffmpeg wrapper: recording → fixed-length mono mp3 segments with exact start/end |
+| `app/Services/Audio/AudioSplitter.php` | ffmpeg wrapper: `split()` recording → fixed-length mono mp3 segments; `findSilence()` / `extract()` / `concat()` for live recording |
+| `LiveRecordingService` + `LiveRecordingController` + `Meetings/Partials/LiveRecorder.vue` | live recording of in-person meetings with a running transcript (see "Live recording") |
 | `app/Console/Commands/FailStuckMeetings.php` | `meetings:fail-stuck` watchdog |
 | `app/Models/` | `Meeting`, `MeetingActionItem`, `MeetingChatMessage`, `Task` (+`TaskEvidence*`, `TaskDisposition`), `ForumComment*`, `Activity`, `AuditLog`, `AiRequestLog`, `Setting` (singleton via `Setting::current()`), `Unit`, `User`, `Webhook`; `Concerns/ScopedToUnit` |
 | `app/Policies/` | `Meeting`, `Task`, `ForumComment`, `Unit`, `User` |
@@ -77,7 +78,7 @@ npm run build                          # builds public/build (gitignored, NOT co
                                        # tests and after adding/renaming any Vue page, or Inertia 500s
 
 # Tests (SQLite :memory:, config in phpunit.xml)
-php artisan test                       # full suite (~15 s, ~260 tests)
+php artisan test                       # full suite (~20 s, ~270 tests)
 php artisan test --filter=ProcessMeetingTest
 php artisan test tests/Feature/Task/TaskApprovalTest.php
 
@@ -164,7 +165,29 @@ the Docker image installs it). Tests needing real ffmpeg skip when it's missing 
 HTTP clients in `OpenRouterTextProvider` / Gemini providers have explicit timeouts; `config/gemini.php`
 must exist (a config-cache clear that drops it silently breaks Gemini).
 
-Meeting status values (Indonesian, stored as strings): `Dijadwalkan` → `Memproses` → `Selesai Diproses` / `Gagal`. During `Memproses`, `Meetings/Show.vue` polls the lazy `progress` prop (`Meeting::processingProgress()`: stage + segments done/total) every 5 s via partial reload and does a full reload once the status changes.
+Meeting status values (Indonesian, stored as strings): `Dijadwalkan` → (`Berlangsung`, live only) → `Memproses` → `Selesai Diproses` / `Gagal`. During `Memproses`/`Berlangsung`, `Meetings/Show.vue` polls the lazy `progress` + `live` props (`Meeting::processingProgress()`, `Meeting::liveState()`) every 5 s via partial reload and does a full reload once the status changes.
+
+### Live recording (in-person meetings)
+One recorder device per meeting (`live_user_id`) runs `LiveRecorder.vue`: MediaRecorder (webm/opus, mp4 on Safari)
+emits a blob every 5 s, sent in order to `PUT /meetings/{id}/live/audio` with `X-Upload-Offset` + `X-Recording-Seconds`
+(recorder clock for the current part) and appended to `recordings/{id}/live-{part}.{ext}` (same offset/409/truncate
+rules as chunked upload; queued in memory and retried forever while offline). When ≥ `ai.live.window_seconds` (60) of
+new audio exist, `CutLiveWindow` (unique per meeting) asks `AudioSplitter::findSilence()` for the first pause between
+second 60 and 90 of the window — **so cuts land between utterances, not mid-sentence**; no pause yet → wait, still none
+at 90 s → forced cut. Each window becomes a `meeting_segments` row transcribed by the normal `TranscribeMeetingSegment`,
+which passes the STT driver a `context` (meeting attendees + last `ai.live.context_lines` lines of the previous segment)
+so speaker labels stay consistent. All times are meeting-absolute: `live_part_offset_seconds` maps part-local file time.
+- **Stop** → status `Memproses`, stage `closing` (NOT claimable, so a finishing segment can't trigger the summary before
+  the tail exists) → `FinishLiveRecording` cuts the tail, sets stage `transcribing`, `claimFinalization()`.
+- **Tab closed / reload** → "Lanjutkan Rekaman" (`/live/resume`): tail of the old part is cut, a new part file starts
+  (a new MediaRecorder stream can't be appended to the old container). Parts are concatenated into
+  `rekaman-lengkap.mp3` at finalize (best-effort). Another member can take over the same way (deliberately low-key UI).
+- **Markers** (`meeting_markers`, "Keputusan"/"Tindak Lanjut", any member, timestamped with the server's recorded
+  seconds) are injected into the summary and action-item prompts as MUST-include items.
+- **Speaker names** (`meetings.speaker_names` JSON, label → name, any member): applied on display and when segments are
+  joined; renaming a displayed name updates the mapping; after finalize it rewrites `meetings.transcript` (not the summary).
+- **Watchdog:** a `Berlangsung` meeting with no audio for `ai.live.stale_minutes` (15) is auto-stopped and processed as is.
+- Microphone access requires HTTPS (or localhost). Browser e2e was verified with Chromium's fake audio device.
 
 ### Auth & multi-unit scoping
 Three roles only: `user`, `admin`, `superadmin` (`spatie/laravel-permission`, seeded by

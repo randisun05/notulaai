@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\ForumComment;
 use App\Models\ForumCommentAttachment;
 use App\Models\Meeting;
+use App\Models\MeetingMarker;
 use App\Models\RecordingUpload;
 use App\Models\User;
 use App\Services\Meeting\ActivityLogger;
@@ -115,8 +116,10 @@ class MeetingController extends Controller
             ]),
             'unitUsers' => User::where('unit_id', $meeting->unit_id)->get(['id', 'name', 'email']),
             'emailPurposes' => EmailDraftGenerator::PURPOSES,
-            // Di-poll halaman (partial reload) selama status Memproses.
+            // Di-poll halaman (partial reload) selama status Memproses / Berlangsung.
             'progress' => fn () => $meeting->fresh()->processingProgress(),
+            'live' => fn () => $meeting->fresh()->liveState(Auth::user()),
+            'markerTypes' => MeetingMarker::TYPES,
         ]);
     }
 

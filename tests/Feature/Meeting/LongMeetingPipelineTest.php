@@ -111,7 +111,7 @@ class LongMeetingSplitter extends AudioSplitter
 
 class LongMeetingTranscriber implements TranscriptionProvider
 {
-    public function transcribe(string $absoluteFilePath, string $fileName, ?string $language = null): AiTranscriptionResult
+    public function transcribe(string $absoluteFilePath, string $fileName, ?string $language = null, ?string $context = null): AiTranscriptionResult
     {
         $part = (int) substr($fileName, 5, 4);
         $text = str_repeat("Pembicara 1: pembahasan program kerja bagian {$part} berlanjut dengan rinci.\n", 55);

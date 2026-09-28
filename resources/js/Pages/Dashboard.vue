@@ -184,6 +184,7 @@ const maxStatusCount = computed(() => Math.max(1, ...props.taskStatusBreakdown.m
                                             :class="{
                                                 'badge-blue': meeting.status === 'Dijadwalkan',
                                                 'badge-yellow': meeting.status === 'Memproses',
+                                            'badge-orange': meeting.status === 'Berlangsung',
                                                 'badge-green': meeting.status === 'Selesai Diproses',
                                                 'badge-red': meeting.status === 'Gagal',
                                             }"

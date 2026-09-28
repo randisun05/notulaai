@@ -6,6 +6,7 @@ use App\Http\Controllers\AuditLogController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ForumCommentController;
 use App\Http\Controllers\ForumCommentReactionController;
+use App\Http\Controllers\LiveRecordingController;
 use App\Http\Controllers\MeetingChatController;
 use App\Http\Controllers\MeetingController;
 use App\Http\Controllers\MeetingEmailController;
@@ -54,6 +55,14 @@ Route::middleware('auth')->group(function () {
     Route::get('/meetings/{meeting}', [MeetingController::class, 'show'])->name('meetings.show');
     Route::get('/meetings/{meeting}/recording', [MeetingController::class, 'recording'])->name('meetings.recording');
     Route::post('/meetings/{meeting}/process', [MeetingController::class, 'process'])->middleware('throttle:ai')->name('meetings.process'); // Rute baru untuk memproses notula
+
+    // Rekaman live rapat tatap muka (transkrip berjalan).
+    Route::post('/meetings/{meeting}/live/start', [LiveRecordingController::class, 'start'])->middleware('throttle:ai')->name('meetings.live.start');
+    Route::post('/meetings/{meeting}/live/resume', [LiveRecordingController::class, 'resume'])->name('meetings.live.resume');
+    Route::put('/meetings/{meeting}/live/audio', [LiveRecordingController::class, 'append'])->name('meetings.live.append');
+    Route::post('/meetings/{meeting}/live/stop', [LiveRecordingController::class, 'stop'])->name('meetings.live.stop');
+    Route::post('/meetings/{meeting}/live/markers', [LiveRecordingController::class, 'marker'])->name('meetings.live.markers');
+    Route::put('/meetings/{meeting}/speakers', [LiveRecordingController::class, 'renameSpeaker'])->name('meetings.speakers.rename');
 
     // Upload rekaman bertahap (bisa dilanjutkan) — satu-satunya jalur upload audio/video.
     Route::post('/meetings/{meeting}/recording-uploads', [RecordingUploadController::class, 'store'])->name('meetings.recording-uploads.store');

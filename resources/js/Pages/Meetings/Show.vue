@@ -8,6 +8,7 @@ import DangerButton from '@/Components/DangerButton.vue'; // <-- Import Tombol M
 import ForumSection from '@/Pages/Meetings/Partials/ForumSection.vue';
 import ActivityTimeline from '@/Pages/Meetings/Partials/ActivityTimeline.vue';
 import RecordingUploader from '@/Pages/Meetings/Partials/RecordingUploader.vue';
+import LiveRecorder from '@/Pages/Meetings/Partials/LiveRecorder.vue';
 import { Head, useForm, usePage, Link, router } from '@inertiajs/vue3';
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
 import axios from 'axios';
@@ -29,18 +30,30 @@ const props = defineProps({
         type: Object,
         default: null,
     },
+    live: {
+        type: Object,
+        default: null,
+    },
+    markerTypes: {
+        type: Object,
+        default: () => ({}),
+    },
 });
 
-// Selama Memproses: ambil progres tiap 5 detik (partial reload, ringan); begitu
-// status berubah, muat ulang halaman penuh supaya rangkuman/transkrip muncul.
+// Status yang datanya berubah terus di server: Memproses (progres) & Berlangsung (transkrip live).
+const POLLED_STATUSES = ['Memproses', 'Berlangsung'];
+
+// Selama Memproses/Berlangsung: ambil progres & transkrip live tiap 5 detik (partial
+// reload, ringan); begitu status berubah, muat ulang halaman penuh.
 let progressTimer = null;
 const pollProgress = () => {
     router.reload({
-        only: ['progress'],
+        only: ['progress', 'live'],
+        preserveScroll: true,
         onSuccess: (p) => {
-            if (p.props.progress?.status !== 'Memproses') {
+            if (p.props.progress?.status !== props.meeting.status) {
                 stopPolling();
-                router.reload();
+                router.reload({ preserveScroll: true });
             }
         },
     });
@@ -50,7 +63,7 @@ const stopPolling = () => {
     progressTimer = null;
 };
 const startPolling = () => {
-    if (!progressTimer && props.meeting.status === 'Memproses') {
+    if (!progressTimer && POLLED_STATUSES.includes(props.meeting.status)) {
         progressTimer = setInterval(pollProgress, 5000);
     }
 };
@@ -166,7 +179,7 @@ const askChat = async () => {
 
 const activeTab = ref(props.meeting.status === 'Selesai Diproses' ? 'summary' : 'input');
 watch(() => props.meeting.status, (status) => {
-    if (status === 'Memproses') {
+    if (POLLED_STATUSES.includes(status)) {
         startPolling();
         return;
     }
@@ -174,7 +187,11 @@ watch(() => props.meeting.status, (status) => {
     // Reload mempertahankan state komponen; pindahkan ke tab hasil begitu selesai.
     if (status === 'Selesai Diproses') activeTab.value = 'summary';
 });
-const inputType = ref('text'); // 'text', 'audio', 'file', 'image'
+const inputType = ref('text'); // 'live', 'text', 'audio', 'file', 'image'
+// Panel rekaman live tetap terpasang dari "Mulai" sampai rekaman diakhiri (status
+// Dijadwalkan → Berlangsung tidak boleh meng-unmount MediaRecorder-nya).
+const liveMode = computed(() => props.meeting.status === 'Berlangsung'
+    || (['Dijadwalkan', 'Gagal'].includes(props.meeting.status) && inputType.value === 'live'));
 
 const form = useForm({
     type: 'text',
@@ -286,6 +303,7 @@ const deleteMeeting = () => {
                         <span :class="{
                             'bg-blue-100 text-blue-800': meeting.status === 'Dijadwalkan',
                             'bg-yellow-100 text-yellow-800': meeting.status === 'Memproses',
+                            'bg-red-100 text-red-700': meeting.status === 'Berlangsung',
                             'bg-green-100 text-green-800': meeting.status === 'Selesai Diproses',
                             'bg-red-100 text-red-800': meeting.status === 'Gagal'
                         }" class="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium">
@@ -296,7 +314,15 @@ const deleteMeeting = () => {
 
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
                     <div class="lg:col-span-2 card">
-                        <div v-if="meeting.status === 'Selesai Diproses'" class="p-6">
+                        <div v-if="liveMode">
+                            <div v-if="meeting.status !== 'Berlangsung'" class="px-6 pt-6">
+                                <h2 class="text-xl font-semibold mb-1">Rekam Rapat Langsung</h2>
+                                <button type="button" class="text-sm text-gray-500 hover:text-gray-700" @click="inputType = 'text'">&larr; Pilih metode input lain</button>
+                            </div>
+                            <LiveRecorder :meeting="meeting" :live="live" :marker-types="markerTypes" />
+                        </div>
+
+                        <div v-else-if="meeting.status === 'Selesai Diproses'" class="p-6">
 
                             <!-- Audio Player Section -->
                             <div v-if="isAudioFile" class="mb-6">
@@ -435,6 +461,7 @@ const deleteMeeting = () => {
 
                             <div class="border-b border-gray-200 mb-6">
                                 <nav class="-mb-px flex space-x-6" aria-label="Tabs">
+                                    <button @click="inputType = 'live'" class="whitespace-nowrap pb-4 px-1 border-b-2 border-transparent font-medium text-sm text-red-600 hover:text-red-700">&#9679; Rekam Langsung</button>
                                     <button @click="inputType = 'text'" :class="['whitespace-nowrap pb-4 px-1 border-b-2 font-medium text-sm', inputType === 'text' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300']">Input Teks</button>
                                     <button @click="inputType = 'audio'" :class="['whitespace-nowrap pb-4 px-1 border-b-2 font-medium text-sm', inputType === 'audio' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300']">Upload Audio</button>
                                     <button @click="inputType = 'file'" :class="['whitespace-nowrap pb-4 px-1 border-b-2 font-medium text-sm', inputType === 'file' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300']">Upload File Teks</button>
@@ -503,7 +530,7 @@ const deleteMeeting = () => {
 
                             <div>
                                 <h4 class="font-medium text-gray-700">Peserta</h4>
-                                <div class="mt-2 text-sm text-gray-600 prose max-w-none whitespace-pre-wrap" v-text="meeting.participants || 'Tidak ada daftar peserta.'"></div>
+                                <div class="mt-2 text-sm text-gray-600 prose max-w-none whitespace-pre-wrap" v-text="meeting.attendees || 'Tidak ada daftar peserta.'"></div>
                             </div>
                         </div>
 

@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\Http;
 
 class WhisperLocalTranscriptionProvider implements TranscriptionProvider
 {
-    public function transcribe(string $absoluteFilePath, string $fileName, ?string $language = null): AiTranscriptionResult
+    public function transcribe(string $absoluteFilePath, string $fileName, ?string $language = null, ?string $context = null): AiTranscriptionResult
     {
         $url = Config::get('services.stt_service.url');
 

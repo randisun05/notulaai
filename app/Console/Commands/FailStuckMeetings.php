@@ -3,8 +3,10 @@
 namespace App\Console\Commands;
 
 use App\Models\Meeting;
+use App\Services\Meeting\LiveRecordingService;
 use App\Services\Meeting\MeetingProcessingService;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Log;
 
 class FailStuckMeetings extends Command
@@ -13,8 +15,18 @@ class FailStuckMeetings extends Command
 
     protected $description = 'Tandai Gagal rapat yang tidak menunjukkan kemajuan pemrosesan melebihi batas waktu (job AI gantung/timeout tidak tertangkap)';
 
-    public function handle(MeetingProcessingService $processingService): int
+    public function handle(MeetingProcessingService $processingService, LiveRecordingService $live): int
     {
+        // Rekaman live yang tidak lagi menerima audio (laptop mati, tab tertutup dan
+        // tidak dilanjutkan): jangan dibuang — proses rekaman yang sudah masuk.
+        $staleLive = Meeting::where('status', 'Berlangsung')
+            ->where('processing_heartbeat_at', '<=', now()->subMinutes((int) Config::get('ai.live.stale_minutes', 15)))
+            ->get();
+        foreach ($staleLive as $meeting) {
+            $live->stop($meeting, null, 'tidak ada audio masuk selama '.Config::get('ai.live.stale_minutes', 15).' menit');
+            Log::warning("Rekaman live Meeting ID {$meeting->id} terputus, dihentikan otomatis oleh watchdog.");
+        }
+
         $minutes = (int) $this->option('minutes');
         $threshold = now()->subMinutes($minutes);
 

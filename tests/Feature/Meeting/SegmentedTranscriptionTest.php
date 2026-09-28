@@ -174,7 +174,7 @@ class FakeSegmentTranscriber implements TranscriptionProvider
 
     public static ?string $failOn = null;
 
-    public function transcribe(string $absoluteFilePath, string $fileName, ?string $language = null): AiTranscriptionResult
+    public function transcribe(string $absoluteFilePath, string $fileName, ?string $language = null, ?string $context = null): AiTranscriptionResult
     {
         if ($fileName === self::$failOn) {
             throw new RuntimeException('STT tidak tersedia');

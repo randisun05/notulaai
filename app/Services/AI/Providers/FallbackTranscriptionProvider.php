@@ -19,13 +19,13 @@ class FallbackTranscriptionProvider implements TranscriptionProvider
         private readonly Closure $resolve,
     ) {}
 
-    public function transcribe(string $absoluteFilePath, string $fileName, ?string $language = null): AiTranscriptionResult
+    public function transcribe(string $absoluteFilePath, string $fileName, ?string $language = null, ?string $context = null): AiTranscriptionResult
     {
         return $this->runChain(
             $this->chain,
             $this->resolve,
             'transcription',
-            fn (TranscriptionProvider $provider) => $provider->transcribe($absoluteFilePath, $fileName, $language),
+            fn (TranscriptionProvider $provider) => $provider->transcribe($absoluteFilePath, $fileName, $language, $context),
         );
     }
 }

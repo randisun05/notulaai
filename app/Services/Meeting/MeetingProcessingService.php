@@ -123,7 +123,7 @@ class MeetingProcessingService
     {
         $this->heartbeat($meeting, 'summarizing');
 
-        $summary = $this->summarize($meeting, $transcript);
+        $summary = $this->summarize($meeting, $transcript, $this->markerNotes($meeting));
 
         Log::info("Rangkuman berhasil dibuat untuk Rapat ID: {$meeting->id}");
 
@@ -142,6 +142,7 @@ class MeetingProcessingService
         $this->generateActionItems($meeting, $transcript);
 
         $this->deleteSegmentAudio($meeting);
+        $this->mergeLiveParts($meeting);
 
         $this->activityLogger->log($meeting, null, 'meeting.processed', 'AI berhasil membuat transkrip dan rangkuman notula.');
         $this->webhookDispatcher->dispatch('meeting.processed', $meeting, ['meeting_id' => $meeting->id, 'title' => $meeting->title]);
@@ -244,7 +245,8 @@ class MeetingProcessingService
         $meeting = $segment->meeting;
 
         // Rapat sudah Gagal (bagian lain gagal / watchdog) atau dihapus: berhenti.
-        if (! $meeting || $meeting->status !== 'Memproses' || $segment->status === MeetingSegment::STATUS_DONE) {
+        // "Berlangsung" = potongan rekaman live yang ditranskrip selagi rapat jalan.
+        if (! $meeting || ! in_array($meeting->status, ['Memproses', 'Berlangsung'], true) || $segment->status === MeetingSegment::STATUS_DONE) {
             return;
         }
 
@@ -258,6 +260,7 @@ class MeetingProcessingService
                 absoluteFilePath: Storage::disk('local')->path((string) $segment->audio_path),
                 fileName: $fileName,
                 language: 'Indonesian',
+                context: $this->speakerContext($segment),
             );
         } catch (Throwable $e) {
             $this->logger->logFailure('transcription', $provider, null, $fileName, $e->getMessage(), $meeting, $meeting->creator);
@@ -270,9 +273,43 @@ class MeetingProcessingService
         Storage::disk('local')->delete((string) $segment->audio_path);
 
         $this->heartbeat($meeting);
+        $this->claimFinalization($meeting);
+    }
 
-        // Klaim atomik: kalau dua bagian terakhir selesai bersamaan, hanya satu
-        // yang berhasil memindahkan stage ke summarizing dan memicu finalisasi.
+    /**
+     * Konteks supaya label pembicara konsisten antar-potongan: daftar peserta dan
+     * beberapa baris terakhir potongan sebelumnya (tersedia di rekaman live, yang
+     * ditranskrip berurutan; untuk upload yang paralel hanya daftar peserta).
+     */
+    private function speakerContext(MeetingSegment $segment): ?string
+    {
+        $meeting = $segment->meeting;
+        $context = [];
+
+        if (trim((string) $meeting->attendees) !== '') {
+            $context[] = 'Peserta rapat: '.trim((string) $meeting->attendees);
+        }
+
+        $previous = MeetingSegment::where('meeting_id', $meeting->id)
+            ->where('index', $segment->index - 1)
+            ->where('status', MeetingSegment::STATUS_DONE)
+            ->value('text');
+
+        if (trim((string) $previous) !== '') {
+            $lines = array_slice(preg_split('/\R/', trim($previous)), -(int) Config::get('ai.live.context_lines', 6));
+            $context[] = "Akhir potongan sebelumnya:\n".implode("\n", $lines);
+        }
+
+        return $context === [] ? null : implode("\n\n", $context);
+    }
+
+    /**
+     * Kalau semua potongan sudah tertranskrip, pindahkan stage ke summarizing dan
+     * antrekan finalisasi. Klaim atomik: kalau dua bagian terakhir selesai
+     * bersamaan (atau rekaman live dihentikan tepat saat itu), hanya satu yang menang.
+     */
+    public function claimFinalization(Meeting $meeting): void
+    {
         $claimed = Meeting::whereKey($meeting->id)
             ->where('status', 'Memproses')
             ->where('processing_stage', 'transcribing')
@@ -301,6 +338,8 @@ class MeetingProcessingService
         if ($transcript === '') {
             throw new RuntimeException('Tidak ada ucapan yang terdeteksi di rekaman.');
         }
+
+        $transcript = $meeting->applySpeakerNames($transcript);
 
         Log::info("Transkrip {$meeting->segments()->count()} bagian digabung untuk Rapat ID: {$meeting->id}");
 
@@ -362,14 +401,14 @@ class MeetingProcessingService
      * digabung jadi satu rangkuman HTML (reduce) — model tidak perlu membaca
      * transkrip berjam-jam sekaligus, dan tiap panggilan tetap di bawah timeout.
      */
-    private function summarize(Meeting $meeting, string $transcript): string
+    private function summarize(Meeting $meeting, string $transcript, string $markerNotes = ''): string
     {
         $chunks = $this->transcriptChunks($transcript);
 
         if (count($chunks) === 1) {
             return $this->callText($meeting, 'text',
                 'You are a helpful assistant that summarizes meeting transcripts. '.self::SUMMARY_HTML_INSTRUCTIONS
-                .'Here is the transcript: '.$transcript,
+                .$markerNotes.'Here is the transcript: '.$transcript,
             );
         }
 
@@ -393,8 +432,51 @@ class MeetingProcessingService
             'You are a helpful assistant that summarizes long meetings. Below are chronological notes taken from each part '
             .'of one meeting transcript. Write ONE coherent summary of the whole meeting, grouping related points across '
             .'parts and keeping the key decisions and action items. '.self::SUMMARY_HTML_INSTRUCTIONS
-            ."Here are the notes:\n\n".implode("\n\n", $notes),
+            .$markerNotes."Here are the notes:\n\n".implode("\n\n", $notes),
         );
+    }
+
+    /**
+     * Penanda yang diklik notulis saat rapat live — instruksi wajib untuk AI.
+     */
+    private function markerNotes(Meeting $meeting): string
+    {
+        $markers = $meeting->markers()->get();
+        if ($markers->isEmpty()) {
+            return '';
+        }
+
+        return 'The minute-taker flagged these moments during the meeting (time in the recording, type, note). '
+            .'Every flagged decision ("Keputusan") MUST appear in a decisions section and every flagged follow-up '
+            ."(\"Tindak Lanjut\") MUST appear among the action items, using the transcript around that time:\n"
+            .$markers->map->describe()->implode("\n")."\n\n";
+    }
+
+    /**
+     * Rekaman live yang sempat terputus tersimpan sebagai beberapa bagian; gabungkan
+     * jadi satu file supaya bisa diputar utuh. Best-effort — transkrip & rangkuman
+     * tidak bergantung pada ini.
+     */
+    private function mergeLiveParts(Meeting $meeting): void
+    {
+        if ($meeting->live_part < 2) {
+            return;
+        }
+
+        $disk = Storage::disk('local');
+        $parts = collect(range(1, $meeting->live_part))
+            ->map(fn (int $part) => $meeting->livePartPath($part))
+            ->filter(fn (string $path) => $disk->exists($path))
+            ->values();
+
+        try {
+            $combined = "recordings/{$meeting->id}/rekaman-lengkap.mp3";
+            $this->audioSplitter->concat($parts->map(fn ($path) => $disk->path($path))->all(), $disk->path($combined));
+            $meeting->update(['source_file_path' => $combined, 'source_disk' => 'local']);
+            $disk->delete($parts->all());
+        } catch (Throwable $e) {
+            Log::warning("Gagal menggabungkan bagian rekaman live Rapat ID {$meeting->id}: {$e->getMessage()}");
+        }
     }
 
     /**
@@ -460,7 +542,12 @@ class MeetingProcessingService
         $chunks = $this->transcriptChunks($transcript);
         $items = [];
 
-        foreach ($chunks as $chunk) {
+        $markerNotes = $this->markerNotes($meeting);
+
+        foreach ($chunks as $i => $chunk) {
+            $flagged = $i === 0 && $markerNotes !== ''
+                ? "Sertakan juga tindak lanjut yang ditandai notulis berikut:\n".$markerNotes
+                : '';
             $prompt = <<<PROMPT
             Dari transkrip rapat berikut, ekstrak daftar action item (tindak lanjut) yang disebutkan.
             Balas HANYA dengan JSON array yang valid, tanpa teks lain dan tanpa markdown code fence.
@@ -471,7 +558,7 @@ class MeetingProcessingService
 
             Jika tidak ada action item yang jelas, balas dengan array kosong: []
 
-            Transkrip:
+            {$flagged}Transkrip:
             {$chunk}
             PROMPT;
 

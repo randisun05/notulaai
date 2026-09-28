@@ -65,7 +65,12 @@ UPDATE `meeting_segments` SET
 UPDATE `meetings` SET
     `created_at` = `created_at` + INTERVAL 7 HOUR,
     `updated_at` = `updated_at` + INTERVAL 7 HOUR,
-    `processing_heartbeat_at` = `processing_heartbeat_at` + INTERVAL 7 HOUR;
+    `processing_heartbeat_at` = `processing_heartbeat_at` + INTERVAL 7 HOUR,
+    `live_started_at` = `live_started_at` + INTERVAL 7 HOUR;
+
+UPDATE `meeting_markers` SET
+    `created_at` = `created_at` + INTERVAL 7 HOUR,
+    `updated_at` = `updated_at` + INTERVAL 7 HOUR;
 
 UPDATE `password_reset_tokens` SET
     `created_at` = `created_at` + INTERVAL 7 HOUR;

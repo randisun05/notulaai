@@ -30,7 +30,7 @@ class GeminiTranscriptionProvider implements TranscriptionProvider
 
     public function __construct(private readonly string $model) {}
 
-    public function transcribe(string $absoluteFilePath, string $fileName, ?string $language = null): AiTranscriptionResult
+    public function transcribe(string $absoluteFilePath, string $fileName, ?string $language = null, ?string $context = null): AiTranscriptionResult
     {
         if (empty(Config::get('gemini.api_key'))) {
             throw new RuntimeException('GEMINI_API_KEY tidak ditemukan. Cek .env.');
@@ -48,7 +48,10 @@ class GeminiTranscriptionProvider implements TranscriptionProvider
             .'Awali setiap giliran bicara dengan baris baru berformat "Nama: ..." jika nama pembicara '
             .'disebut dalam percakapan, atau "Pembicara 1: ...", "Pembicara 2: ..." jika tidak. '
             .'Jangan meringkas, jangan menambahkan komentar atau timestamp. '
-            .'Jika tidak ada ucapan yang terdengar, balas dengan teks kosong.';
+            .'Jika tidak ada ucapan yang terdengar, balas dengan teks kosong.'
+            .($context ? "\n\nKonteks (bukan bagian dari audio, jangan ditranskrip ulang):\n{$context}\n"
+                .'Rekaman ini adalah lanjutan langsung. Pakai label pembicara yang SAMA untuk orang yang sama seperti di '
+                .'konteks, dan pakai nama peserta bila suaranya jelas milik orang yang namanya sudah disebut.' : '');
 
         $startedAt = microtime(true);
 

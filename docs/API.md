@@ -35,7 +35,7 @@ Profil pemilik token: `id`, `name`, `email`, `role` (`user`/`admin`/`superadmin`
 
 ### `GET /api/v1/meetings`
 Daftar rapat, terbaru dulu. Filter: `search` (judul/agenda), `status`
-(`Dijadwalkan`, `Memproses`, `Selesai Diproses`, `Gagal`), `per_page`.
+(`Dijadwalkan`, `Berlangsung` — rekaman live sedang berjalan, `Memproses`, `Selesai Diproses`, `Gagal`), `per_page`.
 
 ### `POST /api/v1/meetings`
 Menjadwalkan rapat baru di unit pemilik token.
