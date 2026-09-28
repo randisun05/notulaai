@@ -38,7 +38,9 @@ return [
             'driver' => 'database',
             'table' => 'jobs',
             'queue' => 'default',
-            'retry_after' => 360,
+            // Harus > timeout job terpanjang (ProcessMeetingNotula: 900 s), kalau
+            // tidak job yang masih berjalan diambil ulang worker lain (kerja dobel).
+            'retry_after' => 960,
             'after_commit' => false,
         ],
 
@@ -66,7 +68,9 @@ return [
             'driver' => 'redis',
             'connection' => 'default',
             'queue' => env('REDIS_QUEUE', 'default'),
-            'retry_after' => 360,
+            // Harus > timeout job terpanjang (ProcessMeetingNotula: 900 s), kalau
+            // tidak job yang masih berjalan diambil ulang worker lain (kerja dobel).
+            'retry_after' => 960,
             'block_for' => null,
             'after_commit' => false,
         ],

@@ -17,6 +17,13 @@ use Inertia\Inertia;
 
 class MeetingController extends Controller
 {
+    /** Rekaman audio, plus video (rekaman Zoom/Meet) yang audionya diambil ffmpeg. */
+    public const RECORDING_MIME_TYPES = [
+        'audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/x-wav', 'audio/wave', 'audio/x-m4a', 'audio/mp4', 'audio/aac', 'audio/x-aac',
+        'audio/ogg', 'audio/opus', 'audio/webm', 'audio/flac', 'audio/x-flac', 'audio/x-matroska',
+        'video/mp4', 'video/webm', 'video/quicktime', 'video/x-matroska', 'video/ogg',
+    ];
+
     public function __construct(private readonly ActivityLogger $activityLogger) {}
 
     /**
@@ -114,6 +121,8 @@ class MeetingController extends Controller
             ]),
             'unitUsers' => User::where('unit_id', $meeting->unit_id)->get(['id', 'name', 'email']),
             'emailPurposes' => EmailDraftGenerator::PURPOSES,
+            // Di-poll halaman (partial reload) selama status Memproses.
+            'progress' => fn () => $meeting->fresh()->processingProgress(),
         ]);
     }
 
@@ -178,7 +187,7 @@ class MeetingController extends Controller
 
         // Validasi berdasarkan tipe input
         if ($inputType === 'audio') {
-            $validated = $request->validate(['audio_file' => 'required|file|mimetypes:audio/mpeg,audio/wav,audio/x-m4a,audio/mp4']);
+            $validated = $request->validate(['audio_file' => 'required|file|mimetypes:'.implode(',', self::RECORDING_MIME_TYPES)]);
         } elseif ($inputType === 'file') {
             $validated = $request->validate(['text_file' => 'required|file|mimetypes:text/plain,text/markdown']);
         } elseif ($inputType === 'text') {

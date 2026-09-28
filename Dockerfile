@@ -37,6 +37,10 @@ RUN apk add --no-cache \
         intl \
     && apk del git unzip
 
+# ffmpeg memecah rekaman panjang (audio/video) jadi potongan untuk ditranskrip
+# (App\Services\Audio\AudioSplitter). Dipakai oleh container app dan queue.
+RUN apk add --no-cache ffmpeg
+
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
 COPY . .

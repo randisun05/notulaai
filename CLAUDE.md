@@ -32,7 +32,8 @@ in the same commit.
 | `app/Http/Controllers/Api/V1/`, `app/Http/Resources/` | REST API v1 (meetings, transcript submission, tasks) — same policies/unit scoping as web |
 | `app/Services/Task/TaskStatusService.php` | status-change rules shared by web + API (selectable statuses, Done-reopen lock, activity + webhook) |
 | `app/Services/{Analytics,Audit,Forum,Webhook}/` | `DashboardInsightGenerator`, `AuditLogger`, `MentionParser`, `WebhookDispatcher` |
-| `app/Jobs/` | `ProcessMeetingNotula`, `SendWebhookNotification`, 3 scheduled jobs (reminders, escalation) |
+| `app/Jobs/` | `ProcessMeetingNotula` → `TranscribeMeetingSegment` (×N) → `FinalizeMeetingNotula`; `SendWebhookNotification`, 3 scheduled jobs (reminders, escalation) |
+| `app/Services/Audio/AudioSplitter.php` | ffmpeg wrapper: recording → fixed-length mono mp3 segments with exact start/end |
 | `app/Console/Commands/FailStuckMeetings.php` | `meetings:fail-stuck` watchdog |
 | `app/Models/` | `Meeting`, `MeetingActionItem`, `MeetingChatMessage`, `Task` (+`TaskEvidence*`, `TaskDisposition`), `ForumComment*`, `Activity`, `AuditLog`, `AiRequestLog`, `Setting` (singleton via `Setting::current()`), `Unit`, `User`, `Webhook`; `Concerns/ScopedToUnit` |
 | `app/Policies/` | `Meeting`, `Task`, `ForumComment`, `Unit`, `User` |
@@ -75,7 +76,7 @@ npm run build                          # builds public/build (gitignored, NOT co
                                        # tests and after adding/renaming any Vue page, or Inertia 500s
 
 # Tests (SQLite :memory:, config in phpunit.xml)
-php artisan test                       # full suite (~10 s, ~216 tests)
+php artisan test                       # full suite (~15 s, ~245 tests)
 php artisan test --filter=ProcessMeetingTest
 php artisan test tests/Feature/Task/TaskApprovalTest.php
 
@@ -109,7 +110,9 @@ to `config/ai.php` defaults (`AI_TEXT_PROVIDER` etc.). Drivers return DTOs (`AiT
 entry in `config/ai.php` under `providers`. No controller/job changes needed.
 
 Current drivers: `gemini` (default text/OCR, `gemini-2.0-flash`), `openrouter` (fallback text,
-free-tier model), `whisper_local` (the Flask sidecar).
+free-tier model), `gemini_stt` (default transcription — audio sent inline, so only for ~10-min segments,
+≤14 MB), `whisper_local` (the Flask sidecar, slow on CPU). The active provider stored in the Settings
+row wins over `AI_TRANSCRIPTION_PROVIDER`, so existing installs switch STT in Admin → Settings.
 
 **Rate limiting:** every LLM-calling route (`meetings.chat.store`, `meetings.emails.generate|send`,
 `meetings.action-items.regenerate`, `meetings.process`, `dashboard.insight`, `/stt/test`) carries
@@ -128,21 +131,27 @@ actually served the request. Passing an explicit name (`->text('gemini')`) skips
 
 ### Meeting processing pipeline
 `MeetingController::process()` / API `POST /api/v1/meetings/{id}/transcript` → `MeetingProcessingService::start()` (only from `Dijadwalkan`/`Gagal`, see `canStart()` — re-processing would duplicate the job, wipe converted action items, and re-email the unit) → dispatches `ProcessMeetingNotula` job → `MeetingProcessingService::process()`:
-1. `extractTranscript()` branches on file extension: audio → transcription provider, `txt`/`md` → read as-is, image → OCR provider.
+1. **Audio/video** (`AUDIO_EXTENSIONS`, incl. Zoom `.mp4`): `AudioSplitter` (ffmpeg, `config('ai.audio')`) cuts the recording into ~10-min mono 16 kHz mp3 segments on the private `local` disk (`meeting_segments/{id}/`), one `meeting_segments` row each, and dispatches one `TranscribeMeetingSegment` job per segment. Each segment job transcribes, deletes its audio, touches `processing_heartbeat_at`, and the one that finishes last atomically claims `processing_stage` `transcribing → summarizing` and dispatches `FinalizeMeetingNotula`, which joins segments as `[HH:MM:SS]`-labelled blocks and calls `finalize()`. A segment failing all tries → `markFailed()` (atomic, one activity). Re-processing after `Gagal` deletes old segments and starts over.
+   **Text/image:** `extractTranscript()` → `txt`/`md` read as-is, image → OCR provider, then `finalize()` in the same job.
 2. `summarize()` — one text-provider call; the prompt asks the model to return **HTML**. It is passed through `App\Support\HtmlSanitizer::clean()` (HTMLPurifier `ai_html` profile) before being stored in `meetings.summary`, then rendered with `v-html` / `{!! !!}`. Same sanitizer guards the free-text `meetings.agenda` (`MeetingController`), the AI email draft body (`EmailDraftGenerator`), and the user-edited send body (`MeetingEmailController`). Forum comment bodies are safe a different way — `renderBody()` in Vue HTML-escapes then only wraps `@Mention` spans.
 3. `generateActionItems()` — second text call returning a JSON array, parsed by `ActionItemsParser` (unit-tested against code-fence / prose-wrapped / missing-title LLM quirks). **Best-effort**: a failure here never fails the meeting.
 4. Logs an Activity, dispatches the `meeting.processed` webhook, emails everyone in the unit.
 
 Every AI call is recorded via `AiRequestLogger` into `ai_request_logs` (the `cost` column is always null — no pricing data wired).
 
-**Reliability notes (see also memory `project-ai-reliability-fixes`):** the job's `$timeout` relies on
-`pcntl`, which does not exist on Windows (the dev/deploy OS), so it is a no-op there. The real safety
-net is `php artisan meetings:fail-stuck` (`FailStuckMeetings` command, scheduled every 5 min) which
-force-fails any meeting stuck in `Memproses` past a threshold — this needs `schedule:work` running.
+**Reliability notes (see also memory `project-ai-reliability-fixes`):** job `$timeout`s (Process 900 s,
+segment/finalize 600 s) must stay below the queue's `retry_after` (960 s, `config/queue.php`) or a running
+job gets picked up twice. `$timeout` relies on `pcntl`, which does not exist on Windows (the dev/deploy OS),
+so it is a no-op there. The real safety net is `php artisan meetings:fail-stuck --minutes=20` (scheduled
+every 5 min) which fails a `Memproses` meeting whose **last progress** (`processing_heartbeat_at`, else
+`updated_at`) is older than the threshold — a 3-hour recording that keeps advancing is never killed.
+Needs `schedule:work` running. **ffmpeg must be installed** on the app/queue host (`FFMPEG_BINARY`;
+the Docker image installs it). Tests needing real ffmpeg skip when it's missing — run them with
+`FFMPEG_BINARY=/path/to/ffmpeg php artisan test`.
 HTTP clients in `OpenRouterTextProvider` / Gemini providers have explicit timeouts; `config/gemini.php`
 must exist (a config-cache clear that drops it silently breaks Gemini).
 
-Meeting status values (Indonesian, stored as strings): `Dijadwalkan` → `Memproses` → `Selesai Diproses` / `Gagal`. `Meetings/Show.vue` shows a static spinner during `Memproses` — there is no polling or broadcasting, the user must refresh manually.
+Meeting status values (Indonesian, stored as strings): `Dijadwalkan` → `Memproses` → `Selesai Diproses` / `Gagal`. During `Memproses`, `Meetings/Show.vue` polls the lazy `progress` prop (`Meeting::processingProgress()`: stage + segments done/total) every 5 s via partial reload and does a full reload once the status changes.
 
 ### Auth & multi-unit scoping
 Three roles only: `user`, `admin`, `superadmin` (`spatie/laravel-permission`, seeded by

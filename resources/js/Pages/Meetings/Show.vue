@@ -8,7 +8,7 @@ import DangerButton from '@/Components/DangerButton.vue'; // <-- Import Tombol M
 import ForumSection from '@/Pages/Meetings/Partials/ForumSection.vue';
 import ActivityTimeline from '@/Pages/Meetings/Partials/ActivityTimeline.vue';
 import { Head, useForm, usePage, Link, router } from '@inertiajs/vue3';
-import { ref, computed } from 'vue';
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
 import axios from 'axios';
 
 const props = defineProps({
@@ -24,6 +24,51 @@ const props = defineProps({
         type: Object,
         default: () => ({}),
     },
+    progress: {
+        type: Object,
+        default: null,
+    },
+});
+
+// Selama Memproses: ambil progres tiap 5 detik (partial reload, ringan); begitu
+// status berubah, muat ulang halaman penuh supaya rangkuman/transkrip muncul.
+let progressTimer = null;
+const pollProgress = () => {
+    router.reload({
+        only: ['progress'],
+        onSuccess: (p) => {
+            if (p.props.progress?.status !== 'Memproses') {
+                stopPolling();
+                router.reload();
+            }
+        },
+    });
+};
+const stopPolling = () => {
+    if (progressTimer) clearInterval(progressTimer);
+    progressTimer = null;
+};
+const startPolling = () => {
+    if (!progressTimer && props.meeting.status === 'Memproses') {
+        progressTimer = setInterval(pollProgress, 5000);
+    }
+};
+onMounted(startPolling);
+onUnmounted(stopPolling);
+
+
+const progressLabel = computed(() => {
+    const p = props.progress;
+    if (!p || p.status !== 'Memproses') return 'Menyiapkan...';
+    if (p.stage === 'transcribing' && p.total) return `Mentranskrip rekaman: ${p.done} dari ${p.total} bagian`;
+    if (p.stage === 'summarizing') return 'Membuat rangkuman dan action items...';
+    return 'Menyiapkan rekaman...';
+});
+const progressPercent = computed(() => {
+    const p = props.progress;
+    if (!p || !p.total) return null;
+    // Transkripsi = 90% pekerjaan, rangkuman 10% terakhir.
+    return p.stage === 'summarizing' ? 95 : Math.round((p.done / p.total) * 90);
 });
 
 const page = usePage();
@@ -119,6 +164,15 @@ const askChat = async () => {
 };
 
 const activeTab = ref(props.meeting.status === 'Selesai Diproses' ? 'summary' : 'input');
+watch(() => props.meeting.status, (status) => {
+    if (status === 'Memproses') {
+        startPolling();
+        return;
+    }
+    stopPolling();
+    // Reload mempertahankan state komponen; pindahkan ke tab hasil begitu selesai.
+    if (status === 'Selesai Diproses') activeTab.value = 'summary';
+});
 const inputType = ref('text'); // 'text', 'audio', 'file', 'image'
 
 const form = useForm({
@@ -404,8 +458,9 @@ const deleteMeeting = () => {
                                 </div>
 
                                 <div v-show="inputType === 'audio'">
-                                    <label for="audio_input" class="block text-sm font-medium text-gray-700">File Rekaman Audio (.mp3, .wav, .m4a)</label>
-                                    <input @change="onFileChange($event, 'audio')" id="audio_input" type="file" accept=".mp3,.wav,.m4a" class="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"/>
+                                    <label for="audio_input" class="block text-sm font-medium text-gray-700">File Rekaman Audio/Video (.mp3, .wav, .m4a, .mp4, .webm, .ogg, .aac, .flac, .mov)</label>
+                                    <p class="text-xs text-gray-500 mb-1">Rekaman berjam-jam didukung: rekaman dipecah per 10 menit dan ditranskrip bertahap. Untuk video (mis. rekaman Zoom) hanya audionya yang dipakai.</p>
+                                    <input @change="onFileChange($event, 'audio')" id="audio_input" type="file" accept=".mp3,.wav,.m4a,.mp4,.webm,.ogg,.oga,.opus,.aac,.flac,.mov,.mkv,audio/*,video/*" class="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"/>
                                     <InputError class="mt-2" :message="form.errors.audio_file" />
                                 </div>
 
@@ -422,6 +477,11 @@ const deleteMeeting = () => {
                                     <InputError class="mt-2" :message="form.errors.image_file" />
                                 </div>
 
+                                <div v-if="form.progress" class="mt-4">
+                                    <div class="flex justify-between text-xs text-gray-600 mb-1"><span>Mengunggah...</span><span>{{ form.progress.percentage }}%</span></div>
+                                    <div class="w-full bg-gray-100 rounded-full h-2"><div class="bg-brand-600 h-2 rounded-full transition-all" :style="{ width: form.progress.percentage + '%' }"></div></div>
+                                </div>
+
                                 <div class="flex items-center mt-6">
                                     <PrimaryButton :class="{ 'opacity-25': form.processing }" :disabled="form.processing">
                                         Proses Notula
@@ -435,7 +495,11 @@ const deleteMeeting = () => {
                                 <div class="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-500"></div>
                             </div>
                             <h3 class="text-lg font-semibold text-gray-800">Sedang Memproses...</h3>
-                            <p class="text-sm text-gray-500 mt-2">Notula Anda sedang dibuat oleh AI. Halaman ini akan diperbarui otomatis setelah selesai.</p>
+                            <p class="text-sm text-gray-700 mt-2">{{ progressLabel }}</p>
+                            <div v-if="progressPercent !== null" class="max-w-md mx-auto mt-3">
+                                <div class="w-full bg-gray-100 rounded-full h-2"><div class="bg-brand-600 h-2 rounded-full transition-all duration-700" :style="{ width: progressPercent + '%' }"></div></div>
+                            </div>
+                            <p class="text-sm text-gray-500 mt-3">Notula Anda sedang dibuat oleh AI. Halaman ini diperbarui otomatis — boleh ditinggal dan dibuka lagi nanti.</p>
                         </div>
                     </div>
 

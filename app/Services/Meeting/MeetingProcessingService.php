@@ -2,13 +2,17 @@
 
 namespace App\Services\Meeting;
 
+use App\Jobs\FinalizeMeetingNotula;
 use App\Jobs\ProcessMeetingNotula;
+use App\Jobs\TranscribeMeetingSegment;
 use App\Mail\MeetingSummary;
 use App\Models\Meeting;
 use App\Models\MeetingActionItem;
+use App\Models\MeetingSegment;
 use App\Models\User;
 use App\Services\AI\AiManager;
 use App\Services\AI\AiRequestLogger;
+use App\Services\Audio\AudioSplitter;
 use App\Services\Webhook\WebhookDispatcher;
 use App\Support\HtmlSanitizer;
 use Illuminate\Support\Facades\Config;
@@ -27,7 +31,8 @@ class MeetingProcessingService
      */
     public const STARTABLE_STATUSES = ['Dijadwalkan', 'Gagal'];
 
-    private const AUDIO_EXTENSIONS = ['mp3', 'wav', 'm4a'];
+    /** Audio & video (rekaman Zoom/Meet); ekstensi hasil tebakan MIME ikut didaftarkan. */
+    public const AUDIO_EXTENSIONS = ['mp3', 'mpga', 'wav', 'm4a', 'm4b', 'mp4', 'mov', 'qt', 'webm', 'weba', 'ogg', 'oga', 'opus', 'aac', 'flac', 'mkv', 'mka'];
 
     private const TEXT_EXTENSIONS = ['txt', 'md'];
 
@@ -39,6 +44,7 @@ class MeetingProcessingService
         private readonly ActionItemsParser $actionItemsParser,
         private readonly ActivityLogger $activityLogger,
         private readonly WebhookDispatcher $webhookDispatcher,
+        private readonly AudioSplitter $audioSplitter,
     ) {}
 
     /**
@@ -81,6 +87,9 @@ class MeetingProcessingService
         $meeting->update([
             'source_file_path' => $sourceFilePath,
             'status' => 'Memproses',
+            'processing_stage' => null,
+            'processing_total_segments' => null,
+            'processing_heartbeat_at' => now(),
         ]);
 
         $this->activityLogger->log($meeting, $user, 'meeting.processing_started', $user->name.' memulai proses pembuatan notula.');
@@ -88,13 +97,30 @@ class MeetingProcessingService
         ProcessMeetingNotula::dispatch($meeting);
     }
 
+    /**
+     * Langkah pertama job ProcessMeetingNotula. Rekaman audio/video dipecah dan
+     * ditranskrip per bagian oleh job terpisah (lanjut di transcribeSegment());
+     * teks & gambar langsung diekstrak lalu difinalisasi di job ini juga.
+     */
     public function process(Meeting $meeting): void
     {
         Log::info("Memulai pemrosesan untuk Rapat ID: {$meeting->id}");
 
-        $transcript = $this->extractTranscript($meeting);
+        if ($this->isAudio($meeting->source_file_path)) {
+            $this->startSegmentedTranscription($meeting);
 
-        Log::info("Transkrip berhasil dibuat untuk Rapat ID: {$meeting->id}");
+            return;
+        }
+
+        $this->finalize($meeting, $this->extractTranscript($meeting));
+    }
+
+    /**
+     * Rangkum transkrip lengkap, simpan, buat action items, lalu beri tahu unit.
+     */
+    public function finalize(Meeting $meeting, string $transcript): void
+    {
+        $this->heartbeat($meeting, 'summarizing');
 
         $summary = $this->summarize($meeting, $transcript);
 
@@ -106,6 +132,7 @@ class MeetingProcessingService
             // {!! !!}); transkrip bisa berisi prompt injection, jadi sanitasi dulu.
             'summary' => HtmlSanitizer::clean($summary),
             'status' => 'Selesai Diproses',
+            'processing_stage' => null,
         ]);
         $meeting->refresh();
 
@@ -113,10 +140,169 @@ class MeetingProcessingService
         // notula tetap dianggap berhasil diproses (transkrip + rangkuman sudah aman).
         $this->generateActionItems($meeting, $transcript);
 
+        $this->deleteSegmentAudio($meeting);
+
         $this->activityLogger->log($meeting, null, 'meeting.processed', 'AI berhasil membuat transkrip dan rangkuman notula.');
         $this->webhookDispatcher->dispatch('meeting.processed', $meeting, ['meeting_id' => $meeting->id, 'title' => $meeting->title]);
 
         $this->notifyUnit($meeting);
+    }
+
+    /**
+     * Tandai Gagal — atomik, jadi beberapa job/watchdog yang gagal bersamaan
+     * hanya mencatat satu aktivitas. Mengembalikan false kalau sudah tidak Memproses.
+     */
+    public function markFailed(Meeting $meeting, string $reason): bool
+    {
+        $updated = Meeting::whereKey($meeting->id)
+            ->where('status', 'Memproses')
+            ->update(['status' => 'Gagal', 'processing_stage' => null, 'updated_at' => now()]);
+
+        if (! $updated) {
+            return false;
+        }
+
+        $meeting->refresh();
+        $this->activityLogger->log($meeting, null, 'meeting.failed', 'Pemrosesan notula gagal: '.$reason);
+
+        return true;
+    }
+
+    private function isAudio(?string $path): bool
+    {
+        return in_array(strtolower(pathinfo((string) $path, PATHINFO_EXTENSION)), self::AUDIO_EXTENSIONS, true);
+    }
+
+    private function heartbeat(Meeting $meeting, ?string $stage = null): void
+    {
+        $meeting->forceFill(array_filter([
+            'processing_heartbeat_at' => now(),
+            'processing_stage' => $stage,
+        ]))->save();
+    }
+
+    private function segmentDirectory(Meeting $meeting): string
+    {
+        return "meeting_segments/{$meeting->id}";
+    }
+
+    private function deleteSegmentAudio(Meeting $meeting): void
+    {
+        Storage::disk('local')->deleteDirectory($this->segmentDirectory($meeting));
+    }
+
+    /**
+     * Pecah rekaman jadi potongan audio (disk privat `local`) dan antrekan satu
+     * job transkripsi per potongan.
+     */
+    private function startSegmentedTranscription(Meeting $meeting): void
+    {
+        $filePath = $meeting->source_file_path;
+        if (! $filePath || ! Storage::disk('public')->exists($filePath)) {
+            throw new RuntimeException("File sumber tidak ditemukan di path: {$filePath}");
+        }
+
+        // Proses ulang (setelah Gagal) mulai dari nol.
+        $meeting->segments()->delete();
+        $this->deleteSegmentAudio($meeting);
+
+        $directory = $this->segmentDirectory($meeting);
+        $parts = $this->audioSplitter->split(
+            Storage::disk('public')->path($filePath),
+            Storage::disk('local')->path($directory),
+        );
+
+        $segments = collect($parts)->values()->map(fn (array $part, int $index) => MeetingSegment::create([
+            'meeting_id' => $meeting->id,
+            'index' => $index,
+            'start_seconds' => $part['start'],
+            'end_seconds' => $part['end'],
+            'audio_path' => $directory.'/'.basename($part['path']),
+        ]));
+
+        $meeting->forceFill([
+            'processing_stage' => 'transcribing',
+            'processing_total_segments' => $segments->count(),
+            'processing_heartbeat_at' => now(),
+        ])->save();
+
+        Log::info("Rapat ID {$meeting->id} dipecah menjadi {$segments->count()} bagian untuk ditranskrip.");
+
+        foreach ($segments as $segment) {
+            TranscribeMeetingSegment::dispatch($segment);
+        }
+    }
+
+    /**
+     * Transkrip satu potongan (dipanggil job TranscribeMeetingSegment). Potongan
+     * terakhir yang selesai memicu FinalizeMeetingNotula.
+     */
+    public function transcribeSegment(MeetingSegment $segment): void
+    {
+        $meeting = $segment->meeting;
+
+        // Rapat sudah Gagal (bagian lain gagal / watchdog) atau dihapus: berhenti.
+        if (! $meeting || $meeting->status !== 'Memproses' || $segment->status === MeetingSegment::STATUS_DONE) {
+            return;
+        }
+
+        $this->heartbeat($meeting);
+
+        $provider = $this->ai->activeTranscriptionProvider();
+        $fileName = basename((string) $segment->audio_path);
+
+        try {
+            $result = $this->ai->transcription()->transcribe(
+                absoluteFilePath: Storage::disk('local')->path((string) $segment->audio_path),
+                fileName: $fileName,
+                language: 'Indonesian',
+            );
+        } catch (Throwable $e) {
+            $this->logger->logFailure('transcription', $provider, null, $fileName, $e->getMessage(), $meeting, $meeting->creator);
+            throw $e;
+        }
+
+        $this->logger->logSuccess('transcription', $result->provider, null, $fileName, $result->text, null, null, $result->durationMs, $meeting, $meeting->creator);
+
+        $segment->update(['status' => MeetingSegment::STATUS_DONE, 'text' => $result->text, 'error' => null]);
+        Storage::disk('local')->delete((string) $segment->audio_path);
+
+        $this->heartbeat($meeting);
+
+        // Klaim atomik: kalau dua bagian terakhir selesai bersamaan, hanya satu
+        // yang berhasil memindahkan stage ke summarizing dan memicu finalisasi.
+        $claimed = Meeting::whereKey($meeting->id)
+            ->where('status', 'Memproses')
+            ->where('processing_stage', 'transcribing')
+            ->whereDoesntHave('segments', fn ($q) => $q->where('status', '!=', MeetingSegment::STATUS_DONE))
+            ->update(['processing_stage' => 'summarizing', 'processing_heartbeat_at' => now()]);
+
+        if ($claimed) {
+            FinalizeMeetingNotula::dispatch($meeting);
+        }
+    }
+
+    /**
+     * Gabungkan semua potongan jadi satu transkrip bertanda waktu, lalu finalisasi.
+     */
+    public function finalizeFromSegments(Meeting $meeting): void
+    {
+        if ($meeting->status !== 'Memproses') {
+            return;
+        }
+
+        $transcript = $meeting->segments()->get()
+            ->filter(fn (MeetingSegment $segment) => trim((string) $segment->text) !== '')
+            ->map(fn (MeetingSegment $segment) => $segment->startLabel()."\n".trim((string) $segment->text))
+            ->implode("\n\n");
+
+        if ($transcript === '') {
+            throw new RuntimeException('Tidak ada ucapan yang terdeteksi di rekaman.');
+        }
+
+        Log::info("Transkrip {$meeting->segments()->count()} bagian digabung untuk Rapat ID: {$meeting->id}");
+
+        $this->finalize($meeting, $transcript);
     }
 
     private function extractTranscript(Meeting $meeting): string
@@ -127,26 +313,6 @@ class MeetingProcessingService
         }
 
         $extension = strtolower(pathinfo($filePath, PATHINFO_EXTENSION));
-
-        if (in_array($extension, self::AUDIO_EXTENSIONS)) {
-            $provider = $this->ai->activeTranscriptionProvider();
-            $fileName = basename($filePath);
-
-            try {
-                $result = $this->ai->transcription()->transcribe(
-                    absoluteFilePath: Storage::disk('public')->path($filePath),
-                    fileName: $fileName,
-                    language: 'Indonesian',
-                );
-            } catch (Throwable $e) {
-                $this->logger->logFailure('transcription', $provider, null, $fileName, $e->getMessage(), $meeting, $meeting->creator);
-                throw $e;
-            }
-
-            $this->logger->logSuccess('transcription', $result->provider, null, $fileName, $result->text, null, null, $result->durationMs, $meeting, $meeting->creator);
-
-            return $result->text;
-        }
 
         if (in_array($extension, self::TEXT_EXTENSIONS)) {
             $transcript = Storage::disk('public')->get($filePath);

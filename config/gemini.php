@@ -25,8 +25,9 @@ return [
     |
     | Maksimal detik menunggu respons dari Gemini API sebelum request dianggap
     | gagal. Tanpa ini, request yang menggantung bisa membuat proses rangkuman
-    | macet tanpa batas waktu.
+    | macet tanpa batas waktu. 180 detik memberi ruang transkripsi potongan
+    | audio ±10 menit (lihat config/ai.php 'audio').
     */
 
-    'request_timeout' => env('GEMINI_REQUEST_TIMEOUT', 60),
+    'request_timeout' => env('GEMINI_REQUEST_TIMEOUT', 180),
 ];

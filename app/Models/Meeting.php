@@ -23,6 +23,13 @@ class Meeting extends Model
         'transcript',
         'summary',
         'source_file_path', // Ditambahkan di sini
+        'processing_stage',
+        'processing_total_segments',
+        'processing_heartbeat_at',
+    ];
+
+    protected $casts = [
+        'processing_heartbeat_at' => 'datetime',
     ];
 
     /**
@@ -62,6 +69,29 @@ class Meeting extends Model
     public function comments(): HasMany
     {
         return $this->hasMany(ForumComment::class)->whereNull('parent_id')->orderBy('created_at');
+    }
+
+    /**
+     * Ringkasan progres untuk UI: status + tahap + jumlah potongan yang sudah ditranskrip.
+     *
+     * @return array{status: string, stage: ?string, done: int, total: ?int}
+     */
+    public function processingProgress(): array
+    {
+        return [
+            'status' => $this->status,
+            'stage' => $this->processing_stage,
+            'done' => $this->processing_total_segments
+                ? $this->segments()->where('status', MeetingSegment::STATUS_DONE)->count()
+                : 0,
+            'total' => $this->processing_total_segments,
+        ];
+    }
+
+    /** @return HasMany<MeetingSegment, $this> */
+    public function segments(): HasMany
+    {
+        return $this->hasMany(MeetingSegment::class)->orderBy('index');
     }
 
     public function activities(): HasMany

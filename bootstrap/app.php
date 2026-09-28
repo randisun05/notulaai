@@ -83,7 +83,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $schedule->job(new EscalateOverdueTasks)
             ->hourly();
 
-        $schedule->command('meetings:fail-stuck', ['--minutes=10'])
+        $schedule->command('meetings:fail-stuck', ['--minutes=20'])
             ->everyFiveMinutes()
             ->withoutOverlapping();
     })

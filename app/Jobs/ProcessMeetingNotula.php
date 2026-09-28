@@ -3,7 +3,6 @@
 namespace App\Jobs;
 
 use App\Models\Meeting;
-use App\Services\Meeting\ActivityLogger;
 use App\Services\Meeting\MeetingProcessingService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -14,13 +13,20 @@ use Illuminate\Support\Facades\Log;
 use OpenAI\Exceptions\ErrorException;
 use Throwable;
 
+/**
+ * Langkah pertama pemrosesan notula: teks/gambar langsung dirangkum di sini;
+ * audio/video hanya dipecah, lalu dilanjutkan TranscribeMeetingSegment.
+ *
+ * Semua timeout job pemrosesan harus di bawah `retry_after` antrean
+ * (config/queue.php), kalau tidak job yang masih jalan diambil ulang worker lain.
+ */
 class ProcessMeetingNotula implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     public $meeting;
 
-    public $timeout = 300; // 5 menit timeout
+    public $timeout = 900;
 
     public $tries = 3;
 
@@ -53,8 +59,6 @@ class ProcessMeetingNotula implements ShouldQueue
             'trace' => $e->getTraceAsString(),
         ]);
 
-        $this->meeting->update(['status' => 'Gagal']);
-
-        app(ActivityLogger::class)->log($this->meeting, null, 'meeting.failed', 'Pemrosesan notula gagal: '.$errorMessage);
+        app(MeetingProcessingService::class)->markFailed($this->meeting, $errorMessage);
     }
 }

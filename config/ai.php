@@ -2,6 +2,7 @@
 
 use App\Services\AI\Providers\GeminiOcrProvider;
 use App\Services\AI\Providers\GeminiTextProvider;
+use App\Services\AI\Providers\GeminiTranscriptionProvider;
 use App\Services\AI\Providers\OpenRouterTextProvider;
 use App\Services\AI\Providers\WhisperLocalTranscriptionProvider;
 
@@ -18,7 +19,7 @@ return [
     */
 
     'default_text_provider' => env('AI_TEXT_PROVIDER', 'gemini'),
-    'default_transcription_provider' => env('AI_TRANSCRIPTION_PROVIDER', 'whisper_local'),
+    'default_transcription_provider' => env('AI_TRANSCRIPTION_PROVIDER', 'gemini_stt'),
     'default_ocr_provider' => env('AI_OCR_PROVIDER', 'gemini_ocr'),
 
     /*
@@ -72,6 +73,25 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Rekaman panjang
+    |--------------------------------------------------------------------------
+    |
+    | Rekaman dipecah ffmpeg menjadi potongan `segment_seconds` detik yang
+    | ditranskrip terpisah (job TranscribeMeetingSegment). ffmpeg wajib ada di
+    | server app; set FFMPEG_BINARY ke path lengkapnya kalau tidak ada di PATH
+    | (mis. C:\ffmpeg\bin\ffmpeg.exe di Windows).
+    |
+    */
+
+    'audio' => [
+        'ffmpeg_binary' => env('FFMPEG_BINARY', 'ffmpeg'),
+        'segment_seconds' => (int) env('AI_AUDIO_SEGMENT_SECONDS', 600),
+        'min_segment_seconds' => 1,
+        'split_timeout' => (int) env('AI_AUDIO_SPLIT_TIMEOUT', 1800),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Provider Configuration
     |--------------------------------------------------------------------------
     |
@@ -93,6 +113,11 @@ return [
 
         'whisper_local' => [
             'driver' => WhisperLocalTranscriptionProvider::class,
+        ],
+
+        'gemini_stt' => [
+            'driver' => GeminiTranscriptionProvider::class,
+            'model' => env('AI_STT_MODEL', 'gemini-2.0-flash'),
         ],
 
         'gemini_ocr' => [
