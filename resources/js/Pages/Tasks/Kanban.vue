@@ -6,6 +6,7 @@ import { ref } from 'vue';
 const props = defineProps({
     tasksByStatus: { type: Object, required: true },
     statuses: { type: Array, required: true },
+    canManage: { type: Boolean, default: false },
 });
 
 const draggingTask = ref(null);
@@ -74,7 +75,7 @@ const priorityBadge = (priority) => ({
                                 <div
                                     v-for="task in tasksByStatus[status]"
                                     :key="task.id"
-                                    draggable="true"
+                                    :draggable="task.status !== 'Done' || canManage"
                                     @dragstart="onDragStart(task)"
                                     class="card p-3 cursor-move hover:shadow-md transition-shadow"
                                 >

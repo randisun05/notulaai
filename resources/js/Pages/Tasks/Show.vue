@@ -164,7 +164,7 @@ const priorityBadge = (priority) => ({
                         <div class="mt-6 pt-6 border-t border-gray-100">
                             <label class="form-label">Status</label>
                             <div class="flex flex-wrap items-center gap-3">
-                                <select :value="task.status" @change="updateStatus($event.target.value)" class="form-select w-full sm:w-64">
+                                <select :value="task.status" @change="updateStatus($event.target.value)" :disabled="task.status === 'Done' && !canManage" :title="task.status === 'Done' && !canManage ? 'Hanya admin yang bisa membuka kembali task yang sudah selesai' : null" class="form-select w-full sm:w-64">
                                     <option v-for="status in selectableStatuses" :key="status" :value="status">{{ status }}</option>
                                     <option v-if="task.status === 'Review'" value="Review">Review</option>
                                     <option v-if="task.status === 'Done'" value="Done">Done</option>

@@ -158,7 +158,7 @@ access into a 404 before the Policy's 403 runs. Single-record authorization goes
 `Done` status is unreachable through the normal status dropdown — `TaskController::updateStatus()`
 rejects it. Path: assignee submits for review (requires evidence) → `approval_requested` → an
 admin/superadmin **in the same unit** approves (`approved`; `TaskPolicy::approve` refuses the task's own assignee, so an admin can't approve their own work) or rejects
-back to `In Progress` with a reason. `is_overdue` / `is_sla_breached` are Eloquent accessors
+back to `In Progress` with a reason. Reopening a `Done` task (status dropdown / Kanban drag) is allowed only for `TaskPolicy::manage` — admin/superadmin of that unit. `is_overdue` / `is_sla_breached` are Eloquent accessors
 (`$appends`), not columns — never true for Done/Cancelled.
 
 ### Collaboration

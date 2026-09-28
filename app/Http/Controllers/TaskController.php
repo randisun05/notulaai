@@ -61,6 +61,7 @@ class TaskController extends Controller
         return Inertia::render('Tasks/Kanban', [
             'tasksByStatus' => $tasksByStatus,
             'statuses' => Task::STATUSES,
+            'canManage' => Auth::user()->can('manage', Task::class),
         ]);
     }
 
@@ -276,6 +277,12 @@ class TaskController extends Controller
     public function updateStatus(Request $request, Task $task)
     {
         $this->authorize('update', $task);
+
+        // Task Done sudah disetujui; membukanya kembali hanya boleh oleh admin
+        // unit tsb (TaskPolicy::manage), bukan siapa saja yang boleh update.
+        if ($task->status === 'Done' && ! Auth::user()->can('manage', $task)) {
+            return back()->with('error', 'Task yang sudah selesai hanya bisa dibuka kembali oleh admin.');
+        }
 
         // "Done" hanya lewat approve() (persetujuan), "Review" hanya lewat
         // submitForReview() (wajib lampirkan bukti pengerjaan) — dropdown status

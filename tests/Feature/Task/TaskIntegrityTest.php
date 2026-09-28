@@ -80,4 +80,37 @@ class TaskIntegrityTest extends TestCase
 
         $this->assertNull($task->fresh()->sla_hours);
     }
+
+    public function test_regular_user_cannot_reopen_a_done_task(): void
+    {
+        $unit = Unit::factory()->create();
+        $user = $this->userInUnit($unit);
+        $task = Task::create(['unit_id' => $unit->id, 'assignee_id' => $user->id, 'title' => 'Selesai', 'status' => 'Done']);
+
+        $this->actingAs($user)->patch(route('tasks.update-status', $task), ['status' => 'Todo'])->assertSessionHas('error');
+
+        $this->assertSame('Done', $task->fresh()->status);
+    }
+
+    public function test_admin_can_reopen_a_done_task(): void
+    {
+        $unit = Unit::factory()->create();
+        $admin = $this->userInUnit($unit, 'admin');
+        $task = Task::create(['unit_id' => $unit->id, 'title' => 'Selesai', 'status' => 'Done']);
+
+        $this->actingAs($admin)->patch(route('tasks.update-status', $task), ['status' => 'In Progress'])->assertSessionHasNoErrors();
+
+        $this->assertSame('In Progress', $task->fresh()->status);
+    }
+
+    public function test_admin_from_another_unit_cannot_reopen_a_done_task(): void
+    {
+        $unit = Unit::factory()->create();
+        $admin = $this->userInUnit(Unit::factory()->create(), 'admin');
+        $task = Task::create(['unit_id' => $unit->id, 'title' => 'Selesai', 'status' => 'Done']);
+
+        $this->actingAs($admin)->patch(route('tasks.update-status', $task), ['status' => 'Todo'])->assertForbidden();
+
+        $this->assertSame('Done', $task->fresh()->status);
+    }
 }
