@@ -40,5 +40,8 @@ class AuthServiceProvider extends ServiceProvider
         Gate::define('access-admin-panel', function (User $user) {
             return $user->hasRole('superadmin');
         });
+
+        // Dasbor pimpinan lintas unit (hanya baca).
+        Gate::define('view-leadership-dashboard', fn (User $user) => $user->seesAllUnits());
     }
 }

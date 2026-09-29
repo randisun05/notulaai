@@ -148,7 +148,7 @@ const formatDateTime = (value) => {
             <InputError class="mt-2" :message="newCommentForm.errors.attachments" />
         </form>
 
-        <p v-if="!meeting.comments?.length" class="text-sm text-gray-500">Belum ada komentar. Jadilah yang pertama berdiskusi.</p>
+        <p v-if="!meeting.comments?.length" class="text-sm text-gray-500">{{ readonly ? 'Belum ada diskusi.' : 'Belum ada komentar. Jadilah yang pertama berdiskusi.' }}</p>
 
         <div v-else class="space-y-5">
             <div v-for="comment in meeting.comments" :key="comment.id" class="border-b border-gray-100 pb-4 last:border-b-0">

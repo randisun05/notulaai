@@ -16,7 +16,7 @@ const classes = computed(() => (props.active ? 'nav-link-active' : 'nav-link-ina
 </script>
 
 <template>
-    <Link :href="href" :class="classes">
+    <Link :href="href" :class="[classes, 'whitespace-nowrap']">
         <slot />
     </Link>
 </template>

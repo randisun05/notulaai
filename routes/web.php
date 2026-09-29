@@ -9,6 +9,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DecisionController;
 use App\Http\Controllers\ForumCommentController;
 use App\Http\Controllers\ForumCommentReactionController;
+use App\Http\Controllers\LeadershipDashboardController;
 use App\Http\Controllers\LiveRecordingController;
 use App\Http\Controllers\MeetingChatController;
 use App\Http\Controllers\MeetingController;
@@ -111,6 +112,9 @@ Route::middleware('auth')->group(function () {
 
     // Daftar keputusan lintas rapat
     Route::get('/keputusan', [DecisionController::class, 'index'])->name('decisions.index');
+
+    // Dasbor pimpinan lintas unit
+    Route::get('/pimpinan', [LeadershipDashboardController::class, 'index'])->middleware('can:view-leadership-dashboard')->name('leadership.index');
 
     // Tanya lintas rapat (AI, dengan rujukan rapat & tanggal)
     Route::get('/tanya', [CrossMeetingQaController::class, 'index'])->name('ask.index');

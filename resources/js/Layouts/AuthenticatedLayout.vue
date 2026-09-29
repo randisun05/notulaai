@@ -34,9 +34,12 @@ const userInitials = computed(() => {
                             </Link>
                         </div>
 
-                        <div class="hidden space-x-6 sm:-my-px sm:ms-10 sm:flex">
+                        <div class="hidden space-x-4 lg:space-x-6 sm:-my-px sm:ms-6 lg:ms-10 sm:flex">
                             <NavLink :href="route('dashboard')" :active="route().current('dashboard')">
                                 Dashboard
+                            </NavLink>
+                            <NavLink v-if="['pimpinan', 'superadmin'].includes($page.props.auth.user.role)" :href="route('leadership.index')" :active="route().current('leadership.*')">
+                                Pimpinan
                             </NavLink>
                             <NavLink :href="route('meetings.index')" :active="route().current('meetings.*')">
                                 Rapat
@@ -54,23 +57,26 @@ const userInitials = computed(() => {
                                 Analitik
                             </NavLink>
 
-                            <template v-if="$page.props.auth.user.role === 'superadmin'">
-                                <NavLink :href="route('admin.units.index')" :active="route().current('admin.units.*')">
-                                    Unit
-                                </NavLink>
-                                <NavLink :href="route('admin.users.index')" :active="route().current('admin.users.*')">
-                                    User
-                                </NavLink>
-                                <NavLink :href="route('admin.settings.edit')" :active="route().current('admin.settings.*')">
-                                    Pengaturan
-                                </NavLink>
-                                <NavLink :href="route('admin.audit-logs.index')" :active="route().current('admin.audit-logs.*')">
-                                    Audit Log
-                                </NavLink>
-                                <NavLink :href="route('admin.webhooks.index')" :active="route().current('admin.webhooks.*')">
-                                    Webhooks
-                                </NavLink>
-                            </template>
+                            <!-- Panel admin dikelompokkan supaya menu tidak meluap di layar laptop. -->
+                            <div v-if="$page.props.auth.user.role === 'superadmin'" class="flex items-center">
+                                <Dropdown align="left" width="48">
+                                    <template #trigger>
+                                        <button type="button" :class="[route().current('admin.*') ? 'nav-link-active' : 'nav-link-inactive', 'whitespace-nowrap h-16']">
+                                            Admin
+                                            <svg class="ms-1 h-4 w-4 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                                                <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
+                                            </svg>
+                                        </button>
+                                    </template>
+                                    <template #content>
+                                        <DropdownLink :href="route('admin.units.index')">Unit</DropdownLink>
+                                        <DropdownLink :href="route('admin.users.index')">User</DropdownLink>
+                                        <DropdownLink :href="route('admin.settings.edit')">Pengaturan</DropdownLink>
+                                        <DropdownLink :href="route('admin.audit-logs.index')">Audit Log</DropdownLink>
+                                        <DropdownLink :href="route('admin.webhooks.index')">Webhooks</DropdownLink>
+                                    </template>
+                                </Dropdown>
+                            </div>
                         </div>
                     </div>
 
@@ -85,7 +91,7 @@ const userInitials = computed(() => {
                                         <span class="flex items-center justify-center h-7 w-7 rounded-full bg-brand-600 text-white text-xs font-semibold">
                                             {{ userInitials }}
                                         </span>
-                                        {{ $page.props.auth.user.name }}
+                                        <span class="hidden xl:inline whitespace-nowrap">{{ $page.props.auth.user.name }}</span>
                                         <svg class="-me-0.5 h-4 w-4 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
                                             <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
                                         </svg>
@@ -126,6 +132,9 @@ const userInitials = computed(() => {
                 <div class="pt-2 pb-3 space-y-1">
                     <ResponsiveNavLink :href="route('dashboard')" :active="route().current('dashboard')">
                         Dashboard
+                    </ResponsiveNavLink>
+                    <ResponsiveNavLink v-if="['pimpinan', 'superadmin'].includes($page.props.auth.user.role)" :href="route('leadership.index')" :active="route().current('leadership.*')">
+                        Dasbor Pimpinan
                     </ResponsiveNavLink>
                     <ResponsiveNavLink :href="route('meetings.index')" :active="route().current('meetings.*')">
                         Rapat

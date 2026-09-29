@@ -38,6 +38,7 @@ in the same commit.
 | `MinutesService` + `MeetingMinutesController` + `Meetings/Minutes.vue` | official minutes in the agency's NOTULA format: AI draft → edit → submit → approve/return; documentation photos; PDF (`exports/minutes-pdf.blade.php`) + Word (`MinutesWordExporter`, phpoffice/phpword) |
 | `DecisionService` + `DecisionController` + `Decisions/Index.vue` | decisions register (`meeting_decisions`, `/keputusan`), see "Cross-meeting memory" |
 | `CrossMeetingQaService` + `CrossMeetingQaController` + `Ask/Index.vue` | "Tanya Lintas Rapat" (`/tanya`): one question over all visible meetings, answer cites `[n]` |
+| `LeadershipDashboardController` + `Leadership/Index.vue` | leadership dashboard `/pimpinan` (Gate `view-leadership-dashboard` = pimpinan/superadmin) |
 | `MeetingSeriesService` + `Meetings/Partials/SeriesPanel.vue` | meeting series (`meetings.previous_meeting_id`): carried-over follow-ups & decisions |
 | `AttendanceService` + `AttendanceController` + `Meetings/Partials/AttendancePanel.vue` + `Attendance/CheckIn.vue` | QR attendance (daftar hadir), public check-in at `/hadir/{token}` |
 | `LiveRecordingService` + `LiveRecordingController` + `Meetings/Partials/LiveRecorder.vue` | live recording of in-person meetings with a running transcript (see "Live recording") |
@@ -278,6 +279,10 @@ No signature capture (physical signatures stay on paper if required).
   Task status, and a `relevantExcerpt()` of the transcript. The model must cite `[n]`; the page escapes the answer
   and only turns `[n]` into links. A question with no usable terms falls back to the 6 newest meetings. Logged as
   `ai_request_logs.type = cross_meeting_qa` (no meeting_id). Won't scale past a few thousand meetings (LIKE scans).
+- **Leadership dashboard** (`/pimpinan`): per-unit table for a 30/90/365-day window (meetings by `meetings.date`,
+  processed, minutes approved, decisions; open & overdue Tasks are all-time; completion % = Done / non-cancelled Tasks
+  *created* in the window), plus the 10 most overdue Tasks, minutes awaiting approval, and latest decisions. Pure
+  grouped counts, no AI. Nav: superadmin's admin links live in an "Admin" dropdown (the bar overflowed at 1024 px).
 
 ### Collaboration
 Forum (`ForumComment`, one level of nesting) lives on `Meetings/Show.vue` **outside** the
