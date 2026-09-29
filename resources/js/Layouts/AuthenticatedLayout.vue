@@ -47,6 +47,9 @@ const userInitials = computed(() => {
                             <NavLink :href="route('decisions.index')" :active="route().current('decisions.*')">
                                 Keputusan
                             </NavLink>
+                            <NavLink :href="route('ask.index')" :active="route().current('ask.*')">
+                                Tanya AI
+                            </NavLink>
                             <NavLink :href="route('analytics.productivity')" :active="route().current('analytics.*')">
                                 Analitik
                             </NavLink>
@@ -132,6 +135,9 @@ const userInitials = computed(() => {
                     </ResponsiveNavLink>
                     <ResponsiveNavLink :href="route('decisions.index')" :active="route().current('decisions.*')">
                         Keputusan
+                    </ResponsiveNavLink>
+                    <ResponsiveNavLink :href="route('ask.index')" :active="route().current('ask.*')">
+                        Tanya AI
                     </ResponsiveNavLink>
                     <ResponsiveNavLink :href="route('analytics.productivity')" :active="route().current('analytics.*')">
                         Analitik

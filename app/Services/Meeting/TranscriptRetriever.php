@@ -106,9 +106,11 @@ class TranscriptRetriever
     }
 
     /**
+     * Kata kunci pertanyaan (tanpa kata umum), dipakai juga pencarian lintas rapat.
+     *
      * @return list<string>
      */
-    private function terms(string $question): array
+    public function terms(string $question): array
     {
         preg_match_all('/[\p{L}\p{N}]+/u', mb_strtolower($question), $matches);
 
@@ -121,7 +123,7 @@ class TranscriptRetriever
     /**
      * @param  list<string>  $terms
      */
-    private function score(string $text, array $terms): float
+    public function score(string $text, array $terms): float
     {
         $haystack = mb_strtolower($text);
         $score = 0.0;

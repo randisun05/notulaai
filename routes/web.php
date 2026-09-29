@@ -4,6 +4,7 @@ use App\Http\Controllers\AnalyticsController;
 use App\Http\Controllers\ApiTokenController;
 use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\AuditLogController;
+use App\Http\Controllers\CrossMeetingQaController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DecisionController;
 use App\Http\Controllers\ForumCommentController;
@@ -110,6 +111,10 @@ Route::middleware('auth')->group(function () {
 
     // Daftar keputusan lintas rapat
     Route::get('/keputusan', [DecisionController::class, 'index'])->name('decisions.index');
+
+    // Tanya lintas rapat (AI, dengan rujukan rapat & tanggal)
+    Route::get('/tanya', [CrossMeetingQaController::class, 'index'])->name('ask.index');
+    Route::post('/tanya', [CrossMeetingQaController::class, 'ask'])->middleware('throttle:ai')->name('ask.store');
 
     // Task Routes
     Route::get('/tasks', [TaskController::class, 'index'])->name('tasks.index');

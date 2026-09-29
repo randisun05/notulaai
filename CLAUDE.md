@@ -37,6 +37,7 @@ in the same commit.
 | `app/Services/Audio/AudioSplitter.php` | ffmpeg wrapper: `split()` recording → fixed-length mono mp3 segments; `findSilence()` / `extract()` / `concat()` for live recording |
 | `MinutesService` + `MeetingMinutesController` + `Meetings/Minutes.vue` | official minutes in the agency's NOTULA format: AI draft → edit → submit → approve/return; documentation photos; PDF (`exports/minutes-pdf.blade.php`) + Word (`MinutesWordExporter`, phpoffice/phpword) |
 | `DecisionService` + `DecisionController` + `Decisions/Index.vue` | decisions register (`meeting_decisions`, `/keputusan`), see "Cross-meeting memory" |
+| `CrossMeetingQaService` + `CrossMeetingQaController` + `Ask/Index.vue` | "Tanya Lintas Rapat" (`/tanya`): one question over all visible meetings, answer cites `[n]` |
 | `MeetingSeriesService` + `Meetings/Partials/SeriesPanel.vue` | meeting series (`meetings.previous_meeting_id`): carried-over follow-ups & decisions |
 | `AttendanceService` + `AttendanceController` + `Meetings/Partials/AttendancePanel.vue` + `Attendance/CheckIn.vue` | QR attendance (daftar hadir), public check-in at `/hadir/{token}` |
 | `LiveRecordingService` + `LiveRecordingController` + `Meetings/Partials/LiveRecorder.vue` | live recording of in-person meetings with a running transcript (see "Live recording") |
@@ -120,7 +121,7 @@ free-tier model), `gemini_stt` (default transcription — audio sent inline, so 
 ≤14 MB), `whisper_local` (the Flask sidecar, slow on CPU). The active provider stored in the Settings
 row wins over `AI_TRANSCRIPTION_PROVIDER`, so existing installs switch STT in Admin → Settings.
 
-**Rate limiting:** every LLM-calling route (`meetings.chat.store`, `meetings.emails.generate|send`,
+**Rate limiting:** every LLM-calling route (`ask.store`, `meetings.chat.store`, `meetings.emails.generate|send`,
 `meetings.action-items.regenerate`, `meetings.process`, `dashboard.insight`, `/stt/test`) carries
 `throttle:ai`. `/stt/test` (STT smoke test, not used by the UI) is superadmin-only and deletes its upload afterwards. The `ai` limiter (`AppServiceProvider::boot`, tunable via `config('ai.rate_limits')` /
 `AI_RATE_*`) stacks per-minute + per-day-per-user + per-day-per-unit limits. A 429 is rendered
@@ -269,6 +270,14 @@ No signature capture (physical signatures stay on paper if required).
   "Kesimpulan rapat" (`source = notula`, links inherited from the most similar AI decision, Jaccard ≥ 0.4); AI never
   overwrites `notula` rows. `/keputusan` searches/filters (text or meeting title, unit for pimpinan/superadmin, meeting
   date range, follow-up status). Old meetings: `php artisan meetings:extract-decisions --limit=50` (one AI call each).
+- **Cross-meeting Q&A** (`POST /tanya`, `throttle:ai`, not stored): keyword retrieval, no embeddings. Terms come from
+  `TranscriptRetriever::terms()`; SQL `LIKE` prefilter on title/summary/transcript/decision text within
+  `visibleTo()` + `Selesai Diproses` (+ optional unit for pimpinan/superadmin, meeting date range), newest 300, scored
+  in PHP (title ×3, summary & decisions ×2, +5 if the transcript mentions a term — transcripts are not loaded for
+  scoring), top 6 become numbered sources: summary (2.5k chars), decisions with follow-up status, action items with
+  Task status, and a `relevantExcerpt()` of the transcript. The model must cite `[n]`; the page escapes the answer
+  and only turns `[n]` into links. A question with no usable terms falls back to the 6 newest meetings. Logged as
+  `ai_request_logs.type = cross_meeting_qa` (no meeting_id). Won't scale past a few thousand meetings (LIKE scans).
 
 ### Collaboration
 Forum (`ForumComment`, one level of nesting) lives on `Meetings/Show.vue` **outside** the
