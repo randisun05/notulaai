@@ -6,12 +6,21 @@ import PrimaryButton from '@/Components/PrimaryButton.vue';
 import TextInput from '@/Components/TextInput.vue';
 import { Head, useForm } from '@inertiajs/vue3';
 
+const props = defineProps({
+    previousOptions: { type: Array, default: () => [] },
+    previousMeetingId: { type: Number, default: null },
+});
+
 const form = useForm({
     title: '',
     date: '',
     attendees: '',
     agenda: '',
+    previous_meeting_id: props.previousMeetingId,
 });
+
+const shortDate = (d) => (d ? new Date(String(d).replace(' ', 'T')).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : '');
+
 
 const submit = () => {
     form.post(route('meetings.store'), {
@@ -54,6 +63,16 @@ const submit = () => {
                             <InputLabel for="agenda" value="Agenda Singkat" />
                             <textarea id="agenda" class="form-textarea mt-1" v-model="form.agenda" required rows="4"></textarea>
                             <InputError class="mt-2" :message="form.errors.agenda" />
+                        </div>
+
+                        <div>
+                            <InputLabel for="previous_meeting_id" value="Lanjutan dari rapat (opsional)" />
+                            <select id="previous_meeting_id" v-model="form.previous_meeting_id" class="form-select mt-1">
+                                <option :value="null">— Bukan rapat lanjutan —</option>
+                                <option v-for="m in previousOptions" :key="m.id" :value="m.id">{{ m.title }} ({{ shortDate(m.date) }})</option>
+                            </select>
+                            <p class="form-hint">Tindak lanjut yang belum selesai &amp; keputusan dari rapat sebelumnya akan ditampilkan dan dipakai AI.</p>
+                            <InputError class="mt-2" :message="form.errors.previous_meeting_id" />
                         </div>
 
                         <div class="flex items-center justify-end pt-2">

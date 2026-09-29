@@ -46,6 +46,7 @@ Menjadwalkan rapat baru di unit pemilik token.
 | `date` | ya | `YYYY-MM-DD HH:MM` (WIB) |
 | `agenda` | tidak | teks/HTML sederhana |
 | `attendees` | tidak | maks. 255 karakter |
+| `previous_meeting_id` | tidak | rapat sebelumnya (unit yang sama) bila ini rapat lanjutan — tindak lanjut & keputusannya ikut jadi konteks AI |
 
 Respons `201` berisi rapat yang dibuat.
 

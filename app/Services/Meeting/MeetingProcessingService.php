@@ -45,6 +45,8 @@ class MeetingProcessingService
         private readonly ActivityLogger $activityLogger,
         private readonly WebhookDispatcher $webhookDispatcher,
         private readonly AudioSplitter $audioSplitter,
+        private readonly DecisionService $decisions,
+        private readonly MeetingSeriesService $series,
     ) {}
 
     /**
@@ -70,6 +72,8 @@ class MeetingProcessingService
         }
 
         $this->generateActionItems($meeting, $meeting->transcript);
+        // Action item lama terhapus → kaitan keputusan ke tindak lanjut disusun ulang.
+        $this->decisions->extract($meeting);
 
         return $meeting->actionItems()->count();
     }
@@ -123,7 +127,8 @@ class MeetingProcessingService
     {
         $this->heartbeat($meeting, 'summarizing');
 
-        $summary = $this->summarize($meeting, $transcript, $this->markerNotes($meeting));
+        // Rapat lanjutan: tindak lanjut & keputusan rapat sebelumnya ikut jadi konteks.
+        $summary = $this->summarize($meeting, $transcript, $this->markerNotes($meeting).$this->series->promptContext($meeting));
 
         Log::info("Rangkuman berhasil dibuat untuk Rapat ID: {$meeting->id}");
 
@@ -140,6 +145,8 @@ class MeetingProcessingService
         // Action items bersifat pelengkap: kalau AI gagal menghasilkan/mem-parse-nya,
         // notula tetap dianggap berhasil diproses (transkrip + rangkuman sudah aman).
         $this->generateActionItems($meeting, $transcript);
+        // Register keputusan lintas rapat (best-effort, sama seperti action items).
+        $this->decisions->extract($meeting);
 
         $this->deleteSegmentAudio($meeting);
         $this->mergeLiveParts($meeting);

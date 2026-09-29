@@ -20,4 +20,14 @@ class HtmlSanitizer
 
         return Purifier::clean($html, 'ai_html');
     }
+
+    /**
+     * HTML (rangkuman AI, agenda) → teks biasa untuk prompt AI & pencarian.
+     */
+    public static function toText(?string $html): string
+    {
+        $text = preg_replace(['/<\/(p|li|h\d|div)>/i', '/<br\s*\/?>/i'], "\n", (string) $html);
+
+        return trim(preg_replace("/\n{3,}/", "\n\n", html_entity_decode(strip_tags($text))));
+    }
 }

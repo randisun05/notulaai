@@ -20,6 +20,7 @@ class MeetingResource extends JsonResource
             'unit_id' => $this->unit_id,
             'agenda' => $this->agenda,
             'attendees' => $this->attendees,
+            'previous_meeting_id' => $this->previous_meeting_id,
             // Isi lengkap hanya di endpoint detail — daftar tetap ringan.
             'summary' => $this->when($request->routeIs('api.v1.meetings.show'), $this->summary),
             'transcript' => $this->when($request->routeIs('api.v1.meetings.show'), $this->transcript),

@@ -7,6 +7,7 @@ use App\Models\MeetingMinutes;
 use App\Models\User;
 use App\Services\AI\AiManager;
 use App\Services\AI\AiRequestLogger;
+use App\Support\HtmlSanitizer;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Config;
 use RuntimeException;
@@ -26,6 +27,8 @@ class MinutesService
         private readonly AiRequestLogger $logger,
         private readonly MinutesDraftParser $parser,
         private readonly ActivityLogger $activityLogger,
+        private readonly DecisionService $decisions,
+        private readonly MeetingSeriesService $series,
     ) {}
 
     /**
@@ -95,6 +98,8 @@ class MinutesService
 
         // Notula final: daftar hadir yang tercetak di dalamnya tidak boleh bertambah lagi.
         $minutes->meeting->update(['attendance_closed_at' => $minutes->meeting->attendance_closed_at ?? now()]);
+        // Kesimpulan resmi menggantikan hasil ekstraksi AI di register keputusan.
+        $this->decisions->syncFromMinutes($minutes);
 
         $this->activityLogger->log($minutes->meeting, $user, 'minutes.approved', "{$user->name} mengesahkan notulen resmi rapat ini.");
     }
@@ -158,6 +163,8 @@ class MinutesService
 
         Daftar hadir (pakai nama & jabatan ini untuk menyebut pembicara bila cocok):
         {$attendance}
+
+        {$this->series->promptContext($meeting)}
         PROMPT;
 
         if ($transcript !== '' && mb_strlen($transcript) <= self::TRANSCRIPT_CHARS) {
@@ -194,8 +201,6 @@ class MinutesService
 
     private function plainText(?string $html): string
     {
-        $text = preg_replace(['/<\/(p|li|h\d|div)>/i', '/<br\s*\/?>/i'], "\n", (string) $html);
-
-        return trim(preg_replace("/\n{3,}/", "\n\n", html_entity_decode(strip_tags($text))));
+        return HtmlSanitizer::toText($html);
     }
 }

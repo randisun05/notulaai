@@ -8,7 +8,10 @@ import { Head, useForm } from '@inertiajs/vue3';
 
 const props = defineProps({
     meeting: Object,
+    previousOptions: { type: Array, default: () => [] },
 });
+const shortDate = (d) => (d ? new Date(String(d).replace(' ', 'T')).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : '');
+
 
 // 'YYYY-MM-DD HH:MM:SS' -> 'YYYY-MM-DDTHH:MM' untuk input datetime-local (sama dengan Create.vue),
 // supaya jam rapat tidak hilang (jadi 00:00) setiap kali rapat diedit.
@@ -19,6 +22,7 @@ const form = useForm({
     date: formattedDate,
     agenda: props.meeting.agenda,
     attendees: props.meeting.attendees,
+    previous_meeting_id: props.meeting.previous_meeting_id ?? null,
 });
 
 const submitUpdate = () => {
@@ -60,6 +64,16 @@ const submitUpdate = () => {
                             <InputLabel for="attendees" value="Peserta" />
                             <TextInput id="attendees" type="text" class="mt-1 block w-full" v-model="form.attendees" required />
                             <InputError class="mt-2" :message="form.errors.attendees" />
+                        </div>
+
+                        <div>
+                            <InputLabel for="previous_meeting_id" value="Lanjutan dari rapat (opsional)" />
+                            <select id="previous_meeting_id" v-model="form.previous_meeting_id" class="form-select mt-1">
+                                <option :value="null">— Bukan rapat lanjutan —</option>
+                                <option v-for="m in previousOptions" :key="m.id" :value="m.id">{{ m.title }} ({{ shortDate(m.date) }})</option>
+                            </select>
+                            <p class="form-hint">Tindak lanjut yang belum selesai &amp; keputusan dari rapat sebelumnya akan ditampilkan dan dipakai AI.</p>
+                            <InputError class="mt-2" :message="form.errors.previous_meeting_id" />
                         </div>
 
                         <div class="flex items-center justify-end pt-2">

@@ -17,6 +17,7 @@ class Meeting extends Model
     protected $fillable = [
         'user_id',
         'unit_id', // Ditambahkan
+        'previous_meeting_id',
         'title',
         'date',
         'agenda',
@@ -72,6 +73,28 @@ class Meeting extends Model
     public function unit(): BelongsTo
     {
         return $this->belongsTo(Unit::class);
+    }
+
+    /** @return HasMany<MeetingDecision, $this> */
+    public function decisions(): HasMany
+    {
+        return $this->hasMany(MeetingDecision::class)->orderBy('order');
+    }
+
+    /**
+     * Rapat sebelumnya dalam seri (rapat ini lanjutannya).
+     *
+     * @return BelongsTo<Meeting, $this>
+     */
+    public function previousMeeting(): BelongsTo
+    {
+        return $this->belongsTo(Meeting::class, 'previous_meeting_id');
+    }
+
+    /** @return HasMany<Meeting, $this> */
+    public function followUpMeetings(): HasMany
+    {
+        return $this->hasMany(Meeting::class, 'previous_meeting_id')->orderBy('date');
     }
 
     /** @return HasMany<MeetingActionItem, $this> */

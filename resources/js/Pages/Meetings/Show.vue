@@ -10,6 +10,8 @@ import ActivityTimeline from '@/Pages/Meetings/Partials/ActivityTimeline.vue';
 import RecordingUploader from '@/Pages/Meetings/Partials/RecordingUploader.vue';
 import LiveRecorder from '@/Pages/Meetings/Partials/LiveRecorder.vue';
 import AttendancePanel from '@/Pages/Meetings/Partials/AttendancePanel.vue';
+import SeriesPanel from '@/Pages/Meetings/Partials/SeriesPanel.vue';
+import FollowUpBadge from '@/Pages/Meetings/Partials/FollowUpBadge.vue';
 import { Head, useForm, usePage, Link, router } from '@inertiajs/vue3';
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
 import axios from 'axios';
@@ -40,6 +42,14 @@ const props = defineProps({
         default: () => ({}),
     },
     attendance: {
+        type: Object,
+        default: null,
+    },
+    decisions: {
+        type: Array,
+        default: () => [],
+    },
+    series: {
         type: Object,
         default: null,
     },
@@ -359,6 +369,20 @@ const deleteMeeting = () => {
                             <div v-show="activeTab === 'summary'">
                                 <h3 class="text-lg font-semibold mb-2">Rangkuman Notula</h3>
                                 <div class="prose max-w-none text-gray-700" v-html="meeting.summary || '<p>Rangkuman tidak tersedia.</p>'"></div>
+
+                                <div v-if="decisions.length" class="mt-6 border-t border-gray-100 pt-4">
+                                    <div class="flex items-center justify-between">
+                                        <h3 class="text-lg font-semibold">Keputusan Rapat</h3>
+                                        <Link :href="route('decisions.index')" class="text-xs text-brand-600 hover:text-brand-800">Semua keputusan &rarr;</Link>
+                                    </div>
+                                    <p class="text-xs text-gray-500 mb-2">{{ decisions[0].source === 'notula' ? 'Sesuai kesimpulan notulen resmi yang disahkan.' : 'Diekstrak AI — diganti kesimpulan notulen resmi setelah disahkan.' }}</p>
+                                    <ol class="list-decimal pl-5 space-y-2 text-sm text-gray-800">
+                                        <li v-for="d in decisions" :key="d.id">
+                                            {{ d.text }}
+                                            <FollowUpBadge class="ml-1" :follow-up="d.follow_up" />
+                                        </li>
+                                    </ol>
+                                </div>
                             </div>
                             <div v-show="activeTab === 'transcript'">
                                 <h3 class="text-lg font-semibold mb-2">Transkrip Penuh</h3>
@@ -549,6 +573,10 @@ const deleteMeeting = () => {
                                 <h4 class="font-medium text-gray-700">Peserta</h4>
                                 <div class="mt-2 text-sm text-gray-600 prose max-w-none whitespace-pre-wrap" v-text="meeting.attendees || 'Tidak ada daftar peserta.'"></div>
                             </div>
+                        </div>
+
+                        <div class="mt-8">
+                            <SeriesPanel :meeting="meeting" :series="series" :can-update="can.update" />
                         </div>
 
                         <div v-if="attendance" class="mt-8">

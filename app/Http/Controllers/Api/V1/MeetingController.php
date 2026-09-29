@@ -7,6 +7,7 @@ use App\Http\Resources\MeetingResource;
 use App\Models\Meeting;
 use App\Services\Meeting\ActivityLogger;
 use App\Services\Meeting\MeetingProcessingService;
+use App\Services\Meeting\MeetingSeriesService;
 use App\Support\HtmlSanitizer;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -36,7 +37,7 @@ class MeetingController extends Controller
         return MeetingResource::collection($meetings);
     }
 
-    public function store(Request $request, ActivityLogger $activityLogger): JsonResponse
+    public function store(Request $request, ActivityLogger $activityLogger, MeetingSeriesService $series): JsonResponse
     {
         $user = $request->user();
 
@@ -45,6 +46,7 @@ class MeetingController extends Controller
             'date' => 'required|date',
             'agenda' => 'nullable|string',
             'attendees' => 'nullable|string|max:255',
+            'previous_meeting_id' => $series->rules($user->unit_id),
         ]);
 
         $meeting = Meeting::create([
@@ -52,6 +54,7 @@ class MeetingController extends Controller
             'date' => $validated['date'],
             'agenda' => HtmlSanitizer::clean($validated['agenda'] ?? null),
             'attendees' => $validated['attendees'] ?? null,
+            'previous_meeting_id' => $validated['previous_meeting_id'] ?? null,
             'status' => 'Dijadwalkan',
             'unit_id' => $user->unit_id,
             'user_id' => $user->id,

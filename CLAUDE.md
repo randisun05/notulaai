@@ -36,6 +36,8 @@ in the same commit.
 | `RecordingUploadController` + `Meetings/Partials/RecordingUploader.vue` | resumable chunked recording upload (see pipeline) |
 | `app/Services/Audio/AudioSplitter.php` | ffmpeg wrapper: `split()` recording → fixed-length mono mp3 segments; `findSilence()` / `extract()` / `concat()` for live recording |
 | `MinutesService` + `MeetingMinutesController` + `Meetings/Minutes.vue` | official minutes in the agency's NOTULA format: AI draft → edit → submit → approve/return; documentation photos; PDF (`exports/minutes-pdf.blade.php`) + Word (`MinutesWordExporter`, phpoffice/phpword) |
+| `DecisionService` + `DecisionController` + `Decisions/Index.vue` | decisions register (`meeting_decisions`, `/keputusan`), see "Cross-meeting memory" |
+| `MeetingSeriesService` + `Meetings/Partials/SeriesPanel.vue` | meeting series (`meetings.previous_meeting_id`): carried-over follow-ups & decisions |
 | `AttendanceService` + `AttendanceController` + `Meetings/Partials/AttendancePanel.vue` + `Attendance/CheckIn.vue` | QR attendance (daftar hadir), public check-in at `/hadir/{token}` |
 | `LiveRecordingService` + `LiveRecordingController` + `Meetings/Partials/LiveRecorder.vue` | live recording of in-person meetings with a running transcript (see "Live recording") |
 | `app/Console/Commands/FailStuckMeetings.php` | `meetings:fail-stuck` watchdog |
@@ -251,6 +253,22 @@ close/reopen check-in (manual additions still work when closed), and regenerate 
 minutes closes check-in. Attendees feed the STT speaker `context` and the minutes prompt; the minutes prefill "Peserta
 Rapat" with "Sebagaimana daftar hadir terlampir" and PDF/Word append a **DAFTAR HADIR** table page (before DOKUMENTASI).
 No signature capture (physical signatures stay on paper if required).
+
+### Cross-meeting memory
+- **Series:** a meeting may continue another one in the same unit (`previous_meeting_id`, picked on Create/Edit, API
+  field too; "+ Rapat lanjutan" on the meeting page links to `meetings.create?previous=ID`). `MeetingSeriesService`
+  walks the chain back (max 10, cycle-safe; validation rejects self/descendant/other-unit). The meeting page shows
+  previous/next meetings, **open follow-ups** (action items of earlier meetings whose Task is not Done/Cancelled, or
+  not converted yet) and earlier decisions. `promptContext()` feeds the same into the summary prompt (asks for a
+  "Perkembangan Tindak Lanjut Rapat Sebelumnya" section) and the minutes draft prompt.
+- **Decisions register:** `meeting_decisions` (unit-scoped via `ScopedToUnit`). `DecisionService::extract()` runs one
+  best-effort text call after action items at finalize (and after action-item regeneration, which deletes the linked
+  items): summary + "Keputusan" markers + numbered action items → `[{keputusan, tindak_lanjut: n|null}]`, so each
+  decision links to the action item that carries it out; its `follow_up` accessor derives the status from that item's
+  Task (selesai / berjalan / belum jadi Task / tanpa). Approving the official minutes replaces them with the minutes'
+  "Kesimpulan rapat" (`source = notula`, links inherited from the most similar AI decision, Jaccard ≥ 0.4); AI never
+  overwrites `notula` rows. `/keputusan` searches/filters (text or meeting title, unit for pimpinan/superadmin, meeting
+  date range, follow-up status). Old meetings: `php artisan meetings:extract-decisions --limit=50` (one AI call each).
 
 ### Collaboration
 Forum (`ForumComment`, one level of nesting) lives on `Meetings/Show.vue` **outside** the

@@ -5,6 +5,7 @@ use App\Http\Controllers\ApiTokenController;
 use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\AuditLogController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\DecisionController;
 use App\Http\Controllers\ForumCommentController;
 use App\Http\Controllers\ForumCommentReactionController;
 use App\Http\Controllers\LiveRecordingController;
@@ -106,6 +107,9 @@ Route::middleware('auth')->group(function () {
 
     // AI Chat per Meeting
     Route::post('/meetings/{meeting}/chat', [MeetingChatController::class, 'store'])->middleware('throttle:ai')->name('meetings.chat.store');
+
+    // Daftar keputusan lintas rapat
+    Route::get('/keputusan', [DecisionController::class, 'index'])->name('decisions.index');
 
     // Task Routes
     Route::get('/tasks', [TaskController::class, 'index'])->name('tasks.index');

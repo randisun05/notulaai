@@ -11,6 +11,7 @@ use App\Models\User;
 use App\Services\Meeting\ActivityLogger;
 use App\Services\Meeting\EmailDraftGenerator;
 use App\Services\Meeting\MeetingProcessingService;
+use App\Services\Meeting\MeetingSeriesService;
 use App\Support\HtmlSanitizer;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -58,15 +59,21 @@ class MeetingController extends Controller
     /**
      * Menampilkan halaman 'Buat Rapat'.
      */
-    public function create()
+    public function create(Request $request, MeetingSeriesService $series)
     {
-        return Inertia::render('Meetings/Create');
+        $user = Auth::user();
+
+        return Inertia::render('Meetings/Create', [
+            'previousOptions' => $series->candidates($user->unit_id),
+            // "Jadwalkan rapat lanjutan" dari halaman rapat → ?previous=ID.
+            'previousMeetingId' => $series->prefill($user, $request->query('previous')),
+        ]);
     }
 
     /**
      * Menyimpan rapat baru.
      */
-    public function store(Request $request)
+    public function store(Request $request, MeetingSeriesService $series)
     {
         $user = Auth::user();
 
@@ -75,6 +82,7 @@ class MeetingController extends Controller
             'date' => 'required|date',
             'agenda' => 'nullable|string',
             'attendees' => 'nullable|string',
+            'previous_meeting_id' => $series->rules($user->unit_id),
         ]);
 
         // Otomatis set unit_id dan user_id saat membuat
@@ -83,6 +91,7 @@ class MeetingController extends Controller
             'date' => $validated['date'],
             'agenda' => HtmlSanitizer::clean($validated['agenda'] ?? null),
             'attendees' => $validated['attendees'],
+            'previous_meeting_id' => $validated['previous_meeting_id'] ?? null,
             'status' => 'Dijadwalkan',
             'unit_id' => $user->unit_id, // WAJIB
             'user_id' => $user->id,
@@ -96,7 +105,7 @@ class MeetingController extends Controller
     /**
      * Menampilkan detail rapat (sudah difilter).
      */
-    public function show(Meeting $meeting)
+    public function show(Meeting $meeting, MeetingSeriesService $series)
     {
         $this->authorize('view', $meeting);
 
@@ -120,6 +129,9 @@ class MeetingController extends Controller
             'progress' => fn () => $meeting->fresh()->processingProgress(),
             'live' => fn () => $meeting->fresh()->liveState(Auth::user()),
             'markerTypes' => MeetingMarker::TYPES,
+            'decisions' => $meeting->decisions()->with('actionItem.task')->get(),
+            // Rapat berseri: rapat sebelumnya/lanjutan + tindak lanjut yang belum selesai.
+            'series' => $series->memory($meeting),
             // false untuk pimpinan yang melihat rapat unit lain → halaman hanya baca.
             'can' => [
                 'update' => Auth::user()->can('update', $meeting),
@@ -147,13 +159,14 @@ class MeetingController extends Controller
 
         return Inertia::render('Meetings/Edit', [
             'meeting' => $meeting,
+            'previousOptions' => app(MeetingSeriesService::class)->candidates($meeting->unit_id, $meeting),
         ]);
     }
 
     /**
      * Update detail rapat.
      */
-    public function update(Request $request, Meeting $meeting)
+    public function update(Request $request, Meeting $meeting, MeetingSeriesService $series)
     {
         $this->authorize('update', $meeting);
 
@@ -166,6 +179,7 @@ class MeetingController extends Controller
             'date' => 'required|date',
             'agenda' => 'nullable|string',
             'attendees' => 'nullable|string',
+            'previous_meeting_id' => $series->rules($meeting->unit_id, $meeting),
         ]);
 
         if (array_key_exists('agenda', $validated)) {

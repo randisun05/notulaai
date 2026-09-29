@@ -44,6 +44,9 @@ const userInitials = computed(() => {
                             <NavLink :href="route('tasks.index')" :active="route().current('tasks.*')">
                                 Task
                             </NavLink>
+                            <NavLink :href="route('decisions.index')" :active="route().current('decisions.*')">
+                                Keputusan
+                            </NavLink>
                             <NavLink :href="route('analytics.productivity')" :active="route().current('analytics.*')">
                                 Analitik
                             </NavLink>
@@ -126,6 +129,9 @@ const userInitials = computed(() => {
                     </ResponsiveNavLink>
                     <ResponsiveNavLink :href="route('tasks.index')" :active="route().current('tasks.*')">
                         Task
+                    </ResponsiveNavLink>
+                    <ResponsiveNavLink :href="route('decisions.index')" :active="route().current('decisions.*')">
+                        Keputusan
                     </ResponsiveNavLink>
                     <ResponsiveNavLink :href="route('analytics.productivity')" :active="route().current('analytics.*')">
                         Analitik

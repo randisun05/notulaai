@@ -86,6 +86,10 @@ UPDATE `meeting_markers` SET
     `created_at` = `created_at` + INTERVAL 7 HOUR,
     `updated_at` = `updated_at` + INTERVAL 7 HOUR;
 
+UPDATE `meeting_decisions` SET
+    `created_at` = `created_at` + INTERVAL 7 HOUR,
+    `updated_at` = `updated_at` + INTERVAL 7 HOUR;
+
 UPDATE `password_reset_tokens` SET
     `created_at` = `created_at` + INTERVAL 7 HOUR;
 
