@@ -3,6 +3,7 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import Pagination from '@/Components/Pagination.vue';
 import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import { computed } from 'vue';
+import { canEditTask } from '@/utils/access';
 
 const props = defineProps({
     tasks: { type: Object, required: true },
@@ -116,7 +117,7 @@ const formattedDate = (dateString) => {
                                         {{ formattedDate(task.deadline) }}
                                     </td>
                                     <td class="table-cell whitespace-nowrap">
-                                        <select :value="task.status" @change="updateStatus(task, $event.target.value)" :disabled="task.status === 'Done' && !canManage" :title="task.status === 'Done' && !canManage ? 'Hanya admin yang bisa membuka kembali task yang sudah selesai' : null" class="form-select text-xs py-1.5">
+                                        <select :value="task.status" @change="updateStatus(task, $event.target.value)" :disabled="!canEditTask($page.props.auth.user, task) || (task.status === 'Done' && !canManage)" :title="task.status === 'Done' && !canManage ? 'Hanya admin yang bisa membuka kembali task yang sudah selesai' : null" class="form-select text-xs py-1.5">
                                             <option v-for="status in selectableStatuses" :key="status" :value="status">{{ status }}</option>
                                             <option v-if="task.status === 'Review'" value="Review">Review</option>
                                             <option v-if="task.status === 'Done'" value="Done">Done</option>

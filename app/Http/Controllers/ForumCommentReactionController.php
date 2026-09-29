@@ -17,7 +17,7 @@ class ForumCommentReactionController extends Controller
      */
     public function toggle(Request $request, ForumComment $comment)
     {
-        $this->authorize('view', $comment->meeting);
+        $this->authorize('update', $comment->meeting);
 
         $validated = $request->validate([
             'emoji' => ['required', Rule::in(self::ALLOWED_EMOJIS)],

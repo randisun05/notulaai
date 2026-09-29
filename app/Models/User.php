@@ -58,6 +58,18 @@ class User extends Authenticatable
         return $this->belongsTo(Unit::class);
     }
 
+    /** Peran yang ada. `pimpinan` = pimpinan instansi: melihat rapat & tindak lanjut semua unit (hanya baca). */
+    public const ROLES = ['user', 'admin', 'pimpinan', 'superadmin'];
+
+    /**
+     * Boleh MELIHAT data semua unit (superadmin & pimpinan). Mengubah data tetap
+     * hanya di unit sendiri — lihat Policy.
+     */
+    public function seesAllUnits(): bool
+    {
+        return $this->hasAnyRole(['superadmin', 'pimpinan']);
+    }
+
     /**
      * Panel admin hanya bisa diakses superadmin — kehilangan yang terakhir
      * mengunci semua orang dari manajemen user/unit/pengaturan.

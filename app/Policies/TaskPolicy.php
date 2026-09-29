@@ -12,9 +12,10 @@ class TaskPolicy
         return true;
     }
 
+    /** Superadmin & pimpinan melihat Task semua unit; mengubah tetap unit sendiri. */
     public function view(User $user, Task $task): bool
     {
-        return $this->inScope($user, $task);
+        return $user->seesAllUnits() || $this->inScope($user, $task);
     }
 
     /**

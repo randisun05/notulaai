@@ -85,7 +85,7 @@ class AnalyticsController extends Controller
     public function overdue()
     {
         $user = Auth::user();
-        $isSuperadmin = $user->hasRole('superadmin');
+        $isSuperadmin = $user->seesAllUnits();
 
         $taskQuery = Task::query()
             ->visibleTo($user)

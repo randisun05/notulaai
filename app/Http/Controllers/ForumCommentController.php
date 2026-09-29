@@ -24,7 +24,8 @@ class ForumCommentController extends Controller
 
     public function store(Request $request, Meeting $meeting)
     {
-        $this->authorize('view', $meeting);
+        // Berdiskusi = ikut serta: hanya anggota unit (pimpinan dari unit lain hanya membaca).
+        $this->authorize('update', $meeting);
 
         $validated = $request->validate([
             'body' => 'required|string|max:5000',

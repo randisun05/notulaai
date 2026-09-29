@@ -43,6 +43,10 @@ const props = defineProps({
         type: Object,
         default: null,
     },
+    can: {
+        type: Object,
+        default: () => ({ update: true, delete: false }),
+    },
 });
 
 // Status yang datanya berubah terus di server: Memproses (progres) & Berlangsung (transkrip live).
@@ -91,7 +95,6 @@ const progressPercent = computed(() => {
 });
 
 const page = usePage();
-const authUserRole = computed(() => page.props.auth.user.role);
 const flashSuccess = computed(() => page.props.flash?.success);
 const flashError = computed(() => page.props.flash?.error);
 
@@ -196,7 +199,7 @@ const inputType = ref('text'); // 'live', 'text', 'audio', 'file', 'image'
 // Panel rekaman live tetap terpasang dari "Mulai" sampai rekaman diakhiri (status
 // Dijadwalkan → Berlangsung tidak boleh meng-unmount MediaRecorder-nya).
 const liveMode = computed(() => props.meeting.status === 'Berlangsung'
-    || (['Dijadwalkan', 'Gagal'].includes(props.meeting.status) && inputType.value === 'live'));
+    || (props.can.update && ['Dijadwalkan', 'Gagal'].includes(props.meeting.status) && inputType.value === 'live'));
 
 const form = useForm({
     type: 'text',
@@ -278,12 +281,12 @@ const deleteMeeting = () => {
                         Notula Resmi
                     </Link>
                      <!-- Tombol Edit -->
-                    <Link v-if="meeting.status === 'Dijadwalkan'" :href="route('meetings.edit', meeting.id)" as="button" class="btn-secondary">
+                    <Link v-if="meeting.status === 'Dijadwalkan' && can.update" :href="route('meetings.edit', meeting.id)" as="button" class="btn-secondary">
                         Edit Rapat
                     </Link>
                     <!-- Tombol Hapus (Hanya untuk Admin / Super Admin) -->
                     <DangerButton
-                        v-if="authUserRole !== 'user'"
+                        v-if="can.delete"
                         @click="deleteMeeting"
                     >
                         Hapus Rapat
@@ -327,7 +330,7 @@ const deleteMeeting = () => {
                                 <h2 class="text-xl font-semibold mb-1">Rekam Rapat Langsung</h2>
                                 <button type="button" class="text-sm text-gray-500 hover:text-gray-700" @click="inputType = 'text'">&larr; Pilih metode input lain</button>
                             </div>
-                            <LiveRecorder :meeting="meeting" :live="live" :marker-types="markerTypes" />
+                            <LiveRecorder :meeting="meeting" :live="live" :marker-types="markerTypes" :readonly="!can.update" />
                         </div>
 
                         <div v-else-if="meeting.status === 'Selesai Diproses'" class="p-6">
@@ -349,8 +352,8 @@ const deleteMeeting = () => {
                                         Action Items
                                         <span v-if="meeting.action_items?.length" class="ml-1 inline-flex items-center justify-center h-5 min-w-[1.25rem] px-1 rounded-full bg-blue-100 text-blue-700 text-xs font-semibold">{{ meeting.action_items.length }}</span>
                                     </button>
-                                    <button @click="activeTab = 'email_ai'" :class="['whitespace-nowrap pb-4 px-1 border-b-2 font-medium text-sm', activeTab === 'email_ai' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300']">Email AI</button>
-                                    <button @click="activeTab = 'chat_ai'" :class="['whitespace-nowrap pb-4 px-1 border-b-2 font-medium text-sm', activeTab === 'chat_ai' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300']">Tanya AI</button>
+                                    <button v-if="can.update" @click="activeTab = 'email_ai'" :class="['whitespace-nowrap pb-4 px-1 border-b-2 font-medium text-sm', activeTab === 'email_ai' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300']">Email AI</button>
+                                    <button v-if="can.update" @click="activeTab = 'chat_ai'" :class="['whitespace-nowrap pb-4 px-1 border-b-2 font-medium text-sm', activeTab === 'chat_ai' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300']">Tanya AI</button>
                                 </nav>
                             </div>
                             <div v-show="activeTab === 'summary'">
@@ -364,6 +367,7 @@ const deleteMeeting = () => {
                             <div v-show="activeTab === 'action_items'">
                                 <div class="flex items-center justify-between mb-2">
                                     <h3 class="text-lg font-semibold">Action Items</h3>
+                                    <template v-if="can.update">
                                     <button
                                         v-if="!hasConvertedActionItem"
                                         @click="regenerateActionItems"
@@ -375,6 +379,7 @@ const deleteMeeting = () => {
                                     <span v-else class="text-xs text-gray-400" title="Sudah ada action item yang dijadikan Task, tidak bisa generate ulang">
                                         Generate ulang tidak tersedia (sudah ada yang jadi Task)
                                     </span>
+                                    </template>
                                 </div>
                                 <p v-if="!meeting.action_items?.length" class="text-sm text-gray-500">Tidak ada action item yang terdeteksi AI dari rapat ini.</p>
                                 <ul v-else class="divide-y divide-gray-200 border border-gray-200 rounded-md">
@@ -387,7 +392,7 @@ const deleteMeeting = () => {
                                             </p>
                                         </div>
                                         <span v-if="item.converted_to_task" class="badge-green shrink-0">Sudah jadi Task</span>
-                                        <button v-else @click="convertToTask(item)" class="shrink-0 text-xs font-medium text-brand-700 bg-brand-50 hover:bg-brand-100 px-3 py-1.5 rounded-md">Jadikan Task</button>
+                                        <button v-else-if="can.update" @click="convertToTask(item)" class="shrink-0 text-xs font-medium text-brand-700 bg-brand-50 hover:bg-brand-100 px-3 py-1.5 rounded-md">Jadikan Task</button>
                                     </li>
                                 </ul>
                             </div>
@@ -461,6 +466,10 @@ const deleteMeeting = () => {
                                     <PrimaryButton :disabled="chatAsking || !chatQuestion.trim()">Kirim</PrimaryButton>
                                 </form>
                             </div>
+                        </div>
+
+                        <div v-else-if="!can.update && ['Dijadwalkan', 'Gagal'].includes(meeting.status)" class="p-6">
+                            <p class="text-sm text-gray-600">Notula rapat ini belum tersedia.</p>
                         </div>
 
                         <div v-else-if="meeting.status === 'Dijadwalkan' || meeting.status === 'Gagal'" class="p-6">
@@ -543,7 +552,7 @@ const deleteMeeting = () => {
                         </div>
 
                         <div v-if="attendance" class="mt-8">
-                            <AttendancePanel :meeting="meeting" :attendance="attendance" :unit-users="unitUsers" />
+                            <AttendancePanel :meeting="meeting" :attendance="attendance" :unit-users="unitUsers" :can-manage="can.update" />
                         </div>
 
                         <div class="mt-8">
@@ -553,7 +562,7 @@ const deleteMeeting = () => {
                 </div>
 
                 <div class="mt-8">
-                    <ForumSection :meeting="meeting" />
+                    <ForumSection :meeting="meeting" :readonly="!can.update" />
                 </div>
 
             </div>

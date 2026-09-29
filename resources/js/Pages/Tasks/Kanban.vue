@@ -2,6 +2,7 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import { Head, Link, router } from '@inertiajs/vue3';
 import { ref } from 'vue';
+import { canEditTask } from '@/utils/access';
 
 const props = defineProps({
     tasksByStatus: { type: Object, required: true },
@@ -75,7 +76,7 @@ const priorityBadge = (priority) => ({
                                 <div
                                     v-for="task in tasksByStatus[status]"
                                     :key="task.id"
-                                    :draggable="task.status !== 'Done' || canManage"
+                                    :draggable="canEditTask($page.props.auth.user, task) && (task.status !== 'Done' || canManage)"
                                     @dragstart="onDragStart(task)"
                                     class="card p-3 cursor-move hover:shadow-md transition-shadow"
                                 >

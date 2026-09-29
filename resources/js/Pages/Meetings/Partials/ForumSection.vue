@@ -10,6 +10,11 @@ const props = defineProps({
         type: Object,
         required: true,
     },
+    // Pimpinan dari unit lain membaca diskusi tanpa ikut menulis.
+    readonly: {
+        type: Boolean,
+        default: false,
+    },
 });
 
 const page = usePage();
@@ -122,7 +127,7 @@ const formatDateTime = (value) => {
     <div class="card-padded">
         <h3 class="text-lg font-semibold mb-4 text-gray-900">Forum Diskusi</h3>
 
-        <form @submit.prevent="submitNewComment" class="mb-6">
+        <form v-if="!readonly" @submit.prevent="submitNewComment" class="mb-6">
             <textarea
                 v-model="newCommentForm.body"
                 rows="3"
@@ -177,6 +182,7 @@ const formatDateTime = (value) => {
                     <button
                         v-for="r in reactionSummary(comment)"
                         :key="r.emoji"
+                        :disabled="readonly"
                         @click="toggleReaction(comment, r.emoji)"
                         :class="['inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs border', r.reactedByMe ? 'bg-brand-50 border-brand-300 text-brand-700' : 'border-gray-200 text-gray-500 hover:bg-gray-50']"
                     >
@@ -186,7 +192,7 @@ const formatDateTime = (value) => {
                 </div>
 
                 <div class="mt-2 flex gap-3 text-xs">
-                    <button @click="startReply(comment.id)" class="text-brand-600 hover:text-brand-800 font-medium">Balas</button>
+                    <button v-if="!readonly" @click="startReply(comment.id)" class="text-brand-600 hover:text-brand-800 font-medium">Balas</button>
                     <template v-if="canManage(comment) && editingId !== comment.id">
                         <button @click="startEdit(comment)" class="text-gray-500 hover:text-gray-700">Edit</button>
                         <button @click="deleteComment(comment)" class="text-red-500 hover:text-red-700">Hapus</button>
@@ -237,6 +243,7 @@ const formatDateTime = (value) => {
                             <button
                                 v-for="r in reactionSummary(reply)"
                                 :key="r.emoji"
+                                :disabled="readonly"
                                 @click="toggleReaction(reply, r.emoji)"
                                 :class="['inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs border', r.reactedByMe ? 'bg-brand-50 border-brand-300 text-brand-700' : 'border-gray-200 text-gray-500 hover:bg-gray-50']"
                             >

@@ -120,6 +120,11 @@ class MeetingController extends Controller
             'progress' => fn () => $meeting->fresh()->processingProgress(),
             'live' => fn () => $meeting->fresh()->liveState(Auth::user()),
             'markerTypes' => MeetingMarker::TYPES,
+            // false untuk pimpinan yang melihat rapat unit lain → halaman hanya baca.
+            'can' => [
+                'update' => Auth::user()->can('update', $meeting),
+                'delete' => Auth::user()->can('delete', $meeting),
+            ],
             'attendance' => fn () => [
                 'url' => route('attendance.check-in', $meeting->attendanceToken()),
                 'open' => $meeting->fresh()->isAttendanceOpen(),

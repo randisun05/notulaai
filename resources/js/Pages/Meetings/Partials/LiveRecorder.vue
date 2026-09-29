@@ -11,6 +11,8 @@ const props = defineProps({
     meeting: { type: Object, required: true },
     live: { type: Object, default: null },
     markerTypes: { type: Object, default: () => ({}) },
+    // Pimpinan dari unit lain: hanya membaca transkrip berjalan.
+    readonly: { type: Boolean, default: false },
 });
 
 const CHUNK_MS = 5000;
@@ -258,8 +260,11 @@ const rename = async (speaker) => {
 
 <template>
     <div class="p-6">
+        <p v-if="readonly" class="inline-flex items-center gap-2 text-sm text-gray-700">
+            <span class="h-2.5 w-2.5 rounded-full bg-red-600 animate-pulse"></span> Rapat sedang berlangsung — Anda melihat transkrip berjalan (hanya baca).
+        </p>
         <!-- Kontrol perekam -->
-        <div class="flex flex-wrap items-center gap-3">
+        <div v-else class="flex flex-wrap items-center gap-3">
             <template v-if="recording">
                 <span class="inline-flex items-center gap-2 text-sm font-semibold text-red-600">
                     <span class="h-3 w-3 rounded-full bg-red-600 animate-pulse"></span> Merekam {{ formatDuration(elapsed) }}
@@ -307,7 +312,7 @@ const rename = async (speaker) => {
 
             <div class="space-y-6">
                 <!-- Penanda notulis -->
-                <div v-if="isLive">
+                <div v-if="isLive && !readonly">
                     <h3 class="text-sm font-semibold text-gray-900 mb-2">Tandai Momen Ini</h3>
                     <input v-model="markerNote" type="text" maxlength="500" placeholder="Catatan singkat (opsional)" class="form-input w-full text-sm mb-2" />
                     <div class="flex flex-wrap gap-2">
@@ -335,7 +340,7 @@ const rename = async (speaker) => {
                             {{ speaker.name ?? speaker.label }}
                             <span v-if="speaker.name" class="text-xs font-normal text-gray-400">({{ speaker.label }})</span>
                         </div>
-                        <div class="flex items-center gap-2 mt-1">
+                        <div v-if="!readonly" class="flex items-center gap-2 mt-1">
                             <input v-model="renaming[speaker.label]" type="text" maxlength="60" placeholder="Ganti nama..." class="form-input text-sm min-w-0 flex-1 py-1" @keyup.enter="rename(speaker)" />
                             <SecondaryButton type="button" class="shrink-0" @click="rename(speaker)">Simpan</SecondaryButton>
                         </div>

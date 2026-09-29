@@ -126,6 +126,7 @@ watch(search, debounce((value) => {
                                                 'badge-green': user.role === 'user',
                                                 'badge-blue': user.role === 'admin',
                                                 'badge-red': user.role === 'superadmin',
+                                                'badge-orange': user.role === 'pimpinan',
                                             }"
                                         >
                                             {{ user.role }}
@@ -179,6 +180,7 @@ watch(search, debounce((value) => {
                         <select id="role" v-model="form.role" class="form-select mt-1">
                             <option value="user">User</option>
                             <option value="admin">Admin</option>
+                            <option value="pimpinan">Pimpinan (lihat semua unit, hanya baca)</option>
                             <option value="superadmin">Super Admin</option>
                         </select>
                         <InputError class="mt-2" :message="form.errors.role" />

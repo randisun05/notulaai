@@ -192,13 +192,23 @@ so speaker labels stay consistent. All times are meeting-absolute: `live_part_of
 - Microphone access requires HTTPS (or localhost). Browser e2e was verified with Chromium's fake audio device.
 
 ### Auth & multi-unit scoping
-Three roles only: `user`, `admin`, `superadmin` (`spatie/laravel-permission`, seeded by
-`RolePermissionSeeder` — call `$this->seed(RolePermissionSeeder::class)` before `assignRole()`/`syncRoles()`
+Four roles (`User::ROLES`): `user`, `admin`, `pimpinan`, `superadmin` (`spatie/laravel-permission`, seeded by
+`RolePermissionSeeder`; existing installs get `pimpinan` from migration `2026_09_29_000000` — call
+`$this->seed(RolePermissionSeeder::class)` before `assignRole()`/`syncRoles()`
 in tests or roles won't exist). Admin panel routes are gated by the `access-admin-panel` Gate, which
 currently allows **superadmin only** (defined in `AuthServiceProvider::boot`).
 
-Unit scoping is enforced by the `ScopedToUnit` trait's local scope `Model::visibleTo($user)` (superadmin
-sees all, everyone else sees their `unit_id`) — used on `Meeting`, `Task`, `User` in every list query.
+**Pimpinan** (agency leadership) = a normal user in their own unit + **read-only view of every unit**:
+`User::seesAllUnits()` (superadmin|pimpinan) drives `visibleTo()` and the `view` policies, while
+`update`/`process`/`delete` stay own-unit (or superadmin). Everything that *writes* on a meeting — forum
+posts, reactions, per-meeting chat, live markers, attendance, minutes — authorizes `update`, never `view`;
+keep it that way or pimpinan gains write access to other units. `Meetings/Show.vue` gets a `can`
+prop (`update`/`delete`) and renders read-only (`readonly` on LiveRecorder/ForumSection, `canManage` on
+AttendancePanel); task lists use `resources/js/utils/access.js`. A pimpinan may be picked as a minutes
+chairperson for any unit and then approves those minutes (`MeetingMinutesController::chairCandidates()`).
+
+Unit scoping is enforced by the `ScopedToUnit` trait's local scope `Model::visibleTo($user)` (superadmin and
+pimpinan see all, everyone else sees their `unit_id`) — used on `Meeting`, `Task`, `User` in every list query.
 Deliberately a **local** scope, not a global one: a global scope would turn cross-unit single-record
 access into a 404 before the Policy's 403 runs. Single-record authorization goes through Policies
 (`app/Policies/`).

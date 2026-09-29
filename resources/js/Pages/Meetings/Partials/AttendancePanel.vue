@@ -71,7 +71,7 @@ const time = (value) => new Date(value).toLocaleTimeString('id-ID', { hour: '2-d
             {{ attendance.open ? 'Terbuka — peserta memindai QR dengan HP.' : 'Ditutup.' }}
         </p>
 
-        <div class="mt-3 flex flex-wrap gap-2">
+        <div v-if="canManage" class="mt-3 flex flex-wrap gap-2">
             <PrimaryButton type="button" @click="showQr = true">Tampilkan QR</PrimaryButton>
             <SecondaryButton type="button" @click="copyLink">{{ copied ? 'Tersalin' : 'Salin Tautan' }}</SecondaryButton>
         </div>

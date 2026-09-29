@@ -111,6 +111,8 @@ class TaskController extends Controller
             'unitUsers' => User::where('unit_id', $task->unit_id)->get(['id', 'name']),
             'canApprove' => Auth::user()->can('approve', $task),
             'canManage' => Auth::user()->can('manage', $task),
+            // Pimpinan yang melihat Task unit lain: hanya baca.
+            'canUpdate' => Auth::user()->can('update', $task),
         ]);
     }
 

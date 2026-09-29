@@ -49,7 +49,7 @@ class UserController extends Controller
             'name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:'.User::class,
             'password' => ['required', Rules\Password::defaults()],
-            'role' => ['required', Rule::in(['user', 'admin', 'superadmin'])],
+            'role' => ['required', Rule::in(User::ROLES)],
             'unit_id' => 'nullable|exists:units,id',
             'phone_number' => 'nullable|string|max:20',
             'nip' => 'nullable|string|max:30',
@@ -95,7 +95,7 @@ class UserController extends Controller
         $request->validate([
             'name' => 'required|string|max:255',
             'email' => ['required', 'string', 'email', 'max:255', Rule::unique('users')->ignore($user->id)],
-            'role' => ['required', Rule::in(['user', 'admin', 'superadmin'])],
+            'role' => ['required', Rule::in(User::ROLES)],
             'unit_id' => 'nullable|exists:units,id',
             'phone_number' => 'nullable|string|max:20',
             'nip' => 'nullable|string|max:30',

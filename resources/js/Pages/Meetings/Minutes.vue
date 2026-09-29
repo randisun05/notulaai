@@ -14,6 +14,7 @@ const props = defineProps({
     minutes: { type: Object, default: null },
     actionItems: { type: Array, default: () => [] },
     unitUsers: { type: Array, default: () => [] },
+    chairCandidates: { type: Array, default: () => [] },
     canEdit: { type: Boolean, default: false },
     canApprove: { type: Boolean, default: false },
 });
@@ -181,7 +182,7 @@ const formatDateTime = (value) => value ? new Date(value).toLocaleString('id-ID'
                                     <InputLabel value="Pemimpin Rapat (nama)" />
                                     <select v-if="!externalChair" v-model="form.chairperson_id" class="form-select w-full">
                                         <option value="">— pilih —</option>
-                                        <option v-for="u in unitUsers" :key="u.id" :value="u.id">{{ u.name }}</option>
+                                        <option v-for="u in chairCandidates" :key="u.id" :value="u.id">{{ u.name }}</option>
                                     </select>
                                     <TextInput v-else v-model="form.chairperson_name" class="w-full" placeholder="Nama pemimpin rapat" />
                                     <label class="mt-1 flex items-center gap-2 text-xs text-gray-600">

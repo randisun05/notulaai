@@ -15,7 +15,7 @@ Accept: application/json
 ```
 
 Token mewakili user yang membuatnya: data yang terlihat dan tindakan yang boleh dilakukan **sama
-persis** dengan user itu di aplikasi web (dibatasi unitnya; superadmin melihat semua unit).
+persis** dengan user itu di aplikasi web (dibatasi unitnya; superadmin dan pimpinan melihat semua unit, tetapi pimpinan hanya bisa mengubah data unitnya sendiri).
 
 Batas: 60 request/menit per user. Endpoint yang memicu AI (`POST .../transcript`) juga ikut kuota AI
 harian per user dan per unit. Melebihi batas → `429`.
@@ -31,7 +31,7 @@ harian per user dan per unit. Melebihi batas → `429`.
 ## Endpoint
 
 ### `GET /api/v1/user`
-Profil pemilik token: `id`, `name`, `email`, `role` (`user`/`admin`/`superadmin`), `unit`.
+Profil pemilik token: `id`, `name`, `email`, `role` (`user`/`admin`/`pimpinan`/`superadmin`), `unit`.
 
 ### `GET /api/v1/meetings`
 Daftar rapat, terbaru dulu. Filter: `search` (judul/agenda), `status`

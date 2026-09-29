@@ -13,6 +13,7 @@ const props = defineProps({
     unitUsers: { type: Array, default: () => [] },
     canApprove: { type: Boolean, default: false },
     canManage: { type: Boolean, default: false },
+    canUpdate: { type: Boolean, default: true },
 });
 
 const page = usePage();
@@ -161,7 +162,11 @@ const priorityBadge = (priority) => ({
                             </div>
                         </dl>
 
-                        <div class="mt-6 pt-6 border-t border-gray-100">
+                        <div v-if="!canUpdate" class="mt-6 pt-6 border-t border-gray-100">
+                            <p class="text-sm text-gray-600"><span class="font-medium">Status:</span> {{ task.status }}</p>
+                            <p class="form-hint">Anda melihat Task unit lain (hanya baca).</p>
+                        </div>
+                        <div v-else class="mt-6 pt-6 border-t border-gray-100">
                             <label class="form-label">Status</label>
                             <div class="flex flex-wrap items-center gap-3">
                                 <select :value="task.status" @change="updateStatus($event.target.value)" :disabled="task.status === 'Done' && !canManage" :title="task.status === 'Done' && !canManage ? 'Hanya admin yang bisa membuka kembali task yang sudah selesai' : null" class="form-select w-full sm:w-64">
@@ -207,7 +212,7 @@ const priorityBadge = (priority) => ({
                             </div>
                         </div>
 
-                        <div class="mt-6 pt-6 border-t border-gray-100">
+                        <div v-if="canUpdate" class="mt-6 pt-6 border-t border-gray-100">
                             <h4 class="text-sm font-semibold text-gray-700 mb-2">Disposisikan Task</h4>
                             <form @submit.prevent="submitDisposition" class="flex flex-wrap items-start gap-2">
                                 <div>
@@ -233,7 +238,7 @@ const priorityBadge = (priority) => ({
                             </div>
                         </div>
 
-                        <div class="mt-6 pt-6 border-t border-gray-100">
+                        <div v-if="canUpdate" class="mt-6 pt-6 border-t border-gray-100">
                             <h4 class="text-sm font-semibold text-gray-700 mb-2">SLA (Batas Waktu Penyelesaian)</h4>
                             <form @submit.prevent="submitSla" class="flex items-start gap-2">
                                 <div>

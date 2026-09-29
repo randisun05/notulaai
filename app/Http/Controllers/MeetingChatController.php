@@ -13,7 +13,7 @@ class MeetingChatController extends Controller
 
     public function store(Request $request, Meeting $meeting)
     {
-        $this->authorize('view', $meeting);
+        $this->authorize('update', $meeting);
 
         $validated = $request->validate([
             'question' => 'required|string|max:1000',

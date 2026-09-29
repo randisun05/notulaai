@@ -79,7 +79,7 @@ class LiveRecordingController extends Controller
 
     public function marker(Request $request, Meeting $meeting): JsonResponse
     {
-        $this->authorize('view', $meeting);
+        $this->authorize('update', $meeting);
         $validated = $request->validate([
             'type' => ['required', Rule::in(array_keys(MeetingMarker::TYPES))],
             'note' => 'nullable|string|max:500',

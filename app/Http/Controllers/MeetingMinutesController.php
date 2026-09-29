@@ -10,6 +10,7 @@ use App\Services\Meeting\MinutesService;
 use App\Services\Meeting\MinutesWordExporter;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
@@ -38,6 +39,8 @@ class MeetingMinutesController extends Controller
             'minutes' => $minutes,
             'actionItems' => $meeting->actionItems()->get(['id', 'title', 'assignee_name', 'deadline']),
             'unitUsers' => User::where('unit_id', $meeting->unit_id)->orderBy('name')->get(['id', 'name']),
+            // Pimpinan Rapat boleh anggota unit atau pimpinan instansi (peran Pimpinan).
+            'chairCandidates' => $this->chairCandidates($meeting)->orderBy('name')->get(['id', 'name']),
             'canEdit' => Auth::user()->can('update', $meeting) && (! $minutes || $minutes->isEditable()),
             'canApprove' => $minutes?->status === MeetingMinutes::STATUS_SUBMITTED && Auth::user()->can('approveMinutes', $meeting),
         ]);
@@ -61,7 +64,7 @@ class MeetingMinutesController extends Controller
             'title' => 'nullable|string|max:500',
             'location' => 'nullable|string|max:255',
             'time_range' => 'nullable|string|max:255',
-            'chairperson_id' => ['nullable', 'integer', Rule::exists('users', 'id')->where('unit_id', $meeting->unit_id)],
+            'chairperson_id' => ['nullable', 'integer', Rule::in($this->chairCandidates($meeting)->pluck('id'))],
             'chairperson_name' => 'nullable|string|max:255',
             'chairperson_title' => 'nullable|string|max:255',
             'minute_taker_id' => ['nullable', 'integer', Rule::exists('users', 'id')->where('unit_id', $meeting->unit_id)],
@@ -181,6 +184,15 @@ class MeetingMinutesController extends Controller
         $path = $exporter->export($this->documentData($meeting, $minutes));
 
         return response()->download($path, $this->fileName($meeting, $minutes, 'docx'))->deleteFileAfterSend();
+    }
+
+    /**
+     * @return Builder<User>
+     */
+    private function chairCandidates(Meeting $meeting)
+    {
+        return User::query()->where(fn ($q) => $q->where('unit_id', $meeting->unit_id)
+            ->orWhereHas('roles', fn ($r) => $r->where('name', 'pimpinan')));
     }
 
     /**

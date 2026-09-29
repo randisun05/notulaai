@@ -205,6 +205,22 @@ class MeetingMinutesTest extends TestCase
             ->assertSessionHasErrors('chairperson_id');
     }
 
+    public function test_an_agency_leader_from_another_unit_can_chair_and_approve(): void
+    {
+        $this->drafted();
+        $leader = User::factory()->create(['unit_id' => Unit::factory()->create()->id, 'name' => 'Kepala Dinas']);
+        $leader->syncRoles(['pimpinan']);
+
+        $this->actingAs($this->notulis)->get(route('meetings.minutes.edit', $this->meeting))
+            ->assertInertia(fn (AssertableInertia $page) => $page->where('chairCandidates', fn ($users) => collect($users)->contains('id', $leader->id)));
+        $this->actingAs($this->notulis)->put(route('meetings.minutes.update', $this->meeting), ['chairperson_id' => $leader->id, 'minute_taker_id' => $this->notulis->id])
+            ->assertSessionHasNoErrors();
+        $this->actingAs($this->notulis)->post(route('meetings.minutes.submit', $this->meeting))->assertSessionHas('success');
+
+        $this->actingAs($leader)->post(route('meetings.minutes.approve', $this->meeting))->assertSessionHas('success');
+        $this->assertSame('disahkan', $this->meeting->fresh()->minutes->status);
+    }
+
     public function test_pdf_and_word_exports(): void
     {
         $this->drafted(['title' => 'Rapat Pembahasan Rancangan Peraturan', 'chairperson_id' => $this->kabag->id, 'chairperson_title' => 'Kepala Bidang Jalan', 'location' => 'Zoom Meeting']);

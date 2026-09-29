@@ -10,7 +10,7 @@ use Spatie\Permission\PermissionRegistrar;
 
 class RolePermissionSeeder extends Seeder
 {
-    private const ROLES = ['user', 'admin', 'superadmin'];
+    private const ROLES = User::ROLES;
 
     /**
      * Buat role & permission, lalu backfill role setiap user berdasarkan

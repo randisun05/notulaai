@@ -5,29 +5,31 @@ namespace App\Policies;
 use App\Models\Meeting;
 use App\Models\User;
 
+/**
+ * Melihat: unit sendiri, atau semua unit bagi superadmin & pimpinan.
+ * Mengubah/berpartisipasi (proses, forum, chat, penanda, daftar hadir, notulen):
+ * hanya anggota unit rapat itu (dan superadmin) — pimpinan di unit lain hanya membaca.
+ */
 class MeetingPolicy
 {
-    /**
-     * Superadmin bisa akses semua rapat, selain itu hanya rapat di unit yang sama.
-     */
-    private function inScope(User $user, Meeting $meeting): bool
+    private function inUnit(User $user, Meeting $meeting): bool
     {
         return $user->hasRole('superadmin') || $meeting->unit_id === $user->unit_id;
     }
 
     public function view(User $user, Meeting $meeting): bool
     {
-        return $this->inScope($user, $meeting);
+        return $user->seesAllUnits() || $meeting->unit_id === $user->unit_id;
     }
 
     public function update(User $user, Meeting $meeting): bool
     {
-        return $this->inScope($user, $meeting);
+        return $this->inUnit($user, $meeting);
     }
 
     public function process(User $user, Meeting $meeting): bool
     {
-        return $this->inScope($user, $meeting);
+        return $this->inUnit($user, $meeting);
     }
 
     /**
@@ -39,7 +41,7 @@ class MeetingPolicy
     {
         $minutes = $meeting->minutes;
 
-        if (! $minutes || $minutes->submitted_by === $user->id || ! $this->inScope($user, $meeting)) {
+        if (! $minutes || $minutes->submitted_by === $user->id) {
             return false;
         }
 
@@ -47,13 +49,16 @@ class MeetingPolicy
             return true;
         }
 
-        return $minutes->chairperson_id
-            ? $minutes->chairperson_id === $user->id
-            : $user->hasRole('admin');
+        // Pimpinan rapat yang ditunjuk boleh dari unit lain (mis. pimpinan instansi).
+        if ($minutes->chairperson_id) {
+            return $minutes->chairperson_id === $user->id;
+        }
+
+        return $user->hasRole('admin') && $this->inUnit($user, $meeting);
     }
 
     public function delete(User $user, Meeting $meeting): bool
     {
-        return ! $user->hasRole('user') && $this->inScope($user, $meeting);
+        return $user->hasAnyRole(['admin', 'superadmin']) && $this->inUnit($user, $meeting);
     }
 }
