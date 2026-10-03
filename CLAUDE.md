@@ -27,26 +27,28 @@ php artisan migrate --seed             # DatabaseSeeder seeds roles, a superadmi
 npm run dev                            # Vite dev server
 npm run build                          # MUST run after adding/renaming any Vue page — the committed
                                        # public/build/manifest.json will 500 pages missing from it,
-                                       # and there is no CI step that rebuilds it
+                                       # and nothing rebuilds it automatically
 
 # Tests (SQLite :memory:, config in phpunit.xml)
-php artisan test                       # full suite (~2 min, ~177 tests)
+php artisan test                       # full suite (~2 min, ~199 tests)
 php artisan test --filter=ProcessMeetingTest
 php artisan test tests/Feature/Task/TaskApprovalTest.php
 
 # Local Speech-to-Text sidecar (separate process, needed only for audio uploads)
-python stt_service.py                  # Flask app on :5055, loads openai-whisper "base" model
-                                       # STT_SERVICE_URL in .env must point at it
+python docker/whisper/stt_service.py   # waitress app on :5055 (POST /transcribe, GET /health);
+                                       # deps in docker/whisper/requirements.txt, model via WHISPER_MODEL
+                                       # (default "base"); STT_SERVICE_URL in .env must point at it
 
-# Quality gates (all run in CI, backend job)
+# Quality gates — run these manually before committing; there is NO CI
+# (.github/workflows/ci.yml was removed, only .github/dependabot.yml remains)
 vendor/bin/pint                        # format (Laravel preset, pint.json)
-vendor/bin/pint --test                 # CI check — fails on unformatted code
+vendor/bin/pint --test                 # check only — fails on unformatted code
 vendor/bin/phpstan analyse             # level 5; 57 pre-existing errors are in phpstan-baseline.neon
 composer audit                         # fails on dependencies with known CVEs
 composer test:ci                       # runs all four gates in sequence
 ```
 
-The Docker Compose path (`docker compose up -d --build`, then `docker compose exec app php artisan migrate --seed`) runs app/nginx/mysql/redis/queue/scheduler together on port 8080. It has **not** been verified with a real build — treat it as unproven. It does **not** include the Whisper STT sidecar.
+The Docker Compose path (`docker compose up -d --build`, then `docker compose exec app php artisan migrate --seed`) runs app/nginx/mysql/redis/queue/scheduler together on port 8080. It has **not** been verified with a real build — treat it as unproven. It includes a `whisper` STT service (`docker/whisper/`, model weights cached in the `whisper_cache` volume); `STT_SERVICE_URL` is injected into app/queue as `http://whisper:5055/transcribe`.
 
 ## Architecture
 
@@ -127,10 +129,11 @@ the user-facing `activities` feed. Separate from `AuditLogger` (`app/Services/Au
 admin-only security `audit_logs` (CRUD on User/Unit/Setting/ApiToken/Webhook; login/logout via an
 `AuditAuthEvents` listener so SSO is covered for free).
 
-### Scheduled work (`app/Console/Kernel.php`)
+### Scheduled work (`bootstrap/app.php` → `withSchedule()`)
 `SendMeetingReminders` (daily 07:00), `SendTaskDeadlineReminders` (daily 07:30), `EscalateOverdueTasks`
 (hourly — emails the task *creator*, there is no manager role), `meetings:fail-stuck` (every 5 min).
-Timezone comes from `Setting::current()->timezone`.
+Timezone comes from `Setting::current()->timezone`, wrapped in `rescue()` (fallback `Asia/Jakarta`) because
+`withSchedule()` runs on every artisan call and must not fatal when the DB is unreachable.
 
 ### Webhooks
 Per-unit outgoing webhooks (`WebhookDispatcher::dispatch()` called from the same sites as
@@ -142,11 +145,11 @@ Per-unit outgoing webhooks (`WebhookDispatcher::dispatch()` called from the same
 
 - **Route ordering:** literal task routes (`/tasks/kanban`, `/tasks/calendar`, `/tasks/export/*`, `/tasks/create`) must stay registered before `/tasks/{task}` or the wildcard swallows them. Same for meetings.
 - **Inertia flash:** `HandleInertiaRequests` shares a `flash` prop; use `redirect()->...->with('success'|'error', ...)` and read `$page.props.flash` in Vue.
-- **Legacy skeleton:** this app was bumped 10→11→12 via `composer.json` only. It still uses `app/Http/Kernel.php`, `app/Console/Kernel.php`, the old `bootstrap/app.php`, the legacy `AuthServiceProvider` `$policies` array, and old `.env` keys (`CACHE_DRIVER`, `BROADCAST_DRIVER`, `QUEUE_CONNECTION`). Works via backcompat; new L11/12 skeleton features are not available.
+- **Skeleton:** the app uses the Laravel 11/12 skeleton — routing, middleware, exceptions and the schedule are configured in `bootstrap/app.php` (`Application::configure()`), providers in `bootstrap/providers.php`. There is no `app/Http/Kernel.php`, `app/Console/Kernel.php`, `app/Exceptions/Handler.php` or `RouteServiceProvider`; `HandleInertiaRequests` is the only custom middleware. Still legacy-style: `EventServiceProvider`, the `AuthServiceProvider` `$policies` array, and old `.env` keys (`CACHE_DRIVER`, `BROADCAST_DRIVER`, `QUEUE_CONNECTION`). Post-login redirect is the inlined `'/dashboard'` (no `RouteServiceProvider::HOME`). `/up` is the health route.
 - **`openai-php/laravel`** is used only to talk to **OpenRouter** (`OPENAI_BASE_URI`), not OpenAI. `OpenRouterTextProvider` has a Guzzle middleware that backfills missing `completion_tokens_details` fields OpenRouter omits, which would otherwise `TypeError` in the client.
 - **Excel export tests:** assert on the collection via `Excel::fake()` + `Excel::assertDownloaded(...)`, not on raw bytes.
 - **Tests run on SQLite**, prod is MySQL — watch for engine differences (`whereJsonContains`, fulltext, etc.).
-- **Dead stubs:** `SourcePath` model/migration/seeder are unused. `whisper-api/` and `venv/` are empty local dirs (gitignored). `routes/api.php` is effectively empty despite API tokens being a feature.
+- **Dead stubs:** `SourcePath` model/migration/seeder are unused. `routes/api.php` is effectively empty despite API tokens being a feature.
 - Meeting search (`MeetingController::index`) uses `LIKE %...%` on `transcript`/`summary` TEXT columns — won't scale.
 
 ## Following the project's task workflow
