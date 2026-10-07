@@ -40,8 +40,8 @@ python docker/whisper/stt_service.py   # waitress app on :5055 (POST /transcribe
                                        # deps in docker/whisper/requirements.txt, model via WHISPER_MODEL
                                        # (default "base"); STT_SERVICE_URL in .env must point at it
 
-# Quality gates — run these manually before committing; there is NO CI
-# (.github/workflows/ci.yml was removed, only .github/dependabot.yml remains)
+# Quality gates — also run in CI (.github/workflows/ci.yml, on push to main + every PR):
+# backend job = Pint + PHPStan + tests, separate audit job, frontend job = npm run build
 vendor/bin/pint                        # format (Laravel preset, pint.json)
 vendor/bin/pint --test                 # check only — fails on unformatted code
 vendor/bin/phpstan analyse             # level 5; 57 pre-existing errors are in phpstan-baseline.neon
