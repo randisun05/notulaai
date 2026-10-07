@@ -25,9 +25,10 @@ php artisan migrate --seed             # DatabaseSeeder seeds roles, a superadmi
 
 # Frontend
 npm run dev                            # Vite dev server
-npm run build                          # MUST run after adding/renaming any Vue page — the committed
-                                       # public/build/manifest.json will 500 pages missing from it,
-                                       # and nothing rebuilds it automatically
+npm run build                          # writes public/build/ — gitignored, NOT committed. Every deploy
+                                       # (and a fresh dev checkout without `npm run dev`) must run it or
+                                       # pages 500 with "Vite manifest not found". The Dockerfile does.
+                                       # Tests don't need it: Tests\TestCase calls withoutVite().
 
 # Tests (SQLite :memory:, config in phpunit.xml)
 php artisan test                       # full suite (~2 min, ~208 tests)
