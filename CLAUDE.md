@@ -30,7 +30,7 @@ npm run build                          # MUST run after adding/renaming any Vue 
                                        # and nothing rebuilds it automatically
 
 # Tests (SQLite :memory:, config in phpunit.xml)
-php artisan test                       # full suite (~2 min, ~199 tests)
+php artisan test                       # full suite (~2 min, ~208 tests)
 php artisan test --filter=ProcessMeetingTest
 php artisan test tests/Feature/Task/TaskApprovalTest.php
 
@@ -64,6 +64,14 @@ entry in `config/ai.php` under `providers`. No controller/job changes needed.
 
 Current drivers: `gemini` (default text/OCR, `gemini-2.0-flash`), `openrouter` (fallback text,
 free-tier model), `whisper_local` (the Flask sidecar).
+
+**Gemini key rotation:** both Gemini drivers call the API through `App\Services\AI\Gemini\GeminiKeyPool`
+(not the `Gemini::` facade), which holds up to 5 keys (`GEMINI_API_KEY`, `GEMINI_API_KEY_2..5` →
+`config('gemini.api_keys')`). It uses the first key not cooling down; on a 429 / 401 / 403 / 400
+"API key not valid" it benches that key in the cache (`GEMINI_KEY_COOLDOWN` 60s for quota,
+`GEMINI_INVALID_KEY_COOLDOWN` 3600s for bad keys) and retries the same request with the next key.
+Any other error (timeout, 5xx, blocked prompt) is rethrown untouched for the provider fallback chain.
+Keys are never logged or used as cache keys raw (sha256). Tests inject a pool built on `Gemini\Testing\ClientFake`.
 
 **Rate limiting:** every LLM-calling route (`meetings.chat.store`, `meetings.emails.generate|send`,
 `meetings.action-items.regenerate`, `meetings.process`, `dashboard.insight`, `/stt/test`) carries

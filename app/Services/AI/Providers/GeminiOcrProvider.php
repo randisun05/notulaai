@@ -4,10 +4,10 @@ namespace App\Services\AI\Providers;
 
 use App\Services\AI\Contracts\OcrProvider;
 use App\Services\AI\DTO\AiTextResult;
+use App\Services\AI\Gemini\GeminiKeyPool;
+use Gemini\Contracts\ClientContract;
 use Gemini\Data\Blob;
 use Gemini\Enums\MimeType;
-use Gemini\Laravel\Facades\Gemini;
-use Illuminate\Support\Facades\Config;
 
 class GeminiOcrProvider implements OcrProvider
 {
@@ -18,14 +18,13 @@ class GeminiOcrProvider implements OcrProvider
         'webp' => MimeType::IMAGE_WEBP,
     ];
 
-    public function __construct(private readonly string $model) {}
+    public function __construct(
+        private readonly string $model,
+        private readonly GeminiKeyPool $keys,
+    ) {}
 
     public function extractText(string $absoluteFilePath, string $fileName): AiTextResult
     {
-        if (empty(Config::get('gemini.api_key'))) {
-            throw new \RuntimeException('GEMINI_API_KEY tidak ditemukan. Cek .env.');
-        }
-
         $extension = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
         $mimeType = self::MIME_TYPES[$extension] ?? null;
 
@@ -37,16 +36,16 @@ class GeminiOcrProvider implements OcrProvider
             .'termasuk dari catatan tulisan tangan atau papan tulis. Jangan menambahkan komentar, '
             .'hanya kembalikan teksnya saja.';
 
+        $image = new Blob(
+            mimeType: $mimeType,
+            data: base64_encode(file_get_contents($absoluteFilePath)),
+        );
+
         $startedAt = microtime(true);
 
-        $result = Gemini::generativeModel(model: $this->model)
-            ->generateContent([
-                $prompt,
-                new Blob(
-                    mimeType: $mimeType,
-                    data: base64_encode(file_get_contents($absoluteFilePath)),
-                ),
-            ]);
+        $result = $this->keys->run(
+            fn (ClientContract $client) => $client->generativeModel(model: $this->model)->generateContent([$prompt, $image])
+        );
 
         $durationMs = (microtime(true) - $startedAt) * 1000;
 
