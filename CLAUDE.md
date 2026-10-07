@@ -104,7 +104,7 @@ force-fails any meeting stuck in `Memproses` past a threshold — this needs `sc
 HTTP clients in `OpenRouterTextProvider` / Gemini providers have explicit timeouts; `config/gemini.php`
 must exist (a config-cache clear that drops it silently breaks Gemini).
 
-Meeting status values (Indonesian, stored as strings): `Dijadwalkan` → `Memproses` → `Selesai Diproses` / `Gagal`. `Meetings/Show.vue` shows a static spinner during `Memproses` — there is no polling or broadcasting, the user must refresh manually.
+Meeting status values (Indonesian, stored as strings): `Dijadwalkan` → `Memproses` → `Selesai Diproses` / `Gagal`. While a meeting is `Memproses`, `Meetings/Show.vue` polls with an Inertia partial reload (`router.reload({ only: ['meeting'] })`) every 5s and stops once the status changes (switching to the summary tab on success). There is no broadcasting.
 
 ### Auth & multi-unit scoping
 Three roles only: `user`, `admin`, `superadmin` (`spatie/laravel-permission`, seeded by

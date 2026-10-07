@@ -8,7 +8,7 @@ import DangerButton from '@/Components/DangerButton.vue'; // <-- Import Tombol M
 import ForumSection from '@/Pages/Meetings/Partials/ForumSection.vue';
 import ActivityTimeline from '@/Pages/Meetings/Partials/ActivityTimeline.vue';
 import { Head, useForm, usePage, Link, router } from '@inertiajs/vue3';
-import { ref, computed } from 'vue';
+import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue';
 import axios from 'axios';
 
 const props = defineProps({
@@ -119,6 +119,44 @@ const askChat = async () => {
 };
 
 const activeTab = ref(props.meeting.status === 'Selesai Diproses' ? 'summary' : 'input');
+
+// Processing runs in a queue job with no broadcasting, so while the meeting is
+// "Memproses" we re-fetch just the meeting prop every few seconds until the job
+// finishes (or the meetings:fail-stuck watchdog marks it Gagal).
+const POLL_INTERVAL_MS = 5000;
+let pollTimer = null;
+let unmounted = false;
+
+const stopPolling = () => {
+    clearTimeout(pollTimer);
+    pollTimer = null;
+};
+
+const schedulePoll = () => {
+    stopPolling();
+    if (unmounted || props.meeting.status !== 'Memproses') return;
+
+    pollTimer = setTimeout(() => {
+        router.reload({
+            only: ['meeting'],
+            onFinish: schedulePoll,
+        });
+    }, POLL_INTERVAL_MS);
+};
+
+watch(() => props.meeting.status, (status, previous) => {
+    if (status === 'Selesai Diproses' && previous !== status) {
+        activeTab.value = 'summary';
+        chatMessages.value = [...(props.meeting.chat_messages || [])];
+    }
+    schedulePoll();
+});
+
+onMounted(schedulePoll);
+onBeforeUnmount(() => {
+    unmounted = true;
+    stopPolling();
+});
 const inputType = ref('text'); // 'text', 'audio', 'file', 'image'
 
 const form = useForm({
