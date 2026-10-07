@@ -159,7 +159,7 @@ Per-unit outgoing webhooks (`WebhookDispatcher::dispatch()` called from the same
 - **Excel export tests:** assert on the collection via `Excel::fake()` + `Excel::assertDownloaded(...)`, not on raw bytes.
 - **Tests run on SQLite**, prod is MySQL — watch for engine differences (`whereJsonContains`, fulltext, etc.).
 - **Dead stubs:** `SourcePath` model/migration/seeder are unused. `routes/api.php` is effectively empty despite API tokens being a feature.
-- Meeting search (`MeetingController::index`) uses `LIKE %...%` on `transcript`/`summary` TEXT columns — won't scale.
+- **Meeting search** goes through `Meeting::scopeSearch()` — always inside one nested `where()` so its ORs can't escape `visibleTo()` (they once did, leaking other units' meetings). On MySQL, agenda/transcript/summary use the `meetings_search_fulltext` FULLTEXT index (boolean mode, every word ≥3 chars required, prefix match); title, and every column on SQLite, use an escaped `LIKE`. InnoDB FULLTEXT ignores uncommitted rows, so FULLTEXT can't be asserted inside `RefreshDatabase` — `MeetingSearchTest` skips those cases on MySQL.
 
 ## Following the project's task workflow
 
