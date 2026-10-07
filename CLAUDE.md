@@ -31,7 +31,7 @@ npm run build                          # writes public/build/ — gitignored, NO
                                        # Tests don't need it: Tests\TestCase calls withoutVite().
 
 # Tests (SQLite :memory:, config in phpunit.xml)
-php artisan test                       # full suite (~2 min, ~208 tests)
+php artisan test                       # full suite (~2 min, ~220 tests)
 php artisan test --filter=ProcessMeetingTest
 php artisan test tests/Feature/Task/TaskApprovalTest.php
 
@@ -63,8 +63,11 @@ to `config/ai.php` defaults (`AI_TEXT_PROVIDER` etc.). Drivers return DTOs (`AiT
 **To add a provider:** implement the relevant contract in `Providers/`, register a name→`{driver, model}`
 entry in `config/ai.php` under `providers`. No controller/job changes needed.
 
-Current drivers: `gemini` (default text/OCR, `gemini-2.0-flash`), `openrouter` (fallback text,
-free-tier model), `whisper_local` (the Flask sidecar).
+Current drivers: `gemini` (default text/OCR, model `gemini-flash-latest` — Google's alias for the current
+Flash model), `openrouter` (fallback text, free-tier model), `whisper_local` (the Flask sidecar).
+`gemini-2.0-flash*` was shut down by Google on 2026-06-01; `config/ai.php` swaps any retired ID found in
+`AI_GEMINI_MODEL` / `AI_OCR_MODEL` for the default (list in `$retiredGeminiModels` — extend it when Google
+retires more).
 
 **Gemini key rotation:** both Gemini drivers call the API through `App\Services\AI\Gemini\GeminiKeyPool`
 (not the `Gemini::` facade), which holds up to 5 keys (`GEMINI_API_KEY`, `GEMINI_API_KEY_2..5` →
@@ -96,7 +99,11 @@ actually served the request. Passing an explicit name (`->text('gemini')`) skips
 3. `generateActionItems()` — second text call returning a JSON array, parsed by `ActionItemsParser` (unit-tested against code-fence / prose-wrapped / missing-title LLM quirks). **Best-effort**: a failure here never fails the meeting.
 4. Logs an Activity, dispatches the `meeting.processed` webhook, emails everyone in the unit.
 
-Every AI call is recorded via `AiRequestLogger` into `ai_request_logs` (the `cost` column is always null — no pricing data wired).
+Every AI call is recorded via `AiRequestLogger` into `ai_request_logs`. `cost` (USD) is computed from
+`config('ai.providers.<name>.pricing')` (per 1M input/output tokens, env `AI_GEMINI_PRICE_*` /
+`AI_OPENROUTER_PRICE_*`); null when the price is unknown or a priced provider reported no tokens. `:free`
+OpenRouter models and `whisper_local` are 0. Gemini drivers report tokens from `usageMetadata`
+(completion = candidates + thinking tokens).
 
 **Reliability notes (see also memory `project-ai-reliability-fixes`):** the job's `$timeout` relies on
 `pcntl`, which does not exist on Windows (the dev/deploy OS), so it is a no-op there. The real safety

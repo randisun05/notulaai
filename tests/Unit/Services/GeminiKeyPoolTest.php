@@ -45,8 +45,9 @@ class GeminiKeyPoolTest extends TestCase
 
     private function ok(string $text): GenerateContentResponse
     {
-        return GenerateContentResponse::fake([
-            'candidates' => [['content' => ['parts' => [['text' => $text]]]]],
+        return GenerateContentResponse::from([
+            'candidates' => [['content' => ['parts' => [['text' => $text]], 'role' => 'model'], 'finishReason' => 'STOP', 'index' => 0]],
+            'usageMetadata' => ['promptTokenCount' => 120, 'candidatesTokenCount' => 30, 'thoughtsTokenCount' => 10, 'totalTokenCount' => 160],
         ]);
     }
 
@@ -185,5 +186,7 @@ class GeminiKeyPoolTest extends TestCase
 
         $this->assertSame('ringkasan', $result->content);
         $this->assertSame('gemini', $result->provider);
+        $this->assertSame(120, $result->promptTokens);
+        $this->assertSame(40, $result->completionTokens, 'candidates + thinking tokens');
     }
 }

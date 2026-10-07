@@ -28,6 +28,9 @@ class GeminiTextProvider implements TextGenerationProvider
             content: $result->text(),
             provider: 'gemini',
             model: $this->model,
+            promptTokens: $result->usageMetadata->promptTokenCount,
+            // Thinking tokens are billed as output on newer Flash models.
+            completionTokens: ($result->usageMetadata->candidatesTokenCount ?? 0) + ($result->usageMetadata->thoughtsTokenCount ?? 0),
             durationMs: $durationMs,
         );
     }
