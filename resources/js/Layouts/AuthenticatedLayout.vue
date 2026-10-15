@@ -5,9 +5,12 @@ import Dropdown from '@/Components/Dropdown.vue';
 import DropdownLink from '@/Components/DropdownLink.vue';
 import NavLink from '@/Components/NavLink.vue';
 import ResponsiveNavLink from '@/Components/ResponsiveNavLink.vue';
+import PageSkeleton from '@/Components/Skeleton/PageSkeleton.vue';
+import { useNavigationSkeleton } from '@/Composables/useNavigationSkeleton';
 import { Link, usePage } from '@inertiajs/vue3';
 
 const showingNavigationDropdown = ref(false);
+const navigationSkeleton = useNavigationSkeleton();
 
 const page = usePage();
 const userInitials = computed(() => {
@@ -178,14 +181,20 @@ const userInitials = computed(() => {
             </div>
         </nav>
 
-        <header class="bg-white border-b border-gray-100" v-if="$slots.header">
-            <div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
-                <slot name="header" />
-            </div>
-        </header>
+        <!-- While the next page loads, show its skeleton. The current page stays
+             mounted underneath (v-show) so its state survives a cancelled visit. -->
+        <PageSkeleton v-if="navigationSkeleton.visible" :variant="navigationSkeleton.variant" />
 
-        <main>
-            <slot />
-        </main>
+        <div v-show="!navigationSkeleton.visible">
+            <header class="bg-white border-b border-gray-100" v-if="$slots.header">
+                <div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+                    <slot name="header" />
+                </div>
+            </header>
+
+            <main>
+                <slot />
+            </main>
+        </div>
     </div>
 </template>

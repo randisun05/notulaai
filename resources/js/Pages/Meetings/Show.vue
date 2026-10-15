@@ -7,6 +7,8 @@ import PrimaryButton from '@/Components/PrimaryButton.vue';
 import DangerButton from '@/Components/DangerButton.vue'; // <-- Import Tombol Merah
 import ForumSection from '@/Pages/Meetings/Partials/ForumSection.vue';
 import ActivityTimeline from '@/Pages/Meetings/Partials/ActivityTimeline.vue';
+import SkeletonBlock from '@/Components/Skeleton/SkeletonBlock.vue';
+import SkeletonText from '@/Components/Skeleton/SkeletonText.vue';
 import { Head, useForm, usePage, Link, router } from '@inertiajs/vue3';
 import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue';
 import axios from 'axios';
@@ -335,7 +337,17 @@ const deleteMeeting = () => {
                                         Generate ulang tidak tersedia (sudah ada yang jadi Task)
                                     </span>
                                 </div>
-                                <p v-if="!meeting.action_items?.length" class="text-sm text-gray-500">Tidak ada action item yang terdeteksi AI dari rapat ini.</p>
+                                <ul v-if="regeneratingActionItems" class="divide-y divide-gray-200 border border-gray-200 rounded-md" role="status" aria-busy="true">
+                                    <span class="sr-only">AI sedang membuat ulang action items...</span>
+                                    <li v-for="n in 3" :key="n" class="p-4 flex items-start justify-between gap-4">
+                                        <div class="flex-1 space-y-2">
+                                            <SkeletonBlock class="h-4 w-3/4" />
+                                            <SkeletonBlock class="h-3 w-1/3" />
+                                        </div>
+                                        <SkeletonBlock class="h-7 w-24 shrink-0" />
+                                    </li>
+                                </ul>
+                                <p v-else-if="!meeting.action_items?.length" class="text-sm text-gray-500">Tidak ada action item yang terdeteksi AI dari rapat ini.</p>
                                 <ul v-else class="divide-y divide-gray-200 border border-gray-200 rounded-md">
                                     <li v-for="item in meeting.action_items" :key="item.id" class="p-4 flex items-start justify-between gap-4">
                                         <div>
@@ -367,7 +379,19 @@ const deleteMeeting = () => {
 
                                 <p v-if="emailError" class="text-sm text-red-600 mb-4">{{ emailError }}</p>
 
-                                <div v-if="emailDraft" class="space-y-4 border border-gray-200 rounded-md p-4">
+                                <div v-if="emailGenerating" class="space-y-4 border border-gray-200 rounded-md p-4" role="status" aria-busy="true">
+                                    <span class="sr-only">AI sedang membuat draft email...</span>
+                                    <div class="space-y-2">
+                                        <SkeletonBlock class="h-3.5 w-16" />
+                                        <SkeletonBlock class="h-10 w-full" />
+                                    </div>
+                                    <div class="space-y-2">
+                                        <SkeletonBlock class="h-3.5 w-24" />
+                                        <SkeletonText :lines="6" label="AI sedang menulis isi email..." />
+                                    </div>
+                                </div>
+
+                                <div v-else-if="emailDraft" class="space-y-4 border border-gray-200 rounded-md p-4">
                                     <div>
                                         <InputLabel for="email_subject" value="Subjek" />
                                         <TextInput id="email_subject" type="text" class="mt-1 block w-full" v-model="emailDraft.subject" />
@@ -409,7 +433,9 @@ const deleteMeeting = () => {
                                         </div>
                                     </div>
                                     <div v-if="chatAsking" class="text-left">
-                                        <div class="inline-block px-3 py-2 rounded-lg text-sm bg-white border border-gray-200 text-gray-400 italic">AI sedang mengetik...</div>
+                                        <div class="inline-block w-2/3 max-w-[80%] px-3 py-3 rounded-lg bg-white border border-gray-200">
+                                            <SkeletonText :lines="2" label="AI sedang mengetik..." />
+                                        </div>
                                     </div>
                                 </div>
 
@@ -468,12 +494,19 @@ const deleteMeeting = () => {
                             </form>
                         </div>
 
-                        <div v-else-if="meeting.status === 'Memproses'" class="p-6 text-center">
-                             <div class="flex justify-center items-center h-40">
-                                <div class="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-500"></div>
+                        <!-- Placeholder in the shape of the finished summary view; the
+                             page polls (see schedulePoll) and swaps it in when done. -->
+                        <div v-else-if="meeting.status === 'Memproses'" class="p-6 space-y-6" role="status" aria-busy="true">
+                            <div class="flex gap-6 border-b border-gray-100 pb-3">
+                                <SkeletonBlock v-for="n in 5" :key="n" class="h-4 w-20" />
                             </div>
-                            <h3 class="text-lg font-semibold text-gray-800">Sedang Memproses...</h3>
-                            <p class="text-sm text-gray-500 mt-2">Notula Anda sedang dibuat oleh AI. Halaman ini akan diperbarui otomatis setelah selesai.</p>
+                            <div class="alert-info flex items-center gap-2">
+                                <span class="h-2 w-2 rounded-full bg-brand-500 motion-safe:animate-ping shrink-0" aria-hidden="true"></span>
+                                <span><span class="font-semibold">Sedang memproses...</span> Notula Anda sedang dibuat oleh AI. Halaman ini akan diperbarui otomatis setelah selesai.</span>
+                            </div>
+                            <SkeletonBlock class="h-6 w-1/3" />
+                            <SkeletonText :lines="4" label="Rangkuman sedang dibuat..." />
+                            <SkeletonText :lines="3" label="Rangkuman sedang dibuat..." />
                         </div>
                     </div>
 

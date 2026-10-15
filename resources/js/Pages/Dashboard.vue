@@ -1,5 +1,6 @@
 <script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+import SkeletonText from '@/Components/Skeleton/SkeletonText.vue';
 import { Head, Link } from '@inertiajs/vue3';
 import {
     DocumentTextIcon,
@@ -111,7 +112,8 @@ const maxStatusCount = computed(() => Math.max(1, ...props.taskStatusBreakdown.m
                             {{ insightLoading ? 'Membuat...' : (insight ? 'Buat Ulang' : 'Buat Insight') }}
                         </button>
                     </div>
-                    <p v-if="insightError" class="mt-3 text-sm text-red-600">{{ insightError }}</p>
+                    <SkeletonText v-if="insightLoading" :lines="3" label="AI sedang membuat insight..." class="mt-4" />
+                    <p v-else-if="insightError" class="mt-3 text-sm text-red-600">{{ insightError }}</p>
                     <p v-else-if="insight" class="mt-3 text-sm text-gray-700 whitespace-pre-wrap">{{ insight }}</p>
                     <p v-else class="mt-3 text-sm text-gray-400">Klik "Buat Insight" untuk mendapatkan ringkasan AI dari data di atas.</p>
                 </div>

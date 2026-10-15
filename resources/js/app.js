@@ -2,11 +2,14 @@ import './bootstrap';
 import '../css/app.css';
 
 import { createApp, h } from 'vue';
-import { createInertiaApp } from '@inertiajs/vue3';
+import { createInertiaApp, router } from '@inertiajs/vue3';
 import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
 import { ZiggyVue } from '../../vendor/tightenco/ziggy';
+import { installNavigationSkeleton } from './Composables/useNavigationSkeleton';
 
 const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
+
+installNavigationSkeleton(router);
 
 createInertiaApp({
     title: (title) => `${title} - ${appName}`,

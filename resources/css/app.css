@@ -166,6 +166,11 @@
         @apply block w-full ps-3 pe-4 py-2 border-l-4 border-transparent text-start text-base font-medium text-gray-600 hover:text-gray-800 hover:bg-gray-50 hover:border-gray-300 transition duration-150 ease-in-out focus:outline-none;
     }
 
+    /* ---------- Skeleton loading (Components/Skeleton/*) ---------- */
+    .skeleton {
+        @apply rounded-md bg-gray-200/80 motion-safe:animate-pulse;
+    }
+
     /* ---------- Empty states ---------- */
     .empty-state {
         @apply text-center py-12 text-sm text-gray-400;

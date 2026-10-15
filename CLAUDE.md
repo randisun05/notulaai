@@ -114,6 +114,16 @@ must exist (a config-cache clear that drops it silently breaks Gemini).
 
 Meeting status values (Indonesian, stored as strings): `Dijadwalkan` → `Memproses` → `Selesai Diproses` / `Gagal`. While a meeting is `Memproses`, `Meetings/Show.vue` polls with an Inertia partial reload (`router.reload({ only: ['meeting'] })`) every 5s and stops once the status changes (switching to the summary tab on success). There is no broadcasting.
 
+### Skeleton loading (`resources/js/Components/Skeleton/`)
+`SkeletonBlock` (one `.skeleton` bar, `motion-safe:animate-pulse`), `SkeletonText` (lines, `role="status"`),
+`PageSkeleton` (variants `dashboard` / `list` / `detail` / `form` / `board`). `Composables/useNavigationSkeleton.js`
+is installed once in `app.js`: on an Inertia `start` event for a **full GET page visit** it shows, after 200ms,
+the `PageSkeleton` matching the destination path (`resolveSkeletonVariant()` — extend it when adding page
+shapes) in place of `AuthenticatedLayout`'s header+main (old page kept mounted via `v-show`); `finish` hides it.
+Partial reloads (`only`, e.g. meeting polling), `preserveState: true` visits (search/filter/pagination) and
+non-GET submits never show it. In-page AI waits use `SkeletonText`/`SkeletonBlock` directly (dashboard insight,
+meeting `Memproses`, chat reply, email draft, action-item regenerate).
+
 ### Auth & multi-unit scoping
 Three roles only: `user`, `admin`, `superadmin` (`spatie/laravel-permission`, seeded by
 `RolePermissionSeeder` — call `$this->seed(RolePermissionSeeder::class)` before `assignRole()`/`syncRoles()`
