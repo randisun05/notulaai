@@ -5,9 +5,28 @@ import Dropdown from '@/Components/Dropdown.vue';
 import DropdownLink from '@/Components/DropdownLink.vue';
 import NavLink from '@/Components/NavLink.vue';
 import ResponsiveNavLink from '@/Components/ResponsiveNavLink.vue';
+import NotificationBell from '@/Components/Notifications/NotificationBell.vue';
+import SearchPalette from '@/Components/Search/SearchPalette.vue';
+import SearchTrigger from '@/Components/Search/SearchTrigger.vue';
+import PageSkeleton from '@/Components/Skeleton/PageSkeleton.vue';
+import { useNavigationSkeleton } from '@/Composables/useNavigationSkeleton';
 import { Link, usePage } from '@inertiajs/vue3';
 
 const showingNavigationDropdown = ref(false);
+const navigationSkeleton = useNavigationSkeleton();
+
+// Admin area, grouped in one dropdown so the top nav stays on one line.
+// `roles` mirrors the route gates: access-unit-admin (admin + superadmin)
+// vs access-admin-panel (superadmin only). The server enforces both.
+const ADMIN_LINKS = [
+    { label: 'Unit', route: 'admin.units.index', active: 'admin.units.*', roles: ['superadmin'] },
+    { label: 'User', route: 'admin.users.index', active: 'admin.users.*', roles: ['admin', 'superadmin'] },
+    { label: 'Pengaturan', route: 'admin.settings.edit', active: 'admin.settings.*', roles: ['superadmin'] },
+    { label: 'Webhooks', route: 'admin.webhooks.index', active: 'admin.webhooks.*', roles: ['admin', 'superadmin'] },
+    { label: 'Audit Log', route: 'admin.audit-logs.index', active: 'admin.audit-logs.*', roles: ['superadmin'] },
+    { label: 'Pemakaian AI', route: 'admin.ai-usage.index', active: 'admin.ai-usage.*', roles: ['superadmin'] },
+];
+const adminLinks = computed(() => ADMIN_LINKS.filter((link) => link.roles.includes(page.props.auth.user.role)));
 
 const page = usePage();
 const userInitials = computed(() => {
@@ -23,6 +42,9 @@ const userInitials = computed(() => {
 
 <template>
     <div class="min-h-screen bg-gray-50">
+        <!-- Rendered once (Teleport to body); opened by any SearchTrigger or Ctrl/Cmd+K, "/". -->
+        <SearchPalette />
+
         <nav class="bg-white/90 backdrop-blur border-b border-gray-100 sticky top-0 z-30">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div class="flex justify-between h-16">
@@ -48,28 +70,38 @@ const userInitials = computed(() => {
                                 Analitik
                             </NavLink>
 
-                            <template v-if="$page.props.auth.user.role === 'superadmin'">
-                                <NavLink :href="route('admin.units.index')" :active="route().current('admin.units.*')">
-                                    Unit
-                                </NavLink>
-                                <NavLink :href="route('admin.users.index')" :active="route().current('admin.users.*')">
-                                    User
-                                </NavLink>
-                                <NavLink :href="route('admin.settings.edit')" :active="route().current('admin.settings.*')">
-                                    Pengaturan
-                                </NavLink>
-                                <NavLink :href="route('admin.audit-logs.index')" :active="route().current('admin.audit-logs.*')">
-                                    Audit Log
-                                </NavLink>
-                                <NavLink :href="route('admin.webhooks.index')" :active="route().current('admin.webhooks.*')">
-                                    Webhooks
-                                </NavLink>
-                            </template>
+                            <Dropdown v-if="adminLinks.length" align="left" width="48">
+                                <template #trigger>
+                                    <button
+                                        type="button"
+                                        class="h-16 gap-1"
+                                        :class="route().current('admin.*') ? 'nav-link-active' : 'nav-link-inactive'"
+                                    >
+                                        Admin
+                                        <svg class="h-4 w-4 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                                            <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
+                                        </svg>
+                                    </button>
+                                </template>
+
+                                <template #content>
+                                    <DropdownLink
+                                        v-for="link in adminLinks"
+                                        :key="link.route"
+                                        :href="route(link.route)"
+                                        :class="route().current(link.active) ? 'bg-brand-50 text-brand-700 font-semibold' : ''"
+                                    >
+                                        {{ link.label }}
+                                    </DropdownLink>
+                                </template>
+                            </Dropdown>
                         </div>
                     </div>
 
-                    <div class="hidden sm:flex sm:items-center sm:ms-6">
-                        <div class="ms-3 relative">
+                    <div class="hidden sm:flex sm:items-center sm:ms-6 gap-2">
+                        <SearchTrigger />
+                        <NotificationBell />
+                        <div class="ms-1 relative">
                             <Dropdown align="right" width="48">
                                 <template #trigger>
                                     <button
@@ -96,7 +128,9 @@ const userInitials = computed(() => {
                         </div>
                     </div>
 
-                    <div class="-me-2 flex items-center sm:hidden">
+                    <div class="-me-2 flex items-center gap-1 sm:hidden">
+                        <SearchTrigger />
+                        <NotificationBell />
                         <button
                             @click="showingNavigationDropdown = !showingNavigationDropdown"
                             class="inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 focus:outline-none focus:bg-gray-100 focus:text-gray-500 transition duration-150 ease-in-out"
@@ -132,29 +166,11 @@ const userInitials = computed(() => {
                     </ResponsiveNavLink>
                 </div>
 
-                <template v-if="$page.props.auth.user.role === 'superadmin'">
-                    <div class="pt-4 pb-1 border-t border-gray-200">
-                        <div class="px-4">
-                            <div class="font-semibold text-xs uppercase tracking-wider text-gray-400">Panel Admin</div>
-                        </div>
-                        <div class="mt-3 space-y-1">
-                            <ResponsiveNavLink :href="route('admin.units.index')" :active="route().current('admin.units.*')">
-                                Manajemen Unit
-                            </ResponsiveNavLink>
-                            <ResponsiveNavLink :href="route('admin.users.index')" :active="route().current('admin.users.*')">
-                                Manajemen User
-                            </ResponsiveNavLink>
-                            <ResponsiveNavLink :href="route('admin.settings.edit')" :active="route().current('admin.settings.*')">
-                                Pengaturan
-                            </ResponsiveNavLink>
-                            <ResponsiveNavLink :href="route('admin.audit-logs.index')" :active="route().current('admin.audit-logs.*')">
-                                Audit Log
-                            </ResponsiveNavLink>
-                            <ResponsiveNavLink :href="route('admin.webhooks.index')" :active="route().current('admin.webhooks.*')">
-                                Webhooks
-                            </ResponsiveNavLink>
-                        </div>
-                    </div>
+                <template v-if="adminLinks.length">
+                    <div class="px-4 pt-3 pb-1 text-xs font-semibold uppercase tracking-wider text-gray-400">Admin</div>
+                    <ResponsiveNavLink v-for="link in adminLinks" :key="link.route" :href="route(link.route)" :active="route().current(link.active)">
+                        {{ link.label }}
+                    </ResponsiveNavLink>
                 </template>
 
                 <div class="pt-4 pb-3 border-t border-gray-200">
@@ -178,14 +194,20 @@ const userInitials = computed(() => {
             </div>
         </nav>
 
-        <header class="bg-white border-b border-gray-100" v-if="$slots.header">
-            <div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
-                <slot name="header" />
-            </div>
-        </header>
+        <!-- While the next page loads, show its skeleton. The current page stays
+             mounted underneath (v-show) so its state survives a cancelled visit. -->
+        <PageSkeleton v-if="navigationSkeleton.visible" :variant="navigationSkeleton.variant" />
 
-        <main>
-            <slot />
-        </main>
+        <div v-show="!navigationSkeleton.visible">
+            <header class="bg-white border-b border-gray-100" v-if="$slots.header">
+                <div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+                    <slot name="header" />
+                </div>
+            </header>
+
+            <main>
+                <slot />
+            </main>
+        </div>
     </div>
 </template>

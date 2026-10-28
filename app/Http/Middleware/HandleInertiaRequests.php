@@ -33,6 +33,10 @@ class HandleInertiaRequests extends Middleware
             ...parent::share($request),
             'auth' => [
                 'user' => $request->user(),
+                // Badge on the bell; refreshed on every page visit (and polled by
+                // NotificationBell). Lives under auth so a page prop named
+                // "notifications" (Notifications/Index) can't shadow it.
+                'unread_notifications' => fn () => $request->user()?->unreadNotifications()->count(),
             ],
             'flash' => [
                 'success' => fn () => $request->session()->get('success'),

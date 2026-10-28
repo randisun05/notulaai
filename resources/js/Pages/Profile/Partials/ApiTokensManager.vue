@@ -13,6 +13,7 @@ defineProps({
 
 const page = usePage();
 const plainTextToken = computed(() => page.props.flash?.plainTextToken);
+const apiBase = `${window.location.origin}/api/v1`;
 
 const form = useForm({
     name: '',
@@ -54,6 +55,22 @@ const formattedDate = (dateString) => {
             <p class="text-sm text-green-800 font-medium mb-1">Token berhasil dibuat. Salin sekarang — tidak akan ditampilkan lagi:</p>
             <code class="block bg-white border border-green-200 rounded px-3 py-2 text-xs break-all select-all">{{ plainTextToken }}</code>
         </div>
+
+        <details class="rounded-md border border-gray-200 bg-gray-50 p-4 text-sm text-gray-700">
+            <summary class="cursor-pointer font-medium text-gray-900">Cara memakai API</summary>
+            <div class="mt-3 space-y-3">
+                <p>Kirim token di header <code class="text-xs">Authorization</code>. Token punya akses yang sama dengan akun Anda (rapat &amp; task di unit Anda), hanya baca.</p>
+                <pre class="overflow-x-auto rounded bg-white border border-gray-200 p-3 text-xs"><code>curl -H "Authorization: Bearer &lt;token&gt;" {{ apiBase }}/meetings</code></pre>
+                <ul class="list-disc ps-5 space-y-0.5 text-xs font-mono">
+                    <li>GET /api/v1/me</li>
+                    <li>GET /api/v1/meetings?search=&amp;status=&amp;from=&amp;to=</li>
+                    <li>GET /api/v1/meetings/{id}?include=transcript</li>
+                    <li>GET /api/v1/tasks?status=&amp;assignee_id=&amp;meeting_id=&amp;overdue=1</li>
+                    <li>GET /api/v1/tasks/{id}</li>
+                </ul>
+                <p class="text-xs text-gray-500">Dokumentasi lengkap: <code>docs/api.md</code> di repository. Batas 60 request/menit.</p>
+            </div>
+        </details>
 
         <form @submit.prevent="createToken" class="flex items-end gap-3">
             <div class="flex-1 max-w-xs">

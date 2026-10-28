@@ -25,28 +25,31 @@ php artisan migrate --seed             # DatabaseSeeder seeds roles, a superadmi
 
 # Frontend
 npm run dev                            # Vite dev server
-npm run build                          # MUST run after adding/renaming any Vue page — the committed
-                                       # public/build/manifest.json will 500 pages missing from it,
-                                       # and there is no CI step that rebuilds it
+npm run build                          # writes public/build/ — gitignored, NOT committed. Every deploy
+                                       # (and a fresh dev checkout without `npm run dev`) must run it or
+                                       # pages 500 with "Vite manifest not found". The Dockerfile does.
+                                       # Tests don't need it: Tests\TestCase calls withoutVite().
 
 # Tests (SQLite :memory:, config in phpunit.xml)
-php artisan test                       # full suite (~2 min, ~177 tests)
+php artisan test                       # full suite (~2 min, ~263 tests)
 php artisan test --filter=ProcessMeetingTest
 php artisan test tests/Feature/Task/TaskApprovalTest.php
 
 # Local Speech-to-Text sidecar (separate process, needed only for audio uploads)
-python stt_service.py                  # Flask app on :5055, loads openai-whisper "base" model
-                                       # STT_SERVICE_URL in .env must point at it
+python docker/whisper/stt_service.py   # waitress app on :5055 (POST /transcribe, GET /health);
+                                       # deps in docker/whisper/requirements.txt, model via WHISPER_MODEL
+                                       # (default "base"); STT_SERVICE_URL in .env must point at it
 
-# Quality gates (all run in CI, backend job)
+# Quality gates — also run in CI (.github/workflows/ci.yml, on push to main + every PR):
+# backend job = Pint + PHPStan + tests, separate audit job, frontend job = npm run build
 vendor/bin/pint                        # format (Laravel preset, pint.json)
-vendor/bin/pint --test                 # CI check — fails on unformatted code
-vendor/bin/phpstan analyse             # level 5; 57 pre-existing errors are in phpstan-baseline.neon
+vendor/bin/pint --test                 # check only — fails on unformatted code
+vendor/bin/phpstan analyse             # level 5; 35 pre-existing errors are in phpstan-baseline.neon
 composer audit                         # fails on dependencies with known CVEs
 composer test:ci                       # runs all four gates in sequence
 ```
 
-The Docker Compose path (`docker compose up -d --build`, then `docker compose exec app php artisan migrate --seed`) runs app/nginx/mysql/redis/queue/scheduler together on port 8080. It has **not** been verified with a real build — treat it as unproven. It does **not** include the Whisper STT sidecar.
+The Docker Compose path (`docker compose up -d --build`, then `docker compose exec app php artisan migrate --seed`) runs app/nginx/mysql/redis/queue/scheduler together on port 8080. It has **not** been verified with a real build — treat it as unproven. It includes a `whisper` STT service (`docker/whisper/`, model weights cached in the `whisper_cache` volume); `STT_SERVICE_URL` is injected into app/queue as `http://whisper:5055/transcribe`.
 
 ## Architecture
 
@@ -60,8 +63,19 @@ to `config/ai.php` defaults (`AI_TEXT_PROVIDER` etc.). Drivers return DTOs (`AiT
 **To add a provider:** implement the relevant contract in `Providers/`, register a name→`{driver, model}`
 entry in `config/ai.php` under `providers`. No controller/job changes needed.
 
-Current drivers: `gemini` (default text/OCR, `gemini-2.0-flash`), `openrouter` (fallback text,
-free-tier model), `whisper_local` (the Flask sidecar).
+Current drivers: `gemini` (default text/OCR, model `gemini-flash-latest` — Google's alias for the current
+Flash model), `openrouter` (fallback text, free-tier model), `whisper_local` (the Flask sidecar).
+`gemini-2.0-flash*` was shut down by Google on 2026-06-01; `config/ai.php` swaps any retired ID found in
+`AI_GEMINI_MODEL` / `AI_OCR_MODEL` for the default (list in `$retiredGeminiModels` — extend it when Google
+retires more).
+
+**Gemini key rotation:** both Gemini drivers call the API through `App\Services\AI\Gemini\GeminiKeyPool`
+(not the `Gemini::` facade), which holds up to 5 keys (`GEMINI_API_KEY`, `GEMINI_API_KEY_2..5` →
+`config('gemini.api_keys')`). It uses the first key not cooling down; on a 429 / 401 / 403 / 400
+"API key not valid" it benches that key in the cache (`GEMINI_KEY_COOLDOWN` 60s for quota,
+`GEMINI_INVALID_KEY_COOLDOWN` 3600s for bad keys) and retries the same request with the next key.
+Any other error (timeout, 5xx, blocked prompt) is rethrown untouched for the provider fallback chain.
+Keys are never logged or used as cache keys raw (sha256). Tests inject a pool built on `Gemini\Testing\ClientFake`.
 
 **Rate limiting:** every LLM-calling route (`meetings.chat.store`, `meetings.emails.generate|send`,
 `meetings.action-items.regenerate`, `meetings.process`, `dashboard.insight`, `/stt/test`) carries
@@ -85,7 +99,13 @@ actually served the request. Passing an explicit name (`->text('gemini')`) skips
 3. `generateActionItems()` — second text call returning a JSON array, parsed by `ActionItemsParser` (unit-tested against code-fence / prose-wrapped / missing-title LLM quirks). **Best-effort**: a failure here never fails the meeting.
 4. Logs an Activity, dispatches the `meeting.processed` webhook, emails everyone in the unit.
 
-Every AI call is recorded via `AiRequestLogger` into `ai_request_logs` (the `cost` column is always null — no pricing data wired).
+Every AI call is recorded via `AiRequestLogger` into `ai_request_logs`. `cost` (USD) is computed from
+`config('ai.providers.<name>.pricing')` (per 1M input/output tokens, env `AI_GEMINI_PRICE_*` /
+`AI_OPENROUTER_PRICE_*`); null when the price is unknown or a priced provider reported no tokens. `:free`
+OpenRouter models and `whisper_local` are 0. Gemini drivers report tokens from `usageMetadata`
+(completion = candidates + thinking tokens). `AiUsageController` (`/admin/ai-usage`, superadmin) aggregates the
+logs per day / provider+model / type / unit (meeting's unit, else the user's) over 7/30/90 days; `unpriced` counts
+successful calls with null cost, shown as "≥ $x".
 
 **Reliability notes (see also memory `project-ai-reliability-fixes`):** the job's `$timeout` relies on
 `pcntl`, which does not exist on Windows (the dev/deploy OS), so it is a no-op there. The real safety
@@ -94,13 +114,27 @@ force-fails any meeting stuck in `Memproses` past a threshold — this needs `sc
 HTTP clients in `OpenRouterTextProvider` / Gemini providers have explicit timeouts; `config/gemini.php`
 must exist (a config-cache clear that drops it silently breaks Gemini).
 
-Meeting status values (Indonesian, stored as strings): `Dijadwalkan` → `Memproses` → `Selesai Diproses` / `Gagal`. `Meetings/Show.vue` shows a static spinner during `Memproses` — there is no polling or broadcasting, the user must refresh manually.
+Meeting status values (Indonesian, stored as strings): `Dijadwalkan` → `Memproses` → `Selesai Diproses` / `Gagal`. While a meeting is `Memproses`, `Meetings/Show.vue` polls with an Inertia partial reload (`router.reload({ only: ['meeting'] })`) every 5s and stops once the status changes (switching to the summary tab on success). There is no broadcasting.
+
+### Skeleton loading (`resources/js/Components/Skeleton/`)
+`SkeletonBlock` (one `.skeleton` bar, `motion-safe:animate-pulse`), `SkeletonText` (lines, `role="status"`),
+`PageSkeleton` (variants `dashboard` / `list` / `detail` / `form` / `board`). `Composables/useNavigationSkeleton.js`
+is installed once in `app.js`: on an Inertia `start` event for a **full GET page visit** it shows, after 200ms,
+the `PageSkeleton` matching the destination path (`resolveSkeletonVariant()` — extend it when adding page
+shapes) in place of `AuthenticatedLayout`'s header+main (old page kept mounted via `v-show`); `finish` hides it.
+Partial reloads (`only`, e.g. meeting polling), `preserveState: true` visits (search/filter/pagination) and
+non-GET submits never show it. In-page AI waits use `SkeletonText`/`SkeletonBlock` directly (dashboard insight,
+meeting `Memproses`, chat reply, email draft, action-item regenerate).
 
 ### Auth & multi-unit scoping
 Three roles only: `user`, `admin`, `superadmin` (`spatie/laravel-permission`, seeded by
 `RolePermissionSeeder` — call `$this->seed(RolePermissionSeeder::class)` before `assignRole()`/`syncRoles()`
-in tests or roles won't exist). Admin panel routes are gated by the `access-admin-panel` Gate, which
-currently allows **superadmin only** (defined in `AuthServiceProvider::boot`).
+in tests or roles won't exist). Admin routes use two Gates (`AuthServiceProvider::boot`):
+`access-admin-panel` = **superadmin only** (Unit, Pengaturan, Audit Log, Pemakaian AI) and `access-unit-admin` =
+admin + superadmin (User, Webhooks). On the latter a unit admin is narrowed by `UserPolicy` / `WebhookPolicy` to
+their own unit: lists are scoped, posted `unit_id`s are forced/validated to their unit, they can assign only
+`user`/`admin` (never `superadmin`) and can't touch superadmin accounts. Mirror any new admin page in
+`ADMIN_LINKS` (`roles`) in `AuthenticatedLayout.vue`.
 
 Unit scoping is enforced by the `ScopedToUnit` trait's local scope `Model::visibleTo($user)` (superadmin
 sees all, everyone else sees their `unit_id`) — used on `Meeting`, `Task`, `User` in every list query.
@@ -122,15 +156,26 @@ bodies are stored HTML-escaped then rendered with `v-html` so `@Mention` spans (
 against the unit roster by `MentionParser`) can be wrapped. Deleting a comment also deletes its
 attachments' physical files (and its replies' files).
 
+**In-app notifications (bell):** `App\Services\Notification\InAppNotifier` writes Laravel database
+notifications (`notifications` table, one `AppNotification` class with `kind/title/body/url/actor_name`) from the
+same call sites as the e-mails — mention, task assigned (create / reassign / disposition), review requested
+(unit admins, else superadmins), approved/rejected, deadline tomorrow, escalation, meeting processed/failed (creator).
+It never notifies the actor and swallows its own failures. UI: `Components/Notifications/NotificationBell.vue`
+(badge from the shared `auth.unread_notifications` prop + a 60s poll of `notifications.recent`) and
+`Pages/Notifications/Index.vue`. Read notifications older than 90 days are pruned daily (03:15). Add a new kind
+in `InAppNotifier::KINDS` and `notificationKinds.js`.
+
 `ActivityLogger` (`app/Services/Meeting/`) is a thin direct-call logger (no events/listeners) writing
 the user-facing `activities` feed. Separate from `AuditLogger` (`app/Services/Audit/`) which writes the
 admin-only security `audit_logs` (CRUD on User/Unit/Setting/ApiToken/Webhook; login/logout via an
 `AuditAuthEvents` listener so SSO is covered for free).
 
-### Scheduled work (`app/Console/Kernel.php`)
+### Scheduled work (`bootstrap/app.php` → `withSchedule()`)
 `SendMeetingReminders` (daily 07:00), `SendTaskDeadlineReminders` (daily 07:30), `EscalateOverdueTasks`
-(hourly — emails the task *creator*, there is no manager role), `meetings:fail-stuck` (every 5 min).
-Timezone comes from `Setting::current()->timezone`.
+(hourly — emails the task *creator*, there is no manager role), `meetings:fail-stuck` (every 5 min),
+`notifications:prune-read` (daily 03:15).
+Timezone comes from `Setting::current()->timezone`, wrapped in `rescue()` (fallback `Asia/Jakarta`) because
+`withSchedule()` runs on every artisan call and must not fatal when the DB is unreachable.
 
 ### Webhooks
 Per-unit outgoing webhooks (`WebhookDispatcher::dispatch()` called from the same sites as
@@ -141,13 +186,16 @@ Per-unit outgoing webhooks (`WebhookDispatcher::dispatch()` called from the same
 ## Conventions & gotchas
 
 - **Route ordering:** literal task routes (`/tasks/kanban`, `/tasks/calendar`, `/tasks/export/*`, `/tasks/create`) must stay registered before `/tasks/{task}` or the wildcard swallows them. Same for meetings.
+- **Admin nav:** admin pages are listed once in `ADMIN_LINKS` in `AuthenticatedLayout.vue` (one "Admin" dropdown on desktop, a section on mobile) — add new admin pages there.
 - **Inertia flash:** `HandleInertiaRequests` shares a `flash` prop; use `redirect()->...->with('success'|'error', ...)` and read `$page.props.flash` in Vue.
-- **Legacy skeleton:** this app was bumped 10→11→12 via `composer.json` only. It still uses `app/Http/Kernel.php`, `app/Console/Kernel.php`, the old `bootstrap/app.php`, the legacy `AuthServiceProvider` `$policies` array, and old `.env` keys (`CACHE_DRIVER`, `BROADCAST_DRIVER`, `QUEUE_CONNECTION`). Works via backcompat; new L11/12 skeleton features are not available.
+- **Skeleton:** the app uses the Laravel 11/12 skeleton — routing, middleware, exceptions and the schedule are configured in `bootstrap/app.php` (`Application::configure()`), providers in `bootstrap/providers.php`. There is no `app/Http/Kernel.php`, `app/Console/Kernel.php`, `app/Exceptions/Handler.php` or `RouteServiceProvider`; `HandleInertiaRequests` is the only custom middleware. Still legacy-style: `EventServiceProvider`, the `AuthServiceProvider` `$policies` array, and old `.env` keys (`CACHE_DRIVER`, `BROADCAST_DRIVER`, `QUEUE_CONNECTION`). Post-login redirect is the inlined `'/dashboard'` (no `RouteServiceProvider::HOME`). `/up` is the health route.
 - **`openai-php/laravel`** is used only to talk to **OpenRouter** (`OPENAI_BASE_URI`), not OpenAI. `OpenRouterTextProvider` has a Guzzle middleware that backfills missing `completion_tokens_details` fields OpenRouter omits, which would otherwise `TypeError` in the client.
 - **Excel export tests:** assert on the collection via `Excel::fake()` + `Excel::assertDownloaded(...)`, not on raw bytes.
 - **Tests run on SQLite**, prod is MySQL — watch for engine differences (`whereJsonContains`, fulltext, etc.).
-- **Dead stubs:** `SourcePath` model/migration/seeder are unused. `whisper-api/` and `venv/` are empty local dirs (gitignored). `routes/api.php` is effectively empty despite API tokens being a feature.
-- Meeting search (`MeetingController::index`) uses `LIKE %...%` on `transcript`/`summary` TEXT columns — won't scale.
+- **REST API v1** (`routes/api.php`, `App\Http\Controllers\Api\V1`, `App\Http\Resources`, documented in `docs/api.md`): read-only `me`, `meetings`, `tasks` (+ show), Sanctum bearer tokens from Profile → API Tokens, `throttle:api` (60/min). Lists use `visibleTo()`, shows use the same Policies as the web UI. `bootstrap/app.php` forces JSON errors for `api/*`. Keep the resource shapes backwards-compatible; breaking changes go in a `v2` prefix.
+- **Dead stubs:** `SourcePath` model/migration/seeder are unused.
+- **Global search** (`SearchController`, `/search` page + `/search/quick` JSON): meetings via `Meeting::scopeSearch()`, tasks via `Task::scopeSearch()` (title/description), comments via `ForumComment::scopeVisibleSearch()` (only on meetings `visibleTo()` the user); 5 per group in the palette, 20 on the page; snippets are plain text. UI: `Components/Search/SearchPalette.vue` is rendered **once** by `AuthenticatedLayout` (Ctrl/⌘+K or `/`), opened by any `SearchTrigger` through the shared `searchState.js`. LIKE patterns go through `App\Support\Like::contains()` (escape char `!`, portable across MySQL/SQLite).
+- **Meeting search** goes through `Meeting::scopeSearch()` — always inside one nested `where()` so its ORs can't escape `visibleTo()` (they once did, leaking other units' meetings). On MySQL, agenda/transcript/summary use the `meetings_search_fulltext` FULLTEXT index (boolean mode, every word ≥3 chars required, prefix match); title, and every column on SQLite, use an escaped `LIKE`. InnoDB FULLTEXT ignores uncommitted rows, so FULLTEXT can't be asserted inside `RefreshDatabase` — `MeetingSearchTest` skips those cases on MySQL.
 
 ## Following the project's task workflow
 

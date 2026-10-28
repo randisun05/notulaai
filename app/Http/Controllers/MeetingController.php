@@ -34,12 +34,7 @@ class MeetingController extends Controller
     public function index(Request $request)
     {
         $meetings = $this->getFilteredMeetingsQuery() // Gunakan query yang sudah difilter
-            ->when($request->input('search'), function ($q, $search) {
-                $q->where('title', 'like', "%{$search}%")
-                    ->orWhere('agenda', 'like', "%{$search}%")
-                    ->orWhere('transcript', 'like', "%{$search}%")
-                    ->orWhere('summary', 'like', "%{$search}%");
-            })
+            ->when($request->input('search'), fn ($q, $search) => $q->search((string) $search))
             ->with('unit')
             ->orderBy('date', 'desc')
             ->paginate(10)

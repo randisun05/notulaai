@@ -119,7 +119,7 @@ const formatDateTime = (value) => {
 </script>
 
 <template>
-    <div class="card-padded">
+    <div id="forum" class="card-padded scroll-mt-24">
         <h3 class="text-lg font-semibold mb-4 text-gray-900">Forum Diskusi</h3>
 
         <form @submit.prevent="submitNewComment" class="mb-6">

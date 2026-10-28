@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use App\Models\Meeting;
 use App\Services\Meeting\ActivityLogger;
+use App\Services\Notification\InAppNotifier;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Log;
 
@@ -13,7 +14,7 @@ class FailStuckMeetings extends Command
 
     protected $description = 'Tandai Gagal meeting yang macet di status Memproses melebihi batas waktu (job AI gantung/timeout tidak tertangkap)';
 
-    public function handle(ActivityLogger $activityLogger): int
+    public function handle(ActivityLogger $activityLogger, InAppNotifier $notifier): int
     {
         $minutes = (int) $this->option('minutes');
 
@@ -28,6 +29,7 @@ class FailStuckMeetings extends Command
 
             Log::warning("Meeting ID {$meeting->id} macet di status Memproses, ditandai Gagal oleh watchdog.");
             $activityLogger->log($meeting, null, 'meeting.failed', $message);
+            $notifier->meetingFailed($meeting);
         }
 
         $this->info("{$stuckMeetings->count()} meeting macet ditandai Gagal.");

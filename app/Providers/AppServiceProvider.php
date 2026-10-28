@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Services\AI\Gemini\GeminiKeyPool;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
@@ -14,7 +15,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        // Built per resolve (not a singleton) so config changes in tests apply.
+        $this->app->bind(GeminiKeyPool::class, fn () => GeminiKeyPool::fromConfig());
     }
 
     /**

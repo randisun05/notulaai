@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Support\Like;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -16,11 +18,21 @@ class ForumComment extends Model
         'body',
     ];
 
+    /** @return BelongsTo<Meeting, $this> */
     public function meeting(): BelongsTo
     {
         return $this->belongsTo(Meeting::class);
     }
 
+    /** Comments on meetings the user may see whose body contains the term. */
+    public function scopeVisibleSearch(Builder $query, User $user, string $term): Builder
+    {
+        return $query
+            ->whereIn('forum_comments.meeting_id', Meeting::query()->visibleTo($user)->select('meetings.id'))
+            ->whereRaw("forum_comments.body like ? escape '!'", [Like::contains(trim($term))]);
+    }
+
+    /** @return BelongsTo<User, $this> */
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);

@@ -5,6 +5,7 @@ namespace App\Jobs;
 use App\Mail\TaskEscalationNotice;
 use App\Models\Task;
 use App\Services\Meeting\ActivityLogger;
+use App\Services\Notification\InAppNotifier;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -21,8 +22,9 @@ class EscalateOverdueTasks implements ShouldQueue
 
     public $backoff = [60, 300, 900];
 
-    public function handle(ActivityLogger $activityLogger): void
+    public function handle(ActivityLogger $activityLogger, ?InAppNotifier $notifier = null): void
     {
+        $notifier ??= app(InAppNotifier::class);
         Log::info('Menjalankan Job Eskalasi Task Terlambat...');
 
         $candidates = Task::whereNotIn('status', ['Done', 'Cancelled'])
@@ -49,6 +51,8 @@ class EscalateOverdueTasks implements ShouldQueue
                 "Task \"{$task->title}\" dieskalasi otomatis karena {$reason}.",
                 $task,
             );
+
+            $notifier->escalated($task, $reason);
 
             if (! empty($task->creator?->email)) {
                 try {

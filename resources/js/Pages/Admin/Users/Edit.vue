@@ -6,8 +6,15 @@ import InputError from '@/Components/InputError.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import { Head, useForm } from '@inertiajs/vue3';
 
-// Menggunakan sintaks defineProps yang lebih sederhana
-const props = defineProps(['user', 'units']);
+const props = defineProps({
+    user: { type: Object, required: true },
+    units: { type: Array, required: true },
+    // Roles the current admin may assign (a unit admin cannot create superadmins).
+    assignableRoles: { type: Array, required: true },
+});
+
+const ROLE_LABELS = { user: 'User', admin: 'Admin', superadmin: 'Super Admin' };
+
 
 const form = useForm({
     _method: 'PATCH',
@@ -54,9 +61,7 @@ const submit = () => {
                             <div>
                                 <InputLabel for="role" value="Role" />
                                 <select id="role" v-model="form.role" class="form-select mt-1">
-                                    <option value="user">User</option>
-                                    <option value="admin">Admin</option>
-                                    <option value="superadmin">Super Admin</option>
+                                    <option v-for="role in assignableRoles" :key="role" :value="role">{{ ROLE_LABELS[role] }}</option>
                                 </select>
                                 <InputError class="mt-2" :message="form.errors.role" />
                             </div>
@@ -64,7 +69,8 @@ const submit = () => {
                             <div>
                                 <InputLabel for="unit" value="Unit (Opsional)" />
                                 <select id="unit" v-model="form.unit_id" class="form-select mt-1">
-                                    <option :value="null">-- Tidak Ada Unit --</option>
+                                    <!-- Only a superadmin may leave a user without a unit. -->
+                            <option v-if="assignableRoles.includes('superadmin')" :value="null">-- Tidak Ada Unit --</option>
                                     <option v-for="unit in units" :key="unit.id" :value="unit.id">{{ unit.name }}</option>
                                 </select>
                                 <InputError class="mt-2" :message="form.errors.unit_id" />

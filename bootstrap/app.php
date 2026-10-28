@@ -12,6 +12,7 @@ use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Exceptions\ThrottleRequestsException;
 use Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets;
 use Illuminate\Http\Request;
+use Illuminate\Notifications\DatabaseNotification;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -39,6 +40,10 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
+        // API clients always get JSON errors (401/403/404/422), even without
+        // an "Accept: application/json" header.
+        $exceptions->shouldRenderJsonWhen(fn (Request $request) => $request->is('api/*') || $request->expectsJson());
+
         $exceptions->dontFlash([
             'current_password',
             'password',
@@ -52,7 +57,7 @@ return Application::configure(basePath: dirname(__DIR__))
             $message = 'Terlalu banyak permintaan dalam waktu singkat.'
                 .($retryAfter ? " Coba lagi dalam {$retryAfter} detik." : ' Coba lagi sebentar lagi.');
 
-            if ($request->expectsJson()) {
+            if ($request->expectsJson() || $request->is('api/*')) {
                 return response()->json(['error' => $message], 429, $e->getHeaders());
             }
 
@@ -83,5 +88,13 @@ return Application::configure(basePath: dirname(__DIR__))
         $schedule->command('meetings:fail-stuck', ['--minutes=10'])
             ->everyFiveMinutes()
             ->withoutOverlapping();
+
+        // Keep the bell's table small: read notifications older than 90 days go.
+        $schedule->call(fn () => DatabaseNotification::query()
+            ->whereNotNull('read_at')
+            ->where('created_at', '<', now()->subDays(90))
+            ->delete())
+            ->name('notifications:prune-read')
+            ->dailyAt('03:15');
     })
     ->create();
