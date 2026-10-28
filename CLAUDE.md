@@ -31,7 +31,7 @@ npm run build                          # writes public/build/ — gitignored, NO
                                        # Tests don't need it: Tests\TestCase calls withoutVite().
 
 # Tests (SQLite :memory:, config in phpunit.xml)
-php artisan test                       # full suite (~2 min, ~220 tests)
+php artisan test                       # full suite (~2 min, ~227 tests)
 php artisan test --filter=ProcessMeetingTest
 php artisan test tests/Feature/Task/TaskApprovalTest.php
 
@@ -103,7 +103,9 @@ Every AI call is recorded via `AiRequestLogger` into `ai_request_logs`. `cost` (
 `config('ai.providers.<name>.pricing')` (per 1M input/output tokens, env `AI_GEMINI_PRICE_*` /
 `AI_OPENROUTER_PRICE_*`); null when the price is unknown or a priced provider reported no tokens. `:free`
 OpenRouter models and `whisper_local` are 0. Gemini drivers report tokens from `usageMetadata`
-(completion = candidates + thinking tokens).
+(completion = candidates + thinking tokens). `AiUsageController` (`/admin/ai-usage`, superadmin) aggregates the
+logs per day / provider+model / type / unit (meeting's unit, else the user's) over 7/30/90 days; `unpriced` counts
+successful calls with null cost, shown as "≥ $x".
 
 **Reliability notes (see also memory `project-ai-reliability-fixes`):** the job's `$timeout` relies on
 `pcntl`, which does not exist on Windows (the dev/deploy OS), so it is a no-op there. The real safety
@@ -170,6 +172,7 @@ Per-unit outgoing webhooks (`WebhookDispatcher::dispatch()` called from the same
 ## Conventions & gotchas
 
 - **Route ordering:** literal task routes (`/tasks/kanban`, `/tasks/calendar`, `/tasks/export/*`, `/tasks/create`) must stay registered before `/tasks/{task}` or the wildcard swallows them. Same for meetings.
+- **Admin nav:** admin pages are listed once in `ADMIN_LINKS` in `AuthenticatedLayout.vue` (one "Admin" dropdown on desktop, a section on mobile) — add new admin pages there.
 - **Inertia flash:** `HandleInertiaRequests` shares a `flash` prop; use `redirect()->...->with('success'|'error', ...)` and read `$page.props.flash` in Vue.
 - **Skeleton:** the app uses the Laravel 11/12 skeleton — routing, middleware, exceptions and the schedule are configured in `bootstrap/app.php` (`Application::configure()`), providers in `bootstrap/providers.php`. There is no `app/Http/Kernel.php`, `app/Console/Kernel.php`, `app/Exceptions/Handler.php` or `RouteServiceProvider`; `HandleInertiaRequests` is the only custom middleware. Still legacy-style: `EventServiceProvider`, the `AuthServiceProvider` `$policies` array, and old `.env` keys (`CACHE_DRIVER`, `BROADCAST_DRIVER`, `QUEUE_CONNECTION`). Post-login redirect is the inlined `'/dashboard'` (no `RouteServiceProvider::HOME`). `/up` is the health route.
 - **`openai-php/laravel`** is used only to talk to **OpenRouter** (`OPENAI_BASE_URI`), not OpenAI. `OpenRouterTextProvider` has a Guzzle middleware that backfills missing `completion_tokens_details` fields OpenRouter omits, which would otherwise `TypeError` in the client.

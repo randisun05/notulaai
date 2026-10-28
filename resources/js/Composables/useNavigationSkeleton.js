@@ -16,7 +16,7 @@ const SHOW_DELAY_MS = 200;
 export function resolveSkeletonVariant(pathname) {
     const path = pathname.replace(/\/+$/, '') || '/';
 
-    if (path === '/dashboard') return 'dashboard';
+    if (path === '/dashboard' || path === '/admin/ai-usage') return 'dashboard';
     if (path === '/tasks/kanban') return 'board';
     if (/\/(create|edit)$/.test(path) || path === '/profile' || path.startsWith('/admin/settings')) return 'form';
     if (/^\/(meetings|tasks)\/\d+$/.test(path)) return 'detail';

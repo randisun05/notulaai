@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AiUsageController;
 use App\Http\Controllers\AnalyticsController;
 use App\Http\Controllers\ApiTokenController;
 use App\Http\Controllers\AuditLogController;
@@ -125,6 +126,9 @@ Route::middleware('auth')->group(function () {
 
             // AUDIT LOG
             Route::get('audit-logs', [AuditLogController::class, 'index'])->name('audit-logs.index');
+
+            // PEMAKAIAN & BIAYA AI
+            Route::get('ai-usage', [AiUsageController::class, 'index'])->name('ai-usage.index');
 
             // WEBHOOKS
             Route::get('webhooks', [WebhookController::class, 'index'])->name('webhooks.index');

@@ -12,6 +12,17 @@ import { Link, usePage } from '@inertiajs/vue3';
 const showingNavigationDropdown = ref(false);
 const navigationSkeleton = useNavigationSkeleton();
 
+// Admin area, grouped in one dropdown so the top nav stays on one line.
+const ADMIN_LINKS = [
+    { label: 'Unit', route: 'admin.units.index', active: 'admin.units.*' },
+    { label: 'User', route: 'admin.users.index', active: 'admin.users.*' },
+    { label: 'Pengaturan', route: 'admin.settings.edit', active: 'admin.settings.*' },
+    { label: 'Webhooks', route: 'admin.webhooks.index', active: 'admin.webhooks.*' },
+    { label: 'Audit Log', route: 'admin.audit-logs.index', active: 'admin.audit-logs.*' },
+    { label: 'Pemakaian AI', route: 'admin.ai-usage.index', active: 'admin.ai-usage.*' },
+];
+const adminLinks = computed(() => (page.props.auth.user.role === 'superadmin' ? ADMIN_LINKS : []));
+
 const page = usePage();
 const userInitials = computed(() => {
     const name = page.props.auth.user.name || '';
@@ -51,23 +62,31 @@ const userInitials = computed(() => {
                                 Analitik
                             </NavLink>
 
-                            <template v-if="$page.props.auth.user.role === 'superadmin'">
-                                <NavLink :href="route('admin.units.index')" :active="route().current('admin.units.*')">
-                                    Unit
-                                </NavLink>
-                                <NavLink :href="route('admin.users.index')" :active="route().current('admin.users.*')">
-                                    User
-                                </NavLink>
-                                <NavLink :href="route('admin.settings.edit')" :active="route().current('admin.settings.*')">
-                                    Pengaturan
-                                </NavLink>
-                                <NavLink :href="route('admin.audit-logs.index')" :active="route().current('admin.audit-logs.*')">
-                                    Audit Log
-                                </NavLink>
-                                <NavLink :href="route('admin.webhooks.index')" :active="route().current('admin.webhooks.*')">
-                                    Webhooks
-                                </NavLink>
-                            </template>
+                            <Dropdown v-if="adminLinks.length" align="left" width="48">
+                                <template #trigger>
+                                    <button
+                                        type="button"
+                                        class="h-16 gap-1"
+                                        :class="route().current('admin.*') ? 'nav-link-active' : 'nav-link-inactive'"
+                                    >
+                                        Admin
+                                        <svg class="h-4 w-4 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                                            <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
+                                        </svg>
+                                    </button>
+                                </template>
+
+                                <template #content>
+                                    <DropdownLink
+                                        v-for="link in adminLinks"
+                                        :key="link.route"
+                                        :href="route(link.route)"
+                                        :class="route().current(link.active) ? 'bg-brand-50 text-brand-700 font-semibold' : ''"
+                                    >
+                                        {{ link.label }}
+                                    </DropdownLink>
+                                </template>
+                            </Dropdown>
                         </div>
                     </div>
 
@@ -135,29 +154,11 @@ const userInitials = computed(() => {
                     </ResponsiveNavLink>
                 </div>
 
-                <template v-if="$page.props.auth.user.role === 'superadmin'">
-                    <div class="pt-4 pb-1 border-t border-gray-200">
-                        <div class="px-4">
-                            <div class="font-semibold text-xs uppercase tracking-wider text-gray-400">Panel Admin</div>
-                        </div>
-                        <div class="mt-3 space-y-1">
-                            <ResponsiveNavLink :href="route('admin.units.index')" :active="route().current('admin.units.*')">
-                                Manajemen Unit
-                            </ResponsiveNavLink>
-                            <ResponsiveNavLink :href="route('admin.users.index')" :active="route().current('admin.users.*')">
-                                Manajemen User
-                            </ResponsiveNavLink>
-                            <ResponsiveNavLink :href="route('admin.settings.edit')" :active="route().current('admin.settings.*')">
-                                Pengaturan
-                            </ResponsiveNavLink>
-                            <ResponsiveNavLink :href="route('admin.audit-logs.index')" :active="route().current('admin.audit-logs.*')">
-                                Audit Log
-                            </ResponsiveNavLink>
-                            <ResponsiveNavLink :href="route('admin.webhooks.index')" :active="route().current('admin.webhooks.*')">
-                                Webhooks
-                            </ResponsiveNavLink>
-                        </div>
-                    </div>
+                <template v-if="adminLinks.length">
+                    <div class="px-4 pt-3 pb-1 text-xs font-semibold uppercase tracking-wider text-gray-400">Admin</div>
+                    <ResponsiveNavLink v-for="link in adminLinks" :key="link.route" :href="route(link.route)" :active="route().current(link.active)">
+                        {{ link.label }}
+                    </ResponsiveNavLink>
                 </template>
 
                 <div class="pt-4 pb-3 border-t border-gray-200">
