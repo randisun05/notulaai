@@ -20,7 +20,6 @@ use App\Http\Controllers\TaskExportController;
 use App\Http\Controllers\UnitController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\WebhookController;
-use App\Models\User;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -107,8 +106,27 @@ Route::middleware('auth')->group(function () {
     Route::post('/comments/{comment}/reactions/toggle', [ForumCommentReactionController::class, 'toggle'])->name('comments.reactions.toggle');
 
     // ===============================================
-    //      RUTE PANEL ADMIN (TAMBAHKAN INI)
+    //      RUTE PANEL ADMIN
     // ===============================================
+    // Unit-level admin pages: admin (own unit, enforced by UserPolicy /
+    // WebhookPolicy) and superadmin (every unit).
+    Route::middleware(['can:access-unit-admin'])
+        ->prefix('admin')
+        ->name('admin.')
+        ->group(function () {
+            Route::get('users', [UserController::class, 'index'])->name('users.index');
+            Route::get('users/{user}/edit', [UserController::class, 'edit'])->name('users.edit');
+            Route::put('users/{user}', [UserController::class, 'update'])->name('users.update');
+            Route::post('users', [UserController::class, 'store'])->name('users.store');
+            Route::delete('users/{user}', [UserController::class, 'destroy'])->name('users.destroy');
+
+            Route::get('webhooks', [WebhookController::class, 'index'])->name('webhooks.index');
+            Route::post('webhooks', [WebhookController::class, 'store'])->name('webhooks.store');
+            Route::patch('webhooks/{webhook}', [WebhookController::class, 'update'])->name('webhooks.update');
+            Route::delete('webhooks/{webhook}', [WebhookController::class, 'destroy'])->name('webhooks.destroy');
+        });
+
+    // Superadmin-only admin pages.
     Route::middleware(['can:access-admin-panel'])
         ->prefix('admin')
         ->name('admin.')
@@ -120,13 +138,6 @@ Route::middleware('auth')->group(function () {
             Route::put('units/{unit}', [UnitController::class, 'update'])->name('units.update');
             Route::delete('units/{unit}', [UnitController::class, 'destroy'])->name('units.destroy');
 
-            // RUTE MANAJEMEN USER (TAMBAHKAN INI)
-            Route::get('users', [UserController::class, 'index'])->name('users.index');
-            Route::get('users/{user}/edit', [UserController::class, 'edit'])->name('users.edit');
-            Route::put('users/{user}', [UserController::class, 'update'])->name('users.update');
-            Route::post('users', [UserController::class, 'store'])->name('users.store');
-            Route::delete('users/{user}', [UserController::class, 'destroy'])->name('users.destroy');
-
             // RUTE PENGATURAN APLIKASI
             Route::get('settings', [SettingController::class, 'edit'])->name('settings.edit');
             Route::put('settings', [SettingController::class, 'update'])->name('settings.update');
@@ -136,12 +147,6 @@ Route::middleware('auth')->group(function () {
 
             // PEMAKAIAN & BIAYA AI
             Route::get('ai-usage', [AiUsageController::class, 'index'])->name('ai-usage.index');
-
-            // WEBHOOKS
-            Route::get('webhooks', [WebhookController::class, 'index'])->name('webhooks.index');
-            Route::post('webhooks', [WebhookController::class, 'store'])->name('webhooks.store');
-            Route::patch('webhooks/{webhook}', [WebhookController::class, 'update'])->name('webhooks.update');
-            Route::delete('webhooks/{webhook}', [WebhookController::class, 'destroy'])->name('webhooks.destroy');
 
         });
 

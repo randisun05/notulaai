@@ -31,7 +31,7 @@ npm run build                          # writes public/build/ — gitignored, NO
                                        # Tests don't need it: Tests\TestCase calls withoutVite().
 
 # Tests (SQLite :memory:, config in phpunit.xml)
-php artisan test                       # full suite (~2 min, ~248 tests)
+php artisan test                       # full suite (~2 min, ~256 tests)
 php artisan test --filter=ProcessMeetingTest
 php artisan test tests/Feature/Task/TaskApprovalTest.php
 
@@ -129,8 +129,12 @@ meeting `Memproses`, chat reply, email draft, action-item regenerate).
 ### Auth & multi-unit scoping
 Three roles only: `user`, `admin`, `superadmin` (`spatie/laravel-permission`, seeded by
 `RolePermissionSeeder` — call `$this->seed(RolePermissionSeeder::class)` before `assignRole()`/`syncRoles()`
-in tests or roles won't exist). Admin panel routes are gated by the `access-admin-panel` Gate, which
-currently allows **superadmin only** (defined in `AuthServiceProvider::boot`).
+in tests or roles won't exist). Admin routes use two Gates (`AuthServiceProvider::boot`):
+`access-admin-panel` = **superadmin only** (Unit, Pengaturan, Audit Log, Pemakaian AI) and `access-unit-admin` =
+admin + superadmin (User, Webhooks). On the latter a unit admin is narrowed by `UserPolicy` / `WebhookPolicy` to
+their own unit: lists are scoped, posted `unit_id`s are forced/validated to their unit, they can assign only
+`user`/`admin` (never `superadmin`) and can't touch superadmin accounts. Mirror any new admin page in
+`ADMIN_LINKS` (`roles`) in `AuthenticatedLayout.vue`.
 
 Unit scoping is enforced by the `ScopedToUnit` trait's local scope `Model::visibleTo($user)` (superadmin
 sees all, everyone else sees their `unit_id`) — used on `Meeting`, `Task`, `User` in every list query.

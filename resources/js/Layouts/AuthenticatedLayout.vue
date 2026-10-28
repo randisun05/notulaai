@@ -14,15 +14,17 @@ const showingNavigationDropdown = ref(false);
 const navigationSkeleton = useNavigationSkeleton();
 
 // Admin area, grouped in one dropdown so the top nav stays on one line.
+// `roles` mirrors the route gates: access-unit-admin (admin + superadmin)
+// vs access-admin-panel (superadmin only). The server enforces both.
 const ADMIN_LINKS = [
-    { label: 'Unit', route: 'admin.units.index', active: 'admin.units.*' },
-    { label: 'User', route: 'admin.users.index', active: 'admin.users.*' },
-    { label: 'Pengaturan', route: 'admin.settings.edit', active: 'admin.settings.*' },
-    { label: 'Webhooks', route: 'admin.webhooks.index', active: 'admin.webhooks.*' },
-    { label: 'Audit Log', route: 'admin.audit-logs.index', active: 'admin.audit-logs.*' },
-    { label: 'Pemakaian AI', route: 'admin.ai-usage.index', active: 'admin.ai-usage.*' },
+    { label: 'Unit', route: 'admin.units.index', active: 'admin.units.*', roles: ['superadmin'] },
+    { label: 'User', route: 'admin.users.index', active: 'admin.users.*', roles: ['admin', 'superadmin'] },
+    { label: 'Pengaturan', route: 'admin.settings.edit', active: 'admin.settings.*', roles: ['superadmin'] },
+    { label: 'Webhooks', route: 'admin.webhooks.index', active: 'admin.webhooks.*', roles: ['admin', 'superadmin'] },
+    { label: 'Audit Log', route: 'admin.audit-logs.index', active: 'admin.audit-logs.*', roles: ['superadmin'] },
+    { label: 'Pemakaian AI', route: 'admin.ai-usage.index', active: 'admin.ai-usage.*', roles: ['superadmin'] },
 ];
-const adminLinks = computed(() => (page.props.auth.user.role === 'superadmin' ? ADMIN_LINKS : []));
+const adminLinks = computed(() => ADMIN_LINKS.filter((link) => link.roles.includes(page.props.auth.user.role)));
 
 const page = usePage();
 const userInitials = computed(() => {

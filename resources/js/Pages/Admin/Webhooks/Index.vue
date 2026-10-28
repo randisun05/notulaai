@@ -20,9 +20,10 @@ const showCreateModal = ref(false);
 const showDeleteModal = ref(false);
 const webhookToDelete = ref(null);
 
+// A unit admin only gets their own unit, so preselect it.
 const form = useForm({
     name: '',
-    unit_id: '',
+    unit_id: props.units.length === 1 ? props.units[0].id : '',
     url: '',
     events: [],
 });

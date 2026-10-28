@@ -18,7 +18,12 @@ const props = defineProps({
         required: true,
     },
     units: {
-        type: Object,
+        type: Array,
+        required: true,
+    },
+    // Roles the current admin may assign (a unit admin cannot create superadmins).
+    assignableRoles: {
+        type: Array,
         required: true,
     },
     filters: {
@@ -26,6 +31,10 @@ const props = defineProps({
         required: true,
     }
 });
+
+const ROLE_LABELS = { user: 'User', admin: 'Admin', superadmin: 'Super Admin' };
+// A unit admin only gets their own unit, so preselect it.
+const defaultUnitId = props.units.length === 1 ? props.units[0].id : null;
 
 const confirmingUserCreation = ref(false);
 const search = ref(props.filters.search);
@@ -37,7 +46,7 @@ const form = useForm({
     email: '',
     password: '',
     role: 'user',
-    unit_id: null,
+    unit_id: defaultUnitId,
     phone_number: '',
 });
 
@@ -131,8 +140,11 @@ watch(search, debounce((value) => {
                                         </span>
                                     </td>
                                     <td class="table-cell whitespace-nowrap text-right font-medium">
+                                        <template v-if="user.can_manage">
                                         <Link :href="route('admin.users.edit', user.id)" class="text-brand-600 hover:text-brand-800">Edit</Link>
                                        <Link @click="openDeleteModal(user)" class="ml-4 text-red-600 hover:text-red-800">Hapus</Link>
+                                        </template>
+                                        <span v-else class="text-xs text-gray-400">Dikelola superadmin</span>
                                     </td>
                                 </tr>
                                 <tr v-if="users.data.length === 0">
@@ -176,9 +188,7 @@ watch(search, debounce((value) => {
                     <div>
                         <InputLabel for="role" value="Role" />
                         <select id="role" v-model="form.role" class="form-select mt-1">
-                            <option value="user">User</option>
-                            <option value="admin">Admin</option>
-                            <option value="superadmin">Super Admin</option>
+                            <option v-for="role in assignableRoles" :key="role" :value="role">{{ ROLE_LABELS[role] }}</option>
                         </select>
                         <InputError class="mt-2" :message="form.errors.role" />
                     </div>
@@ -186,7 +196,8 @@ watch(search, debounce((value) => {
                     <div>
                         <InputLabel for="unit" value="Unit (Opsional)" />
                         <select id="unit" v-model="form.unit_id" class="form-select mt-1">
-                            <option :value="null">-- Tidak Ada Unit --</option>
+                            <!-- Only a superadmin may leave a user without a unit. -->
+                            <option v-if="assignableRoles.includes('superadmin')" :value="null">-- Tidak Ada Unit --</option>
                             <option v-for="unit in units" :key="unit.id" :value="unit.id">{{ unit.name }}</option>
                         </select>
                         <InputError class="mt-2" :message="form.errors.unit_id" />
