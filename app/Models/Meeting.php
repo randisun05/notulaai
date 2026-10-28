@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\Concerns\ScopedToUnit;
+use App\Support\Like;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -49,8 +50,7 @@ class Meeting extends Model
             return $query;
         }
 
-        // "!" as LIKE escape character works the same on MySQL, SQLite and Postgres.
-        $like = '%'.str_replace(['!', '%', '_'], ['!!', '!%', '!_'], $term).'%';
+        $like = Like::contains($term);
 
         preg_match_all('/[\p{L}\p{N}]+/u', $term, $matches);
         $words = array_filter($matches[0], fn (string $word) => mb_strlen($word) >= self::FULLTEXT_MIN_WORD);

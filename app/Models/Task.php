@@ -3,6 +3,8 @@
 namespace App\Models;
 
 use App\Models\Concerns\ScopedToUnit;
+use App\Support\Like;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -39,6 +41,16 @@ class Task extends Model
     ];
 
     protected $appends = ['is_overdue', 'is_sla_breached'];
+
+    /** Title/description contains the term; one nested where() so it can't escape visibleTo(). */
+    public function scopeSearch(Builder $query, string $term): Builder
+    {
+        $like = Like::contains(trim($term));
+
+        return $query->where(fn (Builder $q) => $q
+            ->whereRaw("title like ? escape '!'", [$like])
+            ->orWhereRaw("description like ? escape '!'", [$like]));
+    }
 
     /** @return BelongsTo<Meeting, $this> */
     public function meeting(): BelongsTo

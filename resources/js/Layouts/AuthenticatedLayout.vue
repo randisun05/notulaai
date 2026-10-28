@@ -6,6 +6,8 @@ import DropdownLink from '@/Components/DropdownLink.vue';
 import NavLink from '@/Components/NavLink.vue';
 import ResponsiveNavLink from '@/Components/ResponsiveNavLink.vue';
 import NotificationBell from '@/Components/Notifications/NotificationBell.vue';
+import SearchPalette from '@/Components/Search/SearchPalette.vue';
+import SearchTrigger from '@/Components/Search/SearchTrigger.vue';
 import PageSkeleton from '@/Components/Skeleton/PageSkeleton.vue';
 import { useNavigationSkeleton } from '@/Composables/useNavigationSkeleton';
 import { Link, usePage } from '@inertiajs/vue3';
@@ -40,6 +42,9 @@ const userInitials = computed(() => {
 
 <template>
     <div class="min-h-screen bg-gray-50">
+        <!-- Rendered once (Teleport to body); opened by any SearchTrigger or Ctrl/Cmd+K, "/". -->
+        <SearchPalette />
+
         <nav class="bg-white/90 backdrop-blur border-b border-gray-100 sticky top-0 z-30">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div class="flex justify-between h-16">
@@ -94,6 +99,7 @@ const userInitials = computed(() => {
                     </div>
 
                     <div class="hidden sm:flex sm:items-center sm:ms-6 gap-2">
+                        <SearchTrigger />
                         <NotificationBell />
                         <div class="ms-1 relative">
                             <Dropdown align="right" width="48">
@@ -123,6 +129,7 @@ const userInitials = computed(() => {
                     </div>
 
                     <div class="-me-2 flex items-center gap-1 sm:hidden">
+                        <SearchTrigger />
                         <NotificationBell />
                         <button
                             @click="showingNavigationDropdown = !showingNavigationDropdown"

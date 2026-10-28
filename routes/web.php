@@ -12,6 +12,7 @@ use App\Http\Controllers\MeetingController;
 use App\Http\Controllers\MeetingEmailController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\SearchController;
 use App\Http\Controllers\SettingController;
 use App\Http\Controllers\SpeechController;
 use App\Http\Controllers\TaskController;
@@ -42,6 +43,10 @@ Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+
+    // Global search (navbar command palette + full results page).
+    Route::get('/search', [SearchController::class, 'index'])->name('search.index');
+    Route::get('/search/quick', [SearchController::class, 'quick'])->name('search.quick');
 
     // In-app notifications (bell). Literal routes before {id}.
     Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
