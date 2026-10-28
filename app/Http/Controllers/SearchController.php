@@ -92,7 +92,7 @@ class SearchController extends Controller
             ->get(['id', 'body', 'user_id', 'meeting_id', 'created_at'])
             ->map(fn (ForumComment $c) => [
                 'id' => $c->id,
-                'title' => $c->meeting?->title ?? 'Rapat',
+                'title' => $c->meeting->title,
                 'subtitle' => $c->user?->name,
                 'snippet' => $this->snippet($c->body, $q),
                 'url' => route('meetings.show', $c->meeting_id).'#forum',

@@ -28,7 +28,7 @@ class ForumComment extends Model
     public function scopeVisibleSearch(Builder $query, User $user, string $term): Builder
     {
         return $query
-            ->whereHas('meeting', fn (Builder $q) => $q->visibleTo($user))
+            ->whereIn('forum_comments.meeting_id', Meeting::query()->visibleTo($user)->select('meetings.id'))
             ->whereRaw("forum_comments.body like ? escape '!'", [Like::contains(trim($term))]);
     }
 

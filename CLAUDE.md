@@ -31,7 +31,7 @@ npm run build                          # writes public/build/ — gitignored, NO
                                        # Tests don't need it: Tests\TestCase calls withoutVite().
 
 # Tests (SQLite :memory:, config in phpunit.xml)
-php artisan test                       # full suite (~2 min, ~256 tests)
+php artisan test                       # full suite (~2 min, ~263 tests)
 php artisan test --filter=ProcessMeetingTest
 php artisan test tests/Feature/Task/TaskApprovalTest.php
 
@@ -44,7 +44,7 @@ python docker/whisper/stt_service.py   # waitress app on :5055 (POST /transcribe
 # backend job = Pint + PHPStan + tests, separate audit job, frontend job = npm run build
 vendor/bin/pint                        # format (Laravel preset, pint.json)
 vendor/bin/pint --test                 # check only — fails on unformatted code
-vendor/bin/phpstan analyse             # level 5; 36 pre-existing errors are in phpstan-baseline.neon
+vendor/bin/phpstan analyse             # level 5; 35 pre-existing errors are in phpstan-baseline.neon
 composer audit                         # fails on dependencies with known CVEs
 composer test:ci                       # runs all four gates in sequence
 ```
@@ -194,6 +194,7 @@ Per-unit outgoing webhooks (`WebhookDispatcher::dispatch()` called from the same
 - **Tests run on SQLite**, prod is MySQL — watch for engine differences (`whereJsonContains`, fulltext, etc.).
 - **REST API v1** (`routes/api.php`, `App\Http\Controllers\Api\V1`, `App\Http\Resources`, documented in `docs/api.md`): read-only `me`, `meetings`, `tasks` (+ show), Sanctum bearer tokens from Profile → API Tokens, `throttle:api` (60/min). Lists use `visibleTo()`, shows use the same Policies as the web UI. `bootstrap/app.php` forces JSON errors for `api/*`. Keep the resource shapes backwards-compatible; breaking changes go in a `v2` prefix.
 - **Dead stubs:** `SourcePath` model/migration/seeder are unused.
+- **Global search** (`SearchController`, `/search` page + `/search/quick` JSON): meetings via `Meeting::scopeSearch()`, tasks via `Task::scopeSearch()` (title/description), comments via `ForumComment::scopeVisibleSearch()` (only on meetings `visibleTo()` the user); 5 per group in the palette, 20 on the page; snippets are plain text. UI: `Components/Search/SearchPalette.vue` is rendered **once** by `AuthenticatedLayout` (Ctrl/⌘+K or `/`), opened by any `SearchTrigger` through the shared `searchState.js`. LIKE patterns go through `App\Support\Like::contains()` (escape char `!`, portable across MySQL/SQLite).
 - **Meeting search** goes through `Meeting::scopeSearch()` — always inside one nested `where()` so its ORs can't escape `visibleTo()` (they once did, leaking other units' meetings). On MySQL, agenda/transcript/summary use the `meetings_search_fulltext` FULLTEXT index (boolean mode, every word ≥3 chars required, prefix match); title, and every column on SQLite, use an escaped `LIKE`. InnoDB FULLTEXT ignores uncommitted rows, so FULLTEXT can't be asserted inside `RefreshDatabase` — `MeetingSearchTest` skips those cases on MySQL.
 
 ## Following the project's task workflow

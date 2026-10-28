@@ -91,12 +91,6 @@ parameters:
 			path: app/Http/Controllers/ForumCommentController.php
 
 		-
-			message: '#^Parameter \#2 \$meeting of method App\\Http\\Controllers\\ForumCommentController\:\:notifyMentions\(\) expects App\\Models\\Meeting, Illuminate\\Database\\Eloquent\\Model\|null given\.$#'
-			identifier: argument.type
-			count: 1
-			path: app/Http/Controllers/ForumCommentController.php
-
-		-
 			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:attachments\(\)\.$#'
 			identifier: method.notFound
 			count: 1
