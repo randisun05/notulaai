@@ -4,6 +4,7 @@ namespace App\Jobs;
 
 use App\Mail\TaskDeadlineReminder;
 use App\Models\Task;
+use App\Services\Notification\InAppNotifier;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -20,8 +21,9 @@ class SendTaskDeadlineReminders implements ShouldQueue
 
     public $backoff = [60, 300, 900];
 
-    public function handle(): void
+    public function handle(?InAppNotifier $notifier = null): void
     {
+        $notifier ??= app(InAppNotifier::class);
         Log::info('Menjalankan Job Pengingat Deadline Task...');
 
         $dueTomorrow = Task::whereNotIn('status', ['Done', 'Cancelled'])
@@ -37,6 +39,8 @@ class SendTaskDeadlineReminders implements ShouldQueue
         }
 
         foreach ($dueTomorrow as $task) {
+            $notifier->deadlineTomorrow($task);
+
             if (empty($task->assignee?->email)) {
                 continue;
             }

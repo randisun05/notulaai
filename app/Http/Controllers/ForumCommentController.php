@@ -8,6 +8,7 @@ use App\Models\Meeting;
 use App\Models\User;
 use App\Services\Forum\MentionParser;
 use App\Services\Meeting\ActivityLogger;
+use App\Services\Notification\InAppNotifier;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Mail;
@@ -20,6 +21,7 @@ class ForumCommentController extends Controller
     public function __construct(
         private readonly MentionParser $mentionParser,
         private readonly ActivityLogger $activityLogger,
+        private readonly InAppNotifier $notifier,
     ) {}
 
     public function store(Request $request, Meeting $meeting)
@@ -125,6 +127,8 @@ class ForumCommentController extends Controller
         $newlyMentioned = $mentioned->whereNotIn('id', $previouslyMentionedIds);
 
         foreach ($newlyMentioned as $user) {
+            $this->notifier->mentioned($user, $meeting, $comment->user, $comment->body);
+
             if ($user->email) {
                 Mail::to($user->email)->send(new CommentMentionNotification($comment, $user));
             }

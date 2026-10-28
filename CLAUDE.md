@@ -31,7 +31,7 @@ npm run build                          # writes public/build/ — gitignored, NO
                                        # Tests don't need it: Tests\TestCase calls withoutVite().
 
 # Tests (SQLite :memory:, config in phpunit.xml)
-php artisan test                       # full suite (~2 min, ~238 tests)
+php artisan test                       # full suite (~2 min, ~248 tests)
 php artisan test --filter=ProcessMeetingTest
 php artisan test tests/Feature/Task/TaskApprovalTest.php
 
@@ -44,7 +44,7 @@ python docker/whisper/stt_service.py   # waitress app on :5055 (POST /transcribe
 # backend job = Pint + PHPStan + tests, separate audit job, frontend job = npm run build
 vendor/bin/pint                        # format (Laravel preset, pint.json)
 vendor/bin/pint --test                 # check only — fails on unformatted code
-vendor/bin/phpstan analyse             # level 5; 48 pre-existing errors are in phpstan-baseline.neon
+vendor/bin/phpstan analyse             # level 5; 36 pre-existing errors are in phpstan-baseline.neon
 composer audit                         # fails on dependencies with known CVEs
 composer test:ci                       # runs all four gates in sequence
 ```
@@ -152,6 +152,15 @@ bodies are stored HTML-escaped then rendered with `v-html` so `@Mention` spans (
 against the unit roster by `MentionParser`) can be wrapped. Deleting a comment also deletes its
 attachments' physical files (and its replies' files).
 
+**In-app notifications (bell):** `App\Services\Notification\InAppNotifier` writes Laravel database
+notifications (`notifications` table, one `AppNotification` class with `kind/title/body/url/actor_name`) from the
+same call sites as the e-mails — mention, task assigned (create / reassign / disposition), review requested
+(unit admins, else superadmins), approved/rejected, deadline tomorrow, escalation, meeting processed/failed (creator).
+It never notifies the actor and swallows its own failures. UI: `Components/Notifications/NotificationBell.vue`
+(badge from the shared `auth.unread_notifications` prop + a 60s poll of `notifications.recent`) and
+`Pages/Notifications/Index.vue`. Read notifications older than 90 days are pruned daily (03:15). Add a new kind
+in `InAppNotifier::KINDS` and `notificationKinds.js`.
+
 `ActivityLogger` (`app/Services/Meeting/`) is a thin direct-call logger (no events/listeners) writing
 the user-facing `activities` feed. Separate from `AuditLogger` (`app/Services/Audit/`) which writes the
 admin-only security `audit_logs` (CRUD on User/Unit/Setting/ApiToken/Webhook; login/logout via an
@@ -159,7 +168,8 @@ admin-only security `audit_logs` (CRUD on User/Unit/Setting/ApiToken/Webhook; lo
 
 ### Scheduled work (`bootstrap/app.php` → `withSchedule()`)
 `SendMeetingReminders` (daily 07:00), `SendTaskDeadlineReminders` (daily 07:30), `EscalateOverdueTasks`
-(hourly — emails the task *creator*, there is no manager role), `meetings:fail-stuck` (every 5 min).
+(hourly — emails the task *creator*, there is no manager role), `meetings:fail-stuck` (every 5 min),
+`notifications:prune-read` (daily 03:15).
 Timezone comes from `Setting::current()->timezone`, wrapped in `rescue()` (fallback `Asia/Jakarta`) because
 `withSchedule()` runs on every artisan call and must not fatal when the DB is unreachable.
 

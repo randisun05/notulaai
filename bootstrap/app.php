@@ -12,6 +12,7 @@ use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Exceptions\ThrottleRequestsException;
 use Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets;
 use Illuminate\Http\Request;
+use Illuminate\Notifications\DatabaseNotification;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -87,5 +88,13 @@ return Application::configure(basePath: dirname(__DIR__))
         $schedule->command('meetings:fail-stuck', ['--minutes=10'])
             ->everyFiveMinutes()
             ->withoutOverlapping();
+
+        // Keep the bell's table small: read notifications older than 90 days go.
+        $schedule->call(fn () => DatabaseNotification::query()
+            ->whereNotNull('read_at')
+            ->where('created_at', '<', now()->subDays(90))
+            ->delete())
+            ->name('notifications:prune-read')
+            ->dailyAt('03:15');
     })
     ->create();

@@ -5,6 +5,7 @@ import Dropdown from '@/Components/Dropdown.vue';
 import DropdownLink from '@/Components/DropdownLink.vue';
 import NavLink from '@/Components/NavLink.vue';
 import ResponsiveNavLink from '@/Components/ResponsiveNavLink.vue';
+import NotificationBell from '@/Components/Notifications/NotificationBell.vue';
 import PageSkeleton from '@/Components/Skeleton/PageSkeleton.vue';
 import { useNavigationSkeleton } from '@/Composables/useNavigationSkeleton';
 import { Link, usePage } from '@inertiajs/vue3';
@@ -90,8 +91,9 @@ const userInitials = computed(() => {
                         </div>
                     </div>
 
-                    <div class="hidden sm:flex sm:items-center sm:ms-6">
-                        <div class="ms-3 relative">
+                    <div class="hidden sm:flex sm:items-center sm:ms-6 gap-2">
+                        <NotificationBell />
+                        <div class="ms-1 relative">
                             <Dropdown align="right" width="48">
                                 <template #trigger>
                                     <button
@@ -118,7 +120,8 @@ const userInitials = computed(() => {
                         </div>
                     </div>
 
-                    <div class="-me-2 flex items-center sm:hidden">
+                    <div class="-me-2 flex items-center gap-1 sm:hidden">
+                        <NotificationBell />
                         <button
                             @click="showingNavigationDropdown = !showingNavigationDropdown"
                             class="inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 focus:outline-none focus:bg-gray-100 focus:text-gray-500 transition duration-150 ease-in-out"

@@ -8,6 +8,7 @@ use App\Models\Task;
 use App\Models\Unit;
 use App\Models\User;
 use App\Services\Meeting\ActivityLogger;
+use App\Services\Notification\InAppNotifier;
 use App\Services\Webhook\WebhookDispatcher;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -20,6 +21,7 @@ class TaskController extends Controller
     public function __construct(
         private readonly ActivityLogger $activityLogger,
         private readonly WebhookDispatcher $webhookDispatcher,
+        private readonly InAppNotifier $notifier,
     ) {}
 
     public function index(Request $request)
@@ -167,6 +169,7 @@ class TaskController extends Controller
 
         $this->activityLogger->log(null, $user, 'task.created', $user->name." membuat Task \"{$task->title}\" secara manual.", $task);
         $this->webhookDispatcher->dispatch('task.created', $task, ['task_id' => $task->id, 'title' => $task->title, 'status' => $task->status]);
+        $this->notifier->taskAssigned($task, $user);
 
         return redirect()->route('tasks.show', $task)->with('success', 'Task berhasil dibuat.');
     }
@@ -215,6 +218,7 @@ class TaskController extends Controller
         ]);
 
         $assignee = ! empty($validated['assignee_id']) ? User::find($validated['assignee_id']) : null;
+        $previousAssigneeId = $task->assignee_id;
 
         $task->update([
             'unit_id' => $unitId,
@@ -227,6 +231,10 @@ class TaskController extends Controller
         ]);
 
         $this->activityLogger->log($task->meeting, $user, 'task.details_updated', $user->name." memperbarui detail Task \"{$task->title}\".", $task);
+
+        if ($task->assignee_id && $task->assignee_id !== $previousAssigneeId) {
+            $this->notifier->taskAssigned($task->load('assignee'), $user);
+        }
 
         return redirect()->route('tasks.show', $task)->with('success', 'Task berhasil diperbarui.');
     }
@@ -265,6 +273,7 @@ class TaskController extends Controller
 
         $this->activityLogger->log($meeting, Auth::user(), 'task.created', Auth::user()->name." membuat Task \"{$task->title}\" dari Action Item.", $task);
         $this->webhookDispatcher->dispatch('task.created', $task, ['task_id' => $task->id, 'title' => $task->title, 'status' => $task->status]);
+        $this->notifier->taskAssigned($task, Auth::user());
 
         return back()->with('success', 'Action item berhasil dijadikan Task.');
     }
@@ -345,6 +354,7 @@ class TaskController extends Controller
             $task,
         );
         $this->webhookDispatcher->dispatch('task.status_changed', $task, ['task_id' => $task->id, 'title' => $task->title, 'old_status' => $oldStatus, 'new_status' => 'Review']);
+        $this->notifier->reviewRequested($task, Auth::user());
 
         return back()->with('success', 'Task diajukan untuk direview.');
     }
@@ -367,6 +377,7 @@ class TaskController extends Controller
             $task,
         );
         $this->webhookDispatcher->dispatch('task.approved', $task, ['task_id' => $task->id, 'title' => $task->title]);
+        $this->notifier->reviewDecided($task, Auth::user(), approved: true);
 
         return back()->with('success', 'Task disetujui sebagai selesai.');
     }
@@ -391,6 +402,7 @@ class TaskController extends Controller
         }
 
         $this->activityLogger->log($task->meeting, Auth::user(), 'task.rejected', $description, $task);
+        $this->notifier->reviewDecided($task, Auth::user(), approved: false, reason: $validated['reason'] ?? null);
 
         return back()->with('success', 'Task dikembalikan untuk diperbaiki.');
     }

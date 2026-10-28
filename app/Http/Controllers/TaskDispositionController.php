@@ -5,13 +5,17 @@ namespace App\Http\Controllers;
 use App\Models\Task;
 use App\Models\User;
 use App\Services\Meeting\ActivityLogger;
+use App\Services\Notification\InAppNotifier;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
 
 class TaskDispositionController extends Controller
 {
-    public function __construct(private readonly ActivityLogger $activityLogger) {}
+    public function __construct(
+        private readonly ActivityLogger $activityLogger,
+        private readonly InAppNotifier $notifier,
+    ) {}
 
     public function store(Request $request, Task $task)
     {
@@ -46,6 +50,7 @@ class TaskDispositionController extends Controller
         }
 
         $this->activityLogger->log($task->meeting, $fromUser, 'task.disposed', $description, $task);
+        $this->notifier->taskAssigned($task->setRelation('assignee', $toUser), $fromUser);
 
         return back()->with('success', "Task berhasil didisposisikan ke {$toUser->name}.");
     }

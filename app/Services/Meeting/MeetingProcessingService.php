@@ -8,6 +8,7 @@ use App\Models\MeetingActionItem;
 use App\Models\User;
 use App\Services\AI\AiManager;
 use App\Services\AI\AiRequestLogger;
+use App\Services\Notification\InAppNotifier;
 use App\Services\Webhook\WebhookDispatcher;
 use App\Support\HtmlSanitizer;
 use Illuminate\Support\Facades\Config;
@@ -31,6 +32,7 @@ class MeetingProcessingService
         private readonly ActionItemsParser $actionItemsParser,
         private readonly ActivityLogger $activityLogger,
         private readonly WebhookDispatcher $webhookDispatcher,
+        private readonly InAppNotifier $notifier,
     ) {}
 
     /**
@@ -89,6 +91,7 @@ class MeetingProcessingService
         $this->webhookDispatcher->dispatch('meeting.processed', $meeting, ['meeting_id' => $meeting->id, 'title' => $meeting->title]);
 
         $this->notifyUnit($meeting);
+        $this->notifier->meetingProcessed($meeting);
     }
 
     private function extractTranscript(Meeting $meeting): string

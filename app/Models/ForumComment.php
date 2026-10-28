@@ -21,6 +21,7 @@ class ForumComment extends Model
         return $this->belongsTo(Meeting::class);
     }
 
+    /** @return BelongsTo<User, $this> */
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
