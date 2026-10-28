@@ -86,6 +86,8 @@ class Meeting extends Model
 
     /**
      * Mendapatkan unit yang memiliki rapat ini.
+     *
+     * @return BelongsTo<Unit, $this>
      */
     public function unit(): BelongsTo
     {

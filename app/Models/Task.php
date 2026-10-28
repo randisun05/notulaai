@@ -40,6 +40,7 @@ class Task extends Model
 
     protected $appends = ['is_overdue', 'is_sla_breached'];
 
+    /** @return BelongsTo<Meeting, $this> */
     public function meeting(): BelongsTo
     {
         return $this->belongsTo(Meeting::class);

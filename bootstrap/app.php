@@ -39,6 +39,10 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
+        // API clients always get JSON errors (401/403/404/422), even without
+        // an "Accept: application/json" header.
+        $exceptions->shouldRenderJsonWhen(fn (Request $request) => $request->is('api/*') || $request->expectsJson());
+
         $exceptions->dontFlash([
             'current_password',
             'password',
@@ -52,7 +56,7 @@ return Application::configure(basePath: dirname(__DIR__))
             $message = 'Terlalu banyak permintaan dalam waktu singkat.'
                 .($retryAfter ? " Coba lagi dalam {$retryAfter} detik." : ' Coba lagi sebentar lagi.');
 
-            if ($request->expectsJson()) {
+            if ($request->expectsJson() || $request->is('api/*')) {
                 return response()->json(['error' => $message], 429, $e->getHeaders());
             }
 

@@ -31,7 +31,7 @@ npm run build                          # writes public/build/ — gitignored, NO
                                        # Tests don't need it: Tests\TestCase calls withoutVite().
 
 # Tests (SQLite :memory:, config in phpunit.xml)
-php artisan test                       # full suite (~2 min, ~227 tests)
+php artisan test                       # full suite (~2 min, ~238 tests)
 php artisan test --filter=ProcessMeetingTest
 php artisan test tests/Feature/Task/TaskApprovalTest.php
 
@@ -44,7 +44,7 @@ python docker/whisper/stt_service.py   # waitress app on :5055 (POST /transcribe
 # backend job = Pint + PHPStan + tests, separate audit job, frontend job = npm run build
 vendor/bin/pint                        # format (Laravel preset, pint.json)
 vendor/bin/pint --test                 # check only — fails on unformatted code
-vendor/bin/phpstan analyse             # level 5; 57 pre-existing errors are in phpstan-baseline.neon
+vendor/bin/phpstan analyse             # level 5; 48 pre-existing errors are in phpstan-baseline.neon
 composer audit                         # fails on dependencies with known CVEs
 composer test:ci                       # runs all four gates in sequence
 ```
@@ -178,7 +178,8 @@ Per-unit outgoing webhooks (`WebhookDispatcher::dispatch()` called from the same
 - **`openai-php/laravel`** is used only to talk to **OpenRouter** (`OPENAI_BASE_URI`), not OpenAI. `OpenRouterTextProvider` has a Guzzle middleware that backfills missing `completion_tokens_details` fields OpenRouter omits, which would otherwise `TypeError` in the client.
 - **Excel export tests:** assert on the collection via `Excel::fake()` + `Excel::assertDownloaded(...)`, not on raw bytes.
 - **Tests run on SQLite**, prod is MySQL — watch for engine differences (`whereJsonContains`, fulltext, etc.).
-- **Dead stubs:** `SourcePath` model/migration/seeder are unused. `routes/api.php` is effectively empty despite API tokens being a feature.
+- **REST API v1** (`routes/api.php`, `App\Http\Controllers\Api\V1`, `App\Http\Resources`, documented in `docs/api.md`): read-only `me`, `meetings`, `tasks` (+ show), Sanctum bearer tokens from Profile → API Tokens, `throttle:api` (60/min). Lists use `visibleTo()`, shows use the same Policies as the web UI. `bootstrap/app.php` forces JSON errors for `api/*`. Keep the resource shapes backwards-compatible; breaking changes go in a `v2` prefix.
+- **Dead stubs:** `SourcePath` model/migration/seeder are unused.
 - **Meeting search** goes through `Meeting::scopeSearch()` — always inside one nested `where()` so its ORs can't escape `visibleTo()` (they once did, leaking other units' meetings). On MySQL, agenda/transcript/summary use the `meetings_search_fulltext` FULLTEXT index (boolean mode, every word ≥3 chars required, prefix match); title, and every column on SQLite, use an escaped `LIKE`. InnoDB FULLTEXT ignores uncommitted rows, so FULLTEXT can't be asserted inside `RefreshDatabase` — `MeetingSearchTest` skips those cases on MySQL.
 
 ## Following the project's task workflow
